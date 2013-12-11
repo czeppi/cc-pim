@@ -26,11 +26,28 @@ class AddressDBCreator:
         db = DB()
         self.db = db
         
+        self._CreateColumns()
         self._CreateEvents(db)
         self._CreateKeywords(db)
         self._CreateAddresses(db)
         self._CreateCompanies(db)
         self._CreatePersons(db)
+        
+    def _CreateColumnTypes(self):
+        self._col_types = { name: type for name, type in self._IterColumn() }
+        
+    def _IterColumn(self):
+        yield 'person', Foreignkey('persons')
+        yield 'address', Foreignkey('addresses')
+        yield 'remark', Str()
+        yield 'enabled', Bool()
+        yield 'company', Foreignkey('companies')
+        yield 'valid_since', Foreignkey('events')
+        yield 'valid_until', Foreignkey('events')
+        yield 'mobile', Phonenumber()
+        yield 'landline', Phonenumber()
+        yield 'name', Name())
+        yield 'keyword', Foreignkey('keywords')
         
     def _CreateEvents(self, db):
         events = db.create_table('events')
@@ -67,165 +84,40 @@ class AddressDBCreator:
         companies.add_col('name', Name())
         companies.add_col('owner', Name())
         
-        company_addresses = db.create_table('company_addresses')
-        company_addresses.add_col('company', Foreignkey(companies))
-        company_addresses.add_col('address', Foreignkey(addresses))
-        company_addresses.add_col('valid_since', Foreignkey(events))
+        self._CreateTable('company_addresses', 'company address valid_since remark')
+        self._CreateTable('company_keywords',  'company keyword')
+        self._CreateTable('company_remarks',   'company remark')
+        self._CreateTable('company_urls',      'company url valid_since valid_until remark')
+        self._CreateTable('company_emails',    'company email valid_since valid_until remark enabled')
+        self._CreateTable('company_landlines', 'company landline valid_since valid_until remark enabled')
+        self._CreateTable('company_mobiles',   'company mobile valid_since valid_until remark enabled')
         
-        company_keywords = db.create_table('company_keywords')
-        company_keywords.add_col('person', Foreignkey(persons))
-        company_keywords.add_col('word', Foreignkey(keywords))
-        
-        company_remarks = db.create_table('company_remarks')
-        company_remarks.add_col('person', Foreignkey(persons))
-        company_remarks.add_col('remark', Text())
-        
-        company_urls = db.create_table('company_urls')
-        company_urls.add_col('company', Foreignkey(companies))
-        company_urls.add_col('url', URL)
-        company_urls.add_col('valid_since', Foreignkey(events))
-        company_urls.add_col('valid_until', Foreignkey(events))
-        company_urls.add_col('remark', Str())
-
-        company_landlines = db.create_table('company_landlines')
-        company_landlines.add_col('company', Foreignkey(companies))
-        company_landlines.add_col('landline', Phonenumber())
-        company_landlines.add_col('remark', Str())
-        company_landlines.add_col('valid_since', Foreignkey(events))
-        company_landlines.add_col('valid_until', Foreignkey(events))
-        company_landlines.add_col('enabled', Bool())
-        
-        company_mobiles = db.create_table('company_mobiles')
-        company_mobiles.add_col('person', Foreignkey(persons))
-        company_mobiles.add_col('company', Foreignkey(companies))
-        company_mobiles.add_col('mobile', Phonenumber())
-        company_mobiles.add_col('remark', Str())
-        company_mobiles.add_col('valid_since', Foreignkey(events))
-        company_mobiles.add_col('valid_until', Foreignkey(events))
-        company_mobiles.add_col('enabled', Bool())
-        
-        company_emails = db.create_table('person_companie_emails')
-        company_emails.add_col('person', Foreignkey(persons))
-        company_emails.add_col('company', Foreignkey(companies))
-        company_emails.add_col('email', EMail())
-        company_emails.add_col('remark', Str())
-        company_emails.add_col('valid_since', Foreignkey(events))
-        company_emails.add_col('valid_until', Foreignkey(events))
-        company_emails.add_col('enabled', Bool())
-        
-    def _CreatePersons(self, db):
-        persons = db.create_table('persons')
+    def _CreatePersons(self):
+        persons = self.db.create_table('persons')
         persons.add_col('first_name', Name())
         persons.add_col('birthday', Foreignkey(events))
         
-        person_lastnames = db.create_table('person_lastnames')
-        person_lastnames.add_col('person', Foreignkey(persons))
-        person_lastnames.add_col('valid_since', Foreignkey(events))
-        person_lastnames.add_col('name', Foreignkey(events))
-        
-        person_nicknames = db.create_table('person_nicknames')
-        person_nicknames.add_col('person', Foreignkey(persons))
-        person_nicknames.add_col('valid_since', Foreignkey(events))
-        person_nicknames.add_col('name', Foreignkey(events))
-        
-        person_keywords = db.create_table('person_keywords')
-        person_keywords.add_col('person', Foreignkey(persons))
-        person_keywords.add_col('word', Foreignkey(keywords))
-        
-        person_remarks = db.create_table('person_remarks')
-        person_remarks.add_col('person', Foreignkey(persons))
-        person_remarks.add_col('remark', Text())
-        
-        person_main_addresses = db.create_table('person_main_addresses')
-        person_main_addresses.add_col('person', Foreignkey(persons))
-        person_main_addresses.add_col('address', Foreignkey(addresses))
-        person_main_addresses.add_col('valid_since', Foreignkey(events))
-        
-        person_further_addresses = db.create_table('person_further_addresses')
-        person_further_addresses.add_col('person', Foreignkey(persons))
-        person_further_addresses.add_col('address', Foreignkey(addresses))
-        person_further_addresses.add_col('remark', Str())
-        person_further_addresses.add_col('valid_since', Foreignkey(events))
-        person_further_addresses.add_col('valid_until', Foreignkey(events))
-        
-        person_emails = db.create_table('person_emails')
-        person_emails.add_col('person', Foreignkey(persons))
-        person_emails.add_col('email', EMail())
-        person_emails.add_col('valid_since', Foreignkey(events))
-        person_emails.add_col('valid_until', Foreignkey(events))
-        person_emails.add_col('enabled', Bool())
-        
-        person_homepages = db.create_table('person_homepages')
-        person_homepages.add_col('person', Foreignkey(persons))
-        person_homepages.add_col('url', URL())
-        person_homepages.add_col('remark', Str())
-        person_homepages.add_col('valid_since', Foreignkey(events))
-        person_homepages.add_col('valid_until', Foreignkey(events))
-        
-        person_companies = db.create_table('person_companies')
-        person_companies.add_col('person', Foreignkey(persons))
-        person_companies.add_col('company', Foreignkey(companies))
-        person_companies.add_col('remark', Str())
-        person_companies.add_col('valid_since', Foreignkey(events))
-        person_companies.add_col('valid_until', Foreignkey(events))
-        
-        person_company_addresses = db.create_table('person_companie_addresses')
-        person_company_addresses.add_col('person', Foreignkey(persons))
-        person_company_addresses.add_col('company', Foreignkey(companies))
-        person_company_addresses.add_col('address', Foreignkey(addresses))
-        person_company_addresses.add_col('remark', Str())
-        person_company_addresses.add_col('valid_since', Foreignkey(events))
-        person_company_addresses.add_col('valid_until', Foreignkey(events))
-        
-        person_company_landlines = db.create_table('person_companie_landlines')
-        person_company_landlines.add_col('person', Foreignkey(persons))
-        person_company_landlines.add_col('company', Foreignkey(companies))
-        person_company_landlines.add_col('landline', Phonenumber())
-        person_company_landlines.add_col('remark', Str())
-        person_company_landlines.add_col('valid_since', Foreignkey(events))
-        person_company_landlines.add_col('valid_until', Foreignkey(events))
-        person_company_landlines.add_col('enabled', Bool())
-        
-        person_company_mobiles = db.create_table('person_companie_mobiles')
-        person_company_mobiles.add_col('person', Foreignkey(persons))
-        person_company_mobiles.add_col('company', Foreignkey(companies))
-        person_company_mobiles.add_col('mobile', Phonenumber())
-        person_company_mobiles.add_col('remark', Str())
-        person_company_mobiles.add_col('valid_since', Foreignkey(events))
-        person_company_mobiles.add_col('valid_until', Foreignkey(events))
-        person_company_mobiles.add_col('enabled', Bool())
-        
-        person_companie_emails = db.create_table('person_companie_emails')
-        person_companie_emails.add_col('person', Foreignkey(persons))
-        person_companie_emails.add_col('company', Foreignkey(companies))
-        person_companie_emails.add_col('email', EMail())
-        person_companie_emails.add_col('remark', Str())
-        person_companie_emails.add_col('valid_since', Foreignkey(events))
-        person_companie_emails.add_col('valid_until', Foreignkey(events))
-        person_companie_emails.add_col('enabled', Bool())
+        self._CreateTable('person_lastnames',          'person name valid_since')
+        self._CreateTable('person_nicknames',          'person name valid_since')
+        self._CreateTable('person_main_addresses',     'person address valid_since remark')
+        self._CreateTable('person_further_addresses',  'person address valid_since valid_until remark')
+        self._CreateTable('person_keywords',           'person keyword')
+        self._CreateTable('person_remarks',            'person remark')
+        self._CreateTable('person_landlines',          'person landline valid_since valid_until remark enabled')
+        self._CreateTable('person_mobiles',            'person mobile valid_since valid_until remark enabled')
+        self._CreateTable('person_emails',             'person email valid_since valid_until remark enabled')
+        self._CreateTable('person_homepages',          'person url valid_since valid_until remark')
+        self._CreateTable('person_companies',          'person company valid_since valid_until remark')
+        self._CreateTable('person_company_addresses',  'person company valid_since valid_until remark')
+        self._CreateTable('person_companie_addresses', 'person company address valid_since valid_until remark')
+        self._CreateTable('person_companie_landlines', 'person company landline valid_since valid_until remark enabled')
+        self._CreateTable('person_companie_mobiles',   'person company mobile valid_since valid_until remark enabled')
+        self._CreateTable('person_companie_emails',    'person company email valid_since valid_until remark enabled')
 
-    def _Create1toN(self, conn_name, name1, table1, name2, table2, 
-                    with_remark=False, with_enabled=False):
-        table = db.create_table(conn_name)
-        table.add_col(name1, Foreignkey(table1))
-        table.add_col(name2, Foreignkey(table2))
-        table.add_col('valid_since', Foreignkey(events))
-        if with_remark:
-            table.add_col('remark', Str())
-        if with_enabled:
-            table.add_col('enabled', Bool())
+    def _CreateTable(self, table_name, col_names):
+        table = self.db.create_table(table_name)
+        for col_name in col_names.split():
+            col_type = self._col_types[col_name]
+            table.add_col(col_name, col_type)
     
-    def _CreateNtoN(self, conn_name, name1, table1, name2, table2, 
-                    with_remark=False, with_enabled=False):
-        events = self.events_table
-        
-        table = db.create_table(conn_name)
-        table.add_col(name1, Foreignkey(table1))
-        table.add_col(name2, Foreignkey(table2))
-        table.add_col('valid_since', Foreignkey(events))
-        table.add_col('valid_until', Foreignkey(events))
-        if with_remark:
-            table.add_col('remark', Str())
-        if with_enabled:
-            table.add_col('enabled', Bool())
     
