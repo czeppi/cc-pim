@@ -1,2 +1,5 @@
 syntax: glob
 data
+src/__pycache__
+src/gui/__pycache__
+src/gui/_ui_
