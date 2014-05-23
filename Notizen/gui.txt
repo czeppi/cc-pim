@@ -1,0 +1,10 @@
+Titel: CC-PIM
+Menüs: ?
+Icons:
+  Telefon -> Adressverwaltung starten
+  Notizblock -> Notizverwaltung starten
+  Kalenderblatt -> Kalenderansicht starten
+  ToDo? -> ToDo-Verwaltung starten
+Hauptfenster: ?
+Statuszeile:
+  Synchronisierungsstatus (ok, aktive, pause/Frage an Benutzer, Fehler)

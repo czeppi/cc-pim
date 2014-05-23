@@ -1,0 +1,36 @@
+Beispiele:
+----------
+
+<=2013-11
+~2013
+2013-11-12?
+>=2011, <=2013
+
+
+Attribut-Histories:
+-------------------
+
+Handy:           von     bis
+0177 990809890   ~2008   ~2010
+0152 893028290   ~2010 
+
+Address:
+1970-02-17    Biesenwerder 19
+1996-05       Otto-Wels-Ring
+2001-09(=d1)  Burgemeisterstr.
+2013-10-19    Kronbergstr.
+
+2. Address
+>=1997-07-25  Franz-Körner
+2001-09       -
+
+
+Fuzzi-Dates-Zuordnung:
+---------------------
+
+2001-09:  
+  ChCz.address:    Otto-Wels-Ring  =>  Burgemeisterstr.
+  ChCz.address2:   Franz-Körner    =>  -
+  Manti.address:   Franz-Körner    =>  Burgemeisterstr.
+  Manti.address2:  Otto-Wels-Ring  =>  -
+

@@ -1,0 +1,311 @@
+DB-Format:
+---------
+Vorteil: Schnelle Deltabestimmung, um verschiedene Rechner zu synchronisieren
+
+Variant1 (bervorzugte Variante!):
+  Vorteil vom json-string: er kann auch gleich für Übertragung zwischen Client und Server dienen
+  Vorteil DB: schnelle Deltabestimmung
+  
+  commits: <id>, <prev-id>, <prev-merge-id>, <json-string>
+  json-string1:
+    {
+      "date": "2013-12-12",
+      "user": "chcz",
+      "changes": [
+        ["create table", "persons"],
+        ["add col", "persons", "last_name", "str", [], {"max_len": 30}],
+        #["add col", "persons", "addresses", "temp_conn", ["addresses"], {"max": 1, "remarks": True}],
+        ["add row", "addresses", 2],
+        ["set value", "addresses", 2, "city", "Berlin"],
+        ["add row", "persons", 5],
+        ["add value", "persons.addresses", 5, 17],
+        ["set value", "persons.addresses", 17, 2],
+        ],
+      "options":
+        "views": [
+          "person": ["persons.last_name", "person_addresses"], 
+        ]
+         "connections[1] = connect(persons[1], addresses[1], valid_since=..., valid_until=..., remark=...)",
+         
+      ],
+    }
+    
+  json-string2:
+    {
+      "date": "2013-12-12",
+      "user": "chcz",
+      "changes": """
+        persons = Table('persons')
+        addresses = Table('addresses')
+        persons['main_address'] = VarKey(addresses, withh_remark=True))
+        persons['further_addresses'] = VarKeys(addresses))
+        persons['emails'] = VarKeys(addresses, with_enabled=True))
+        persons['companies'] = Table('employee_data')
+        persons['companies']
+        persons['c'] = Int(init=lambda x: x.get('a') + x.get('b'))
+        persons[0] = persons.create_row(firstname='Max', lastname='Mustermann')
+        persons[0]['birthday'] = Date('700214')
+        persons[0]['company'][0]['address'] = addresses[34]
+      """,
+    }
+
+Variant2:
+  commits: 1, 0, 0, 131128T1341, chcz
+  changes: 1, 1, persons, ,   ,           new table,     
+           2, 1, persons, ,   last_name,  new attribute, str(20)
+           3, 1, persons, ,   first_name, new attribute, str(2)
+           4, 1, persons, ,   id,         new row,       17
+           5, 1, persons, 17, last_name,  set,           Czepluch
+           6, 1, persons, 17, first_name, set,           Nicole
+           
+  mögliche Kommandos:
+  - new table
+  - rename table
+  - delete table
+  - new column
+  - rename column
+  - delete column
+  - order columns
+  - new row
+  - delete row
+  - set value
+
+
+Variant2b:
+  #        id, prev_id1, prev_id2, date, user
+  commits: 1, 0, 0, 131128T1341, chcz
+  
+  #        id, commit_id, table_id, row, col_id, value
+  changes: 1, 1,          1, -, -,               persons             # create table
+           2, 1,          1, -, 1,               lastname, str(20)   # create column
+           3, 1,          1, -, 2,               first_name, str(2)  # create column
+           4, 1,          1, 1, 1,               Czepluch            # create row + set value
+           5, 1,          1, 1, 2,               Nicole              # set value
+           6, 1,          1, -, 2,               None                # remove column
+           7, 1,          1, -, 1,               name, str(20)       # rename column
+           8, 1,          1, 1, -,               None                # remove row
+           9, 1,          1, -, -,               None                # remove table
+  
+Variant3:        
+  commits: 1, 0, 0, 131128T1341, chcz
+  changes: 1, 1, , new table
+           2, 1, persons, new attribute
+           3, 1, persons, new row
+           4, 1, persons/17, set
+  values:  1, 1, name, persons
+           2, 2, name, last_name
+           3, 2, name, first_name
+           4, 3, id, 17
+           5, 4, last_name, Czepluch
+           6, 4, first_name, Nicole
+           
+  Struktur:
+    commits:    id, prev_id1, prev_id2(für Merge), timestamp, user
+    changes:    id, commit_id, root, kind/cmd(rename, delete, new, set)
+    new_values: id, change_id, attribute, value
+
+Variant4:
+  commits: 1, 0, 0, 131128T1341, chcz
+  changes: 1, 1, , new table, persons
+           2, 1, persons, new column, last_name=string(30)
+           3, 1, persons, new row, id=17, last_name=Czepluch
+           
+Variante5:           
+  commits: 1, 0, 0, 131128T1341, chcz, persons = new table
+                                       persons.columns += new column('last_name', string(30))
+                                       persons[17] = new persons
+                                       persons[17].last_name = 'Czepluch'
+           
+RDF-Format:
+-----------
+Person12345 has-last-name Galla
+Person12345 lives-at Address123 from Date123 to Date124
+
+
+SQL-Format:
+-----------
+create table persons
+create table dates
+create table addresses
+create table person_addresses(id, person_id, address_id, valid_fom, valid_to)
+
+insert into persons(name, first_name) values=()
+insert into events values=()
+insert into addresses values=()
+insert into residences values=()
+insert into person_addresses values()
+insert into person_mobile_numbers values=()
+
+
+Python-Format:
+--------------
+class Person:
+  last_name: text(max_len=)
+  first_name: text(...)
+  
+class TempConn:
+  valid_from: Event*
+  valid_to: Event*
+  
+class PersonAddress(TempConn):
+  person: Person*
+  address: Address*
+  constraints = 
+  
+Person183665 = Person(name=Galla, first_name=Manuela)
+Date12548844
+Address4545878 = 
+PersonAddress5648789 = Person183665.address.append(Adress4545878, valid_from=Date12548844)
+PersonAddress5648789 = PersonAddress(person=..., address=..., valid_form=...)
+
+// ManuelaGalla = Person(name=...)
+// 131019Umzug = Date(...)
+// Kronberg14 = Address()
+// ManuelaGallaKronberg14 = MaGalla.address.append(Kronberg14, valid_from=Date131019Umzug)
+// ManuelaGallaBurgemeister74a.valid_to = Date131019Umzug
+
+
+csv-Format:
+-----------
+Vorteil: besser lesbar
+
+#131210T1539, chcz
+addresses = table()
+addresses.add_column(street, str())
+addresses.add_row({name='xxx', birthday='yxy'})
+
+drop column addresses.street
+rename column adresses.street s
++addresses.street = str
++addresses.city = str
++persons
++persons.firstname = str
++person_address
++person_address.person = key(persons)
++person_address.address = key(addresses)
+
+
+yaml-Format:
+------------
+Variant1:
+
+  addresses:
+    RotharingWeg34:
+      street: "Rotharing Weg 34"
+      phones:
+         xyz: 
+    Hildegardstr10
+      street: "Hildegardstr. 10"
+      
+  companies:    
+    Daimler:
+      ...
+      
+  events:
+    EventKnabeHeidrunHildegardstr:
+      name: Knabe und Heidrung ziehen zusammen
+      date: ~2010
+    EventKnabePhoneXY
+    EventKnabeSiemens
+
+  persons:
+    Knabe:
+      lastname: Knabe
+      firstname: Thomas
+      addresses:
+        RotharingWeg34: - EventKnabeHeidrunHildegardstr
+        Hildegardstr10: EventKnabeHeidrunHildegardstr -
+      mobiles:
+        - xxx: ~2011, >2011-05, <=2012-03 -
+        - xxx: - ~2011
+      companies:
+        Daimler:
+          employee: - EventKnabeSiemens
+          addresses: []
+          phones: []
+        Siemens:
+          employee: EventKnabeSiemens -
+          addresses: []
+          phones: []
+
+Variant2:
+
+  types:
+    addresses:
+      street: Str()
+      city: Str()
+      country: Str()
+    companies:
+      name: Str()
+      street: Str()
+      city: Str()
+      homepage: Str()
+      email: Str()
+    persons:
+      lastname
+      firstname
+      addresses: 
+        address
+        
+        
+google-protocol-buffers:
+-------------------
+  message Address {
+    required int32 id = 1;
+    optional string street = 2;
+    optional string city = 3;
+    optional string country = 4;
+  }
+
+  message Event {
+    message EventDate {
+      enum EventDateAccurateness {
+        EXACT = 0;
+        CIRCA = 1
+        AFTER = 2;
+        BEFORE = 3;
+      }
+      required EventDateAccurateness = 1;
+      required string date = 2;
+    }
+    optional string name = 1;
+    repeated EventDate date = 2;
+  
+  message MobileNumber {
+    required string number = 1;
+    optional int valid_since_id = 2;
+    optional int valid_until_id = 3;
+  }
+  
+  message AddressEntry {
+    required int address_id = 1;
+    optional int valid_since_id = 2;
+    optional int valid_until_id = 3;
+  }
+
+  message CompanyEntry {
+    required int company_id = 1;
+    repeated AddressEntry addresses = 5;
+    repeated MobileNumber mobiles = 4;
+    
+    optional int valid_since_id = 2;
+    optional int valid_until_id = 3;
+  }
+  
+  message Person {
+    required int32 id = 1;
+    required string last_name = 2;
+    optional string email = 3;
+
+    repeated AddressEntry addresses = 4;
+    repeated MobileNumber mobiles = 5;
+    repeated CompanyEntry companies = 6;
+  }         
+  
+  message AddressBook {
+    repeated Person persons = 1;
+    repeated Company companies = 2;
+    repeated Address addresses = 3;
+    repeated Event events = 4;
+  }
+      

@@ -1,0 +1,18 @@
+
+Mögliche Update-Operationen
+---------------------------
+
+create_table (name)
+drop/delete_table (name)
+rename_table (old_name, new_name)
+
+add_column (table_name, col_name, col_type)
+delete_column (table_name, col_name)
+rename_column (table_name, old_col_name, new_col_name)
+move_column (table_name, col_name, new_index)
+  oder new_order_col (table_name, new_indices)
+add_connection (table1_name, col1_name, table2_name, col2_name, multiplicity=1->1, dynamic=False?)
+
+add_row (table_name, row_id, values...)
+change_row (table_name, row_id, values...)
+delete_row (table_name, row_id)

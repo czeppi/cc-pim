@@ -1,0 +1,163 @@
+Personal-Data-Manager
+=====================
+
+Der Datenmanager ist eine Anwendung, der die verschiedenen DB verwaltet.
+
+
+Mögliche DB
+-----------
+
+- Adressen
+- Notizen
+- Kalender/Logbuch
+- Todo/Einkaufslisten
+- Fotoverwaltung
+- Musikverwaltung
+- E-Mails u.ä.
+
+
+Infrastruktur
+-------------
+
+- Homeserver 
+  - vermutlich nur ein Teil der Daten der mobilen Festplatte
+  - alle Multimedia-Dateien? (nur mit externer Festplatte!)
+  - als Backup-Medium verwenden?
+- Notebook + mobile Festplatte
+- Handy 
+  - nur Teil der Multimedia-Dateien
+
+    
+GUI
+---
+
+Notebook: python 3.x + pyside  (Java??, s. Daten-Deltas)
+Handy: Android 2.3
+
+
+Synchronisierung
+----------------
+
+Homeserver + Notebook: 
+  Internet: !keine großen Deltas!
+  WLAN: 
+  
+Homeserver + Handy
+  Internet: !keine großen Deltas!
+  WLAN: 
+
+Notebook + Handy
+  USB: (cc-sync oder cc-mirror)
+  
+  
+Daten-Deltas
+------------
+
+Deltas müssen in einer Art SQL-Sprache vorliegen, da
+- Handy und Server unterschiedliche Sprachen benutzt (Java <-> Python)
+  - vielleicht Server + Notebook-GUI auch in Java??
+  
+Diese Deltas sollten in DB-spezifische SQL-Kommandos übersetzt werden,
+da Sqlite3 nicht alle wichtigen Kommandos beherscht (alter table kann 
+kein drop column und keine constraints)
+
+
+DB-Operationen
+--------------
+
+- DB anlegt
+- Spalten einfügt
+- Spalten verschiebt
+- Spalten löscht
+- Daten importiert?
+- Daten exportiert (z.B. Html)
+- Daten synchronisiert mit Server?
+
+
+Adress-DB
+---------
+
+- Person
+  - ID
+  - Name
+  - Vorname
+  - Adresse
+  - Handynummern
+  - Firma
+  - Geburtstag
+  - E-Mails
+  - Webseiten
+  - 
+- Adresse
+  - ID
+  - Stadt
+  - Straße
+  - Nr
+  - extra
+  - Telefon
+
+  
+Notizen-DB
+----------
+
+- Notizen
+  - ID
+  - Datum
+  - Tags
+  - Titel
+  - Body
+  - vorherige Revision
+- Tags
+  - Name
+  - Type (Person, Ort, ...)
+- Links
+  - Adresse
+  - Kopie
+- Bilder
+  - Daten
+
+  
+Aufgagen-DB
+-----------
+
+
+Kalender-DB  
+-----------
+
+- Unternehmung
+  - Datum
+  - was (kino, essen, ...)
+  - Ort
+  - mit wem
+  
+  
+===================
+Adress-DB
+
+# name, Typ
+
+# Person
+ID, key
+Name, string
+Vorname, string
+Adresse, foreignkey, adresse
+Handynummern, telefonnummer
+Firma, string
+Geburtstag, date
+E-Mail1, e-mail
+E-Mail2, e-mail
+Webseite1, url
+Webseite2, url
+Firmenadresse, foreignkey, adresse
+
+# Adresse
+ID, ID
+Land, string, default=Deutschland
+Stadt, string, default=Berlin
+
+
+# Telefon
+ID, ID
+Vorwahl, Int, default=004930
+Nummer, Int
+Zusatz, Int

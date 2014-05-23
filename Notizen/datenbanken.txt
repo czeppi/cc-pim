@@ -1,0 +1,5 @@
+address.db
+notes.db + todo.db + kal.db
+files.db + fotos.db + music.db
+
+oder alles in cc-pim.db
