@@ -1,64 +1,157 @@
-#! /usr/bin/env python
-#-*- coding: utf-8 -*-
-
 ##########################################
 ## CC-PIM                               ##
 ## Copyright 2013 by Christian Czepluch ##
 ##########################################
 
+from collections import OrderedDict
+import datetime
 
 #-------------------------------------------------------------------------------
 
-class DB:
+class Model:
     def __init__(self):
-        self.tables = {}
-        self._next_table_id = 1
+        self._tables = {}  # name -> Table
         
-    def create_table(self, name):
-        new_table_id = self._next_table_id
-        new_table = Table(new_table_id, name)
-        self.tables[new_table_id] = new_table
-        self._next_table_id += 1
-        return new_table_id
-
+    def add_table(self, name:str):
+        if name in self._tables:
+            raise Exception(name)
+        new_table = Table(name)
+        self._tables[new_table] = new_table
+        
+    def remove_table(self, name:str):
+        assert isinstance(name, str)
+        if name not in self._tables:
+            raise Exception(name)
+        del self._tables[name]
+        
+    def rename_table(self, old_name:str, new_name:str):
+        assert isinstance(old_name, str)
+        assert isinstance(new_name, str)
+        if old_name not in self._tables:
+            raise Exception(old_name)
+        if new_name in self._tables:
+            raise Exception(new_name)
+        self._tables[new_name] = self._tables[old_name]
+        del self._tables[name]
+        
+    def find_table(self, table_name):
+        return self._tables(table_name, None)
+        
 #-------------------------------------------------------------------------------
     
 class Table:
-    def __init__(self, id, name):
-        self.id = id
-        self.name = name
-        self.columns = {}
-        self._next_col_id = 1
+    def __init__(self, name:str):
+        assert isinstance(name, str)
+        self._name = name
+        self._columns = OrderedDict()
         self._next_row_id = 1
+        self._rows = {}  # serial => Row
         
-    def add_col(self, col_name, col_type):
-        new_id = self._next_col_id
-        new_col = Column(new_id, col_name, col_type)
-        self.columns[new_id] = new_col
-        self._next_col_id += 1
+    @property
+    def name(self):
+        return self._name
+        
+    @property
+    def columns(self):
+        return self._columns.values()
+        
+    def new_row_id(self):
+        new_row_id = self._next_row_id
+        self._next_row_id += 1
+        return new_row_id
+        
+    def add_col(self, name:str, type:ColumnType):
+        assert isinstance(name, str)
+        assert isinstance(type, ColumnType)
+        if name in self.columns:
+            raise Exception('{} {}'.format(self.name, name))
+        new_col = Column(self, name, type)
+        self.columns.append(new_col)
         return new_col
         
-    def add_row(self, **values):
-        new_id = self._next_row_id
-        new_row = Row(new_id, **values)
-        self.rows[new_id] = new_row
-        self._next_row_id += 1
+    def remove_col(self, name:str):
+        assert isinstance(name, str)
+        if name not in self.columns:
+            raise Exception('{} {}'.format(self.name, name))
+        del self._columns[name]
+        
+    def add_row(self, data):
+        new_row_id = self.new_row_id()
+        new_row = Row(self, new_row_id, data)
+        self._rows[new_row_id] = new_row
         return new_row
+        
+    def remove_row(self, row_id:int):
+        assert isinstance(row_id, int)
+        if row_id not in self._rows:
+            raise Exception(str(row_id))
+        del self._rows[new_row_id]
+        
+    def set_value(self, row_id:int, col_name:str, new_value):
+        assert isinstance(row_id, int)
+        assert isinstance(col_name, str)
+        if row_id not in self._rows:
+            raise Exception('{} {}'.format(self.name, row_id))
+        row = self._rows[row_id]
+        if col_name not in self._columns:
+            raise Exception('{} {}'.format(self.name, col_name))
+        row[col_name] = new_value
+        
+    def get_value(self, row_id:int, col_name:str):
+        assert isinstance(row_id, int)
+        assert isinstance(col_name, str)
+        if row_id not in self._rows:
+            raise Exception('{} {}'.format(self.name, row_id))
+        row = self._rows[row_id]
+        if col_name not in self._columns:
+            raise Exception('{} {}'.format(self.name, col_name))
+        return row.get(col_name, None)
     
 #-------------------------------------------------------------------------------
 
 class Column:
-    def __init__(self, id, name, col_type):
-        self.id = id
-        self.name = name
-        self.col_type = col_type
+    def __init__(self, table:Table, name:str, col_type:ColumnType):
+        assert isinstance(table, Table)
+        assert isinstance(name, str)
+        assert isinstance(col_type, ColumnType)
+        self._table = table
+        self._name = name
+        self._col_type = col_type
+
+    @property
+    def table(self):
+        return self._table
+     
+    @property
+    def name(self):
+        return self._name
+        
+    @property
+    def col_type(self):
+        return self._col_type
         
 #-------------------------------------------------------------------------------
 
 class Row:
-    def __init__(self, id, **values):
-        self.id = id
-        self.values = values
+    def __init__(self, table:Table, id:int, data:map):
+        assert isinstance(table, Table)
+        assert isinstance(id, int)
+        assert isinstance(data, map)
+        self._table = table
+        self._id = id
+        self._data = data
+        
+    @property
+    def table(self):
+        return self._table
+        
+    @property
+    def id(self):
+        return self._id
+        
+    @property
+    def data(self):
+        return self._data
 
 #-------------------------------------------------------------------------------
 
@@ -107,4 +200,34 @@ class Bool(ColumnType):
 #-------------------------------------------------------------------------------
 
 class Date(ColumnType):
-    pass  
+    pass
+
+#-------------------------------------------------------------------------------
+
+class Ref(ColumnType):
+    def __init__(self, table, col, multiplicity):
+        self.table = table
+        self.col = col
+        self.multiplicity = multiplicity
+    
+#-------------------------------------------------------------------------------
+
+class BackRef(ColumnType):
+    def __init__(self, table, col, ref):
+        self.table = table
+        self.col = col
+        self.ref = ref
+    
+#-------------------------------------------------------------------------------
+
+class List(ColumnType):
+    def __init__(self, item_type):
+        self.item_type = item_type
+        
+#-------------------------------------------------------------------------------
+
+enum Multiplicity:
+    one2one = 1
+    one2many = 2
+    many2one = 3
+    many2many = 4
