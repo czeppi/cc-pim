@@ -8,21 +8,23 @@ from pathlib import Path
 from zipfile import ZipFile
 import csv
 import io
-from collections import Counter
+from collections import Counter, OrderedDict
 import json
 import datetime
 from db import Model, Table
 from cmd import Command
 
 class const:
-    root_dir            = Path(sys.argv[0]).resolve().parents[2]
-    archive_dir         = root_dir / 'cc-address' / 'archive'
+    root_dir            = Path(sys.argv[0]).resolve().parents[1]
+    archive_dir         = root_dir.parent / 'cc-address' / 'archive'
+    out_dir             = root_dir
     # zip_pathes          = list(archive_dir.glob('data-01.zip'))
     zip_pathes          = sorted(list(archive_dir.glob('data-??.zip')) +
                                  list(archive_dir.glob('data-11-rekronstruiert.zip')))
     persons_filename    = 'persons.csv'
     companies_filename  = 'companies.csv'
     entry_sep           = ';'
+    json_filename       = 'import.json'
 
 #-------------------------------------------------------------------------------
 
@@ -30,102 +32,142 @@ def main():
     revisions = Revisions()
     revisions.append(
         Revision(datetime.datetime.today(), [
-            Command('crate table', ['persons']), 
-            Command('crate table', ['companies']),
+            Command('crate table', 'persons'), 
+            Command('crate table', 'companies'),
             ]
         )
     )
     
-    prev_persons = CvsData()
+    persons_key = ('Lastname', 'Firstname')
+    persons_table_name = 'persons'
+    prev_persons = CvsData(persons_table_name, persons_key)
     for zip_path in const.zip_pathes:
         with ZipFile(str(zip_path)) as data_zip:
             print('{}:'.format(zip_path))
+            
+            cmd_list = []
             persons_file = data_zip.open(const.persons_filename)
-            persons = CvsData(persons_file)
-            #print(len(persons.cols))
-            #print(persons.rows[0])
+            persons = CvsData(persons_table_name, persons_key)
+            persons.read(persons_file)
+            persons.init_id2rows(prev_persons)
             
-            cols_comparer = ColumnsComparer(prev_persons.cols, persons.cols)
+            #print(len(persons.cols_name))
+            #print(persons.rows_data[0])
+            
+            cols_comparer = ColumnsComparer(prev_persons.cols_name, persons.cols_name)
             cols_diff = cols_comparer.compare()
-            print(cols_diff)
+            #print(cols_diff)
+            cmd_list += cols_diff.create_cmd_list(persons_table_name)
             
-            rows_comparer = RowsComparer(prev_persons, persons)
-            rows_diff = rows_comparer.compare()
-            print(rows_diff)
+            rows_id_diff = RowsIdDiff(prev_persons, persons)
+            cmd_list += rows_id_diff.create_cmd_list(persons_table_name)
             
-            rows_diff.transfer_ids()
-            persons.fill_up_ids(next_id=prev_persons.next_id)
-            
-            prev_persons = persons
-            
-            cmd_list = cols_diff.create_cmd_list() + rows_diff.create_cmd_list()
+            for row_id in rows_id_diff.common_id_list:
+                row1 = prev_persons.get_row(row_id)
+                row2 = persons.get_row(row_id)
+                rows_comparer = RowsComparer(row1, row2, cols_diff)
+                rows_diff = rows_comparer.compare()
+                # print(rows_diff)
+                cmd_list += rows_diff.create_cmd_list(persons_table_name)
+
+            for row_id in rows_id_diff.added_id_list:
+                row2 = persons.get_row(row_id)
+                cmd_list += row2.create_cmd_list(persons_table_name)
+                
             revisions.append(
                 Revision(datetime.datetime.today(), cmd_list))
                 
-    print(revisions.json())
+            prev_persons = persons
+                
+    out_path = const.out_dir / const.json_filename
+    out_path.open('w').write(revisions.json())
             
 #-------------------------------------------------------------------------------
 
 class CvsData:
-    def __init__(self, fh=None):
+    def __init__(self, table_name, key_col_names):
+        self._key_col_names = key_col_names
+        self._key2row = {}
+        self._id2row = {}
+        self._next_id = 1
+        self.table_name = table_name
+        self.cols_name = []
+        self.rows_data = []
+        
+    def read(self, fh):
         print('fh: {}'.format(type(fh)))
-        if fh is None:
-            self.cols = []
-            self.rows = []
-        else:
-            text_wrapper = io.TextIOWrapper(fh, encoding='latin-1')
-            reader = csv.DictReader(text_wrapper, delimiter=const.entry_sep, skipinitialspace=True)
-            self.cols = reader.fieldnames
-            self.rows = list(reader)
+        text_wrapper = io.TextIOWrapper(fh, encoding='latin-1')
+        reader = csv.DictReader(text_wrapper, delimiter=const.entry_sep, skipinitialspace=True)
+        self.cols_name = reader.fieldnames
+        self.rows_data = list(reader)
             
-        self.next_id = 1
-        self.row_key2id = {}
-        
-    def check(self):
-        key_counter = Counter(self._create_key(row) for row in self.rows)
-        for key, count in key_counter.items():
-            if count == 2:
-                rows = [row for row in self.rows if self._create_key(row) == key]
-                row1, row2 = rows
-                if row1 == row2:
-                    print('## ERROR ==: 2x: {}'.format(key))
-                else:
-                    print('## ERROR ==: 2x: {}'.format(key))
-            elif count > 2:
-                print('## ERROR: {}x: {}'.format(count, key))
-                
-        # key_set = set(self._create_key(row) for row in self.rows) 
-        # if len(key_set) < len(self.rows):
-            # print('## ERROR: missing: {}'.format(len(self.rows) - len(key_set)))
-            
-    def create_row_map(self):
-        row_map = {}
-        for row in self.rows:
-            key = self._create_key(row)
-            val = row_map.get(key, None)
-            if val is None:
-                row_map[key] = row
-            elif val != row_map[key]:
-                raise Exception('')
-        return row_map
+        self._init_key2row()
 
-    def _create_key(self, row):
-        return row['Lastname'], row['Firstname'] #, row['Nickname']
-        
-    def set_row_id(self, row_key, id):
-        assert id not in self.row_key2id
-        self.row_key2id[row_key] = id
-        
-    def get_row_id(self, row_key):
-        return self.row_key2id[row_key]
-        
-    def fill_up_ids(self, next_id):
-        for row in self.rows:
-            row_key = self._create_key(row)
-            if row_key not in self.row_key2id:
-                self.set_row_id(row_key, next_id)
+    def _init_key2row(self):
+        self._key2row = {}
+        for i in range(len(self.rows_data)):
+            row = Row(self, i)
+            key = (row.data[x] for x in self._key_col_names)
+            if key in self._key2row:
+                raise Exception(key)
+            self._key2row[key] = row
+
+    def init_id2rows(self, other):
+        self._id2row = {}
+        self._transfer_ids(other)
+        self._fill_up_ids(other._next_id)
+    
+    def _transfer_ids(self, other):
+        common_keys = set(self._key2row.keys()) &  set(other._key2row.keys())
+        for key in common_keys:
+            self_row  = self._key2row[key]
+            other_row = other._key2row[key]
+            self_row.set_id(other_row.id)
+            self._id2row[other_row.id] = self_row
+
+    def _fill_up_ids(self, next_id):
+        for key, row in self._key2row.items():
+            if row.id is None:
+                row.set_id(next_id)
+                self._id2row[next_id] = row
                 next_id += 1
-        self.next_id = next_id
+        self._next_id = next_id
+        
+    def row_id_set(self):
+        return set(self._id2row.keys())
+        
+    def get_row(self, row_id):
+        return self._id2row[row_id]
+    
+#---------------------------------------------------------------------------
+
+class Row:
+    def __init__(self, cvs_data, index):
+        self._cvs_data  = cvs_data
+        self._row_data  = cvs_data.rows_data[index]
+        self._index     = index
+        self._id        = None
+        
+    @property
+    def id(self):
+        return self._id
+        
+    @property
+    def data(self):
+        return self._row_data
+        
+    @property
+    def table_name(self):
+        return self._cvs_data.table_name
+        
+    def set_id(self, row_id):
+        assert self._id is None
+        self._id = row_id
+        
+    def create_cmd_list(self, table_name) -> '[Command]':
+        return [Command('set value', table_name, self.id, x, self._row_data[x])
+                for x in self._cvs_data.cols_name
+                if self._row_data[x] not in (None, '')]
         
 #---------------------------------------------------------------------------
 
@@ -136,8 +178,8 @@ class ColumnsComparer:
         
     def compare(self):
         diff = ColumnsDiff()
-        if self.cols1 == self.cols2:
-            return diff
+        # if self.cols1 == self.cols2:
+            # return diff
             
         n1 = len(self.cols1)
         n2 = len(self.cols2)
@@ -151,6 +193,7 @@ class ColumnsComparer:
                 diff.map_col(col1, col2)
             elif col1 == col2:
                 n_left = i + 1
+                diff.map_col(col1, col2)
             else:
                 break
                 
@@ -162,6 +205,7 @@ class ColumnsComparer:
                 diff.map_col(col1, col2)
             elif col1 == col2:
                 n_right = i + 1
+                diff.map_col(col1, col2)
             elif col1 != col2:
                 break
                 
@@ -187,13 +231,13 @@ class ColumnsComparer:
 
 class ColumnsDiff:
     def __init__(self):
-        self.removed_cols = []
-        self.added_cols = []
+        self.removed_col_names = []
+        self.added_col_names = []
         self.mapping = {}
         
     def __str__(self):
-        lines  = ['-{}'.format(x) for x in self.removed_cols]
-        lines += ['+{}'.format(x) for x in self.added_cols]
+        lines  = ['-{}'.format(x) for x in self.removed_col_names]
+        lines += ['+{}'.format(x) for x in self.added_col_names]
         lines += ['{} -> {}'.format(x, y) for x, y in self.mapping.items()]
         return '  ' + '\n  '.join(lines)
         
@@ -201,106 +245,117 @@ class ColumnsDiff:
         return str(self)
         
     def remove_col(self, col_name):
-        self.removed_cols.append(col_name)
+        self.removed_col_names.append(col_name)
         
     def add_col(self, col_name):
-        self.added_cols.append(col_name)
+        self.added_col_names.append(col_name)
         
     def map_col(self, col_name_old, col_name_new):
         self.mapping[col_name_old] = col_name_new
         
-    def create_cmd_list(self)->'[Command]':
-        cmd_list  = [Command('remove col', [x])      for x      in self.removed_cols]
-        cmd_list += [Command('add col',    [x])      for x      in self.added_cols]
-        cmd_list += [Command('rename col', [x1, x2]) for x1, x2 in self.mapping.items()]
+    def create_cmd_list(self, table_name) -> '[Command]':
+        cmd_list  = [Command('remove col', table_name, x)      for x      in self.removed_col_names]
+        cmd_list += [Command('add col',    table_name, x)      for x      in self.added_col_names]
+        cmd_list += [Command('rename col', table_name, x1, x2) for x1, x2 in self.mapping.items()]
+        return cmd_list
+        
+#---------------------------------------------------------------------------
+
+# class RowsIDTransmitter:
+    # def __init__(self, cvs_data1:'CvsData', cvs_data2:'CvsData'):
+        # """ Set IDs from cvs_data2.
+        # """
+        # assert isinstance(cvs_data1, CvsData)
+        # assert isinstance(cvs_data2, CvsData)
+        # self._cvs_data1 = cvs_data1
+        # self._cvs_data2 = cvs_data2
+        
+    # def transfer_ids(self):
+        # self.rows1 = {x.create_key() for x in self._cvs_data1.generate_rows()}
+        # self.rows2 = {x.create_key() for x in self._cvs_data2.generate_rows()}
+        
+        # common_keys = set(self.rows1.keys()) &  set(self.rows2.keys())
+        # for key in common_keys:
+            # row1 = self.rows1[key]
+            # row2 = self.rows2[key]
+            # row2.set_id(row1.id)
+        
+#---------------------------------------------------------------------------
+
+class RowsIdDiff:
+    def __init__(self, cvs_data1:'CvsData', cvs_data2:'CvsData'):
+        assert isinstance(cvs_data1, CvsData)
+        assert isinstance(cvs_data2, CvsData)
+        self.cvs_data1 = cvs_data1
+        self.cvs_data2 = cvs_data2
+        
+        ids1 = cvs_data1.row_id_set()
+        ids2 = cvs_data2.row_id_set()
+        
+        self.removed_id_list = list(ids1 - ids2)
+        self.added_id_list   = list(ids2 - ids1)
+        self.common_id_list  = list(ids1 & ids2)
+
+    def create_cmd_list(self, table_name) -> '[Command]':
+        cmd_list  = [Command('remove row', table_name, x) for x in self.removed_id_list]
+        cmd_list += [Command('add row',    table_name, x) for x in self.added_id_list]
         return cmd_list
         
 #---------------------------------------------------------------------------
 
 class RowsComparer:
-    def __init__(self, data1:'CvsData', data2:'CvsData'):
-        assert isinstance(data1, CvsData)
-        assert isinstance(data2, CvsData)
-        self.data1 = data1
-        self.data2 = data2
+    def __init__(self, row1:'Row', row2:'Row', col_diff:'ColumnsDiff'):
+        assert isinstance(row1, Row)
+        assert isinstance(row2, Row)
+        assert isinstance(col_diff, ColumnsDiff)
+        self.row1 = row1
+        self.row2 = row2
+        self._col_diff = col_diff
         
     def compare(self) -> 'RowsDiff':
-        diff = RowsDiff(self.data1, self.data2)
-        row_map1 = diff.map1
-        row_map2 = diff.map2
+        diff = RowsDiff(self.row1, self.row2)
         
-        keys1 = set(row_map1.keys())
-        keys2 = set(row_map2.keys())
-        for key in keys1 - keys2:
-            diff.remove_row(key)
-        for key in keys2 - keys1:
-            diff.add_row(key)
-        for key in keys1 & keys2:
-            row1 = row_map1[key]
-            row2 = row_map2[key]
-            if row1 != row2:
-                diff.change_row(key)
+        # common columns
+        for col_name1, col_name2 in self._col_diff.mapping.items():
+            val1 = self.row1.data[col_name1]
+            val2 = self.row2.data[col_name2]
+            if val1 != val2:
+                diff.add(col_name2, val2)
+                
+        # new columns
+        for col_name2 in self._col_diff.added_col_names:
+            val2 = self.row2.data[col_name2]
+            if val2 is not None and val2 != '':
+                diff.add(col_name2, val2)
+            
         return diff
         
 #---------------------------------------------------------------------------
 
 class RowsDiff:
-    def __init__(self, data1:'CvsData', data2:'CvsData'):
-        self.data1 = data1
-        self.data2 = data2
-        self.map1 = data1.create_row_map()
-        self.map2 = data2.create_row_map()
-        self.removed_rows = []
-        self.added_rows = []
-        self.changed_rows = []
+    def __init__(self, row1:'Row', row2:'Row'):
+        assert isinstance(row1, Row)
+        assert isinstance(row2, Row)
+        self.row1 = row1
+        self.row2 = row2
+        self.diff_list = []
+        
+    def add(self, col_name2, value2):
+        self.diff_list.append(
+            RowDiff(col_name2, value))
+        
+    def create_cmd_list(self, table_name) -> '[Command]':
+        return [x.create_cmd(table_name) for x in self.diff_list]
+    
+#---------------------------------------------------------------------------
 
-    def __str__(self):
-        return self._summary()
+class RowDiff:
+    def __init__(self, col_name, value):
+        self.col_name = col_name
+        self.value    = value
         
-    def _summary(self) -> str:
-        lines  = [
-            '{} removed'.format(len(self.removed_rows)),
-            '{} added'.format(len(self.added_rows)),
-            '{} changed'.format(len(self.changed_rows)),
-        ]
-        return '  ' + '\n  '.join(lines)
-        
-    def _details(self)->str:
-        lines  = ['removed:']
-        lines += ['  {}'.format(x) for x in self.removed_rows]
-        lines += ['added:']
-        lines += ['  {}'.format(x) for x in self.added_rows]
-        lines += ['changed:']
-        lines += ['  {} -> {}'.format(x, y) for x, y in self.changed_rows]
-        return '\n'.join(lines)
-        
-    def __repr__(self):
-        return str(self)
-        
-    def remove_row(self, row_key:str):
-        self.removed_rows.append(row_key)
-        
-    def add_row(self, row_key:str):
-        self.added_rows.append(row_key)
-        
-    def change_row(self, row_key:str):
-        self.changed_rows.append(row_key)
-        
-    def transfer_ids(self):
-        for key in self.changed_rows:
-            row_id = self.data1.get_row_id(key)
-            self.data2.set_row_id(key, row_id)
-            
-    def create_cmd_list(self)->'[Command]':
-        cmd_list  = [Command('remove row', [self.data1.get_row_id(x)]) for x in self.removed_rows]
-        cmd_list += [Command('add row',    [self.data2.get_row_id(x)]) for x in self.added_rows]
-        
-        #cmd_list += [Command('rename row', [x1, x2]) for x1, x2 in self.changed_rows]
-        for row_key in self.changed_rows:
-            self.data1.
-        
-        
-        return cmd_list
+    def create_cmd(self, table_name) -> 'Command':
+        return Command('set value', table_name, row_id, self.col_name, value)
         
 #---------------------------------------------------------------------------
 
@@ -312,12 +367,12 @@ class Revision:
         self.cmd_list = cmd_list
         
     def json(self)->{str:str}:
-        return {
-            "date":    self.date.strftime('%Y-%m-%d_%H:%M:%S'),
-            "user":    self.user,
-            "action":  self.action,
-            "changes": [x.json() for x in self.cmd_list],
-        }
+        return OrderedDict([
+            ("date",    self.date.strftime('%Y-%m-%d_%H:%M:%S')),
+            ("user",    self.user),
+            ("action",  self.action),
+            ("changes", [x.json() for x in self.cmd_list]),
+        ])
 
 #---------------------------------------------------------------------------
 
@@ -331,7 +386,7 @@ class Revisions:
         
     def json(self)->{str:str}:
         data = [x.json() for x in self._revisions]
-        return json.dumps(data, sort_keys=True, indent=4)
+        return json.dumps(data, sort_keys=False, indent=None)
 
 #---------------------------------------------------------------------------
 

@@ -9,13 +9,12 @@ import datetime
 #-------------------------------------------------------------------------------
 
 class Command:
-    def __init__(self, cmd_name:str, parameters:list):
+    def __init__(self, cmd_name:str, *parameters):
         assert isinstance(cmd_name, str)
-        assert isinstance(parameters, list)
-        print ('{}, {}'.format(cmd_name, parameters))
+        #print ('{}, {}'.format(cmd_name, parameters))
         
         self._cmd_name = cmd_name
-        self._parameters = parameters
+        self._parameters = list(parameters)
         
     def json(self):
         return [self._cmd_name] + self._parameters
