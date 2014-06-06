@@ -9,12 +9,21 @@ import datetime
 #-------------------------------------------------------------------------------
 
 class Command:
-    def __init__(self, cmd_name:str, parameters:[str]):
+    def __init__(self, cmd_name:str, parameters:list):
         assert isinstance(cmd_name, str)
-        assert isinstance(parameter_list, list)
-        assert all(isinstance(x, str) for x in parameters)
+        assert isinstance(parameters, list)
+#        if not all(isinstance(x, str) for x in parameters):
+        print ('{}, {}'.format(cmd_name, parameters))
+        
+ #       assert all(isinstance(x, str) for x in parameters)
         self._cmd_name = cmd_name
         self._parameters = parameters
+        
+    def json(self):
+        # str_list = [self._cmd_name] + self._parameters
+        # text = ', '.join('"' + x + '"' for x in str_list)
+        # return '[{}]'.format(text)
+        return [self._cmd_name] + self._parameters
         
     def apply(self, model):
         cmd_name = self._cmd_name
@@ -38,22 +47,22 @@ class Command:
     def _add_table(self, model):
         parameters = self._parameters
         if len(parameters) != 1:
-            raise Exception('{} {}'.format(cmd_name, parameters)
+            raise Exception('{} {}'.format(cmd_name, parameters))
         model.add_table(*parameters)
         
     def _remove_table(self, model):
         if len(parameters) != 1:
-            raise Exception('{} {}'.format(cmd_name, parameters)
+            raise Exception('{} {}'.format(cmd_name, parameters))
         model.remove_table(*parameters)
         
     def _rename_table(self, model):
         if len(parameters) != 2:
-            raise Exception('{} {}'.format(cmd_name, parameters)
+            raise Exception('{} {}'.format(cmd_name, parameters))
         model.rename_table(*parameters)
         
     def _add_col(self, model):
         if len(parameters) != 2:
-            raise Exception('{} {}'.format(cmd_name, parameters)
+            raise Exception('{} {}'.format(cmd_name, parameters))
         col_path = parameters[0]
         col_type = self._parse_col_type(parameters[1])
         table_name, col_name = self._split_col_path(col_path)
@@ -62,7 +71,7 @@ class Command:
             
     def _remove_col(self, model):
         if len(parameters) != 1:
-            raise Exception('{} {}'.format(cmd_name, parameters)
+            raise Exception('{} {}'.format(cmd_name, parameters))
         col_path = parameters[0]
         table_name, col_name = self._split_col_path(col_path)
         table = self._get_table(table_name)
@@ -70,7 +79,7 @@ class Command:
             
     def _add_row(self, model):
         if len(parameters) < 2:
-            raise Exception('{} {}'.format(cmd_name, parameters)
+            raise Exception('{} {}'.format(cmd_name, parameters))
         row_path = parameters[0]
         table_name, row_id = self._split_row_path(row_path)
         table = self._get_table(table_name)
@@ -78,7 +87,7 @@ class Command:
             
     def _set_value(self, model):
         if len(parameters) != 2:
-            raise Exception('{} {}'.format(cmd_name, parameters)
+            raise Exception('{} {}'.format(cmd_name, parameters))
         cell_path, new_value = parameters
         table_name, row_id, col_name = self._split_cell_path(cell_path)
         table = self._get_table(table_name)

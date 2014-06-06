@@ -4,6 +4,7 @@
 ##########################################
 
 from collections import OrderedDict
+from enum import Enum
 import datetime
 
 #-------------------------------------------------------------------------------
@@ -60,7 +61,7 @@ class Table:
         self._next_row_id += 1
         return new_row_id
         
-    def add_col(self, name:str, type:ColumnType):
+    def add_col(self, name:str, type:'ColumnType'):
         assert isinstance(name, str)
         assert isinstance(type, ColumnType)
         if name in self.columns:
@@ -110,7 +111,7 @@ class Table:
 #-------------------------------------------------------------------------------
 
 class Column:
-    def __init__(self, table:Table, name:str, col_type:ColumnType):
+    def __init__(self, table:Table, name:str, col_type:'ColumnType'):
         assert isinstance(table, Table)
         assert isinstance(name, str)
         assert isinstance(col_type, ColumnType)
@@ -226,7 +227,7 @@ class List(ColumnType):
         
 #-------------------------------------------------------------------------------
 
-enum Multiplicity:
+class Multiplicity(Enum):
     one2one = 1
     one2many = 2
     many2one = 3
