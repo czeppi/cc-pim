@@ -12,17 +12,12 @@ class Command:
     def __init__(self, cmd_name:str, parameters:list):
         assert isinstance(cmd_name, str)
         assert isinstance(parameters, list)
-#        if not all(isinstance(x, str) for x in parameters):
         print ('{}, {}'.format(cmd_name, parameters))
         
- #       assert all(isinstance(x, str) for x in parameters)
         self._cmd_name = cmd_name
         self._parameters = parameters
         
     def json(self):
-        # str_list = [self._cmd_name] + self._parameters
-        # text = ', '.join('"' + x + '"' for x in str_list)
-        # return '[{}]'.format(text)
         return [self._cmd_name] + self._parameters
         
     def apply(self, model):

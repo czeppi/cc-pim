@@ -23,15 +23,6 @@ class const:
     persons_filename    = 'persons.csv'
     companies_filename  = 'companies.csv'
     entry_sep           = ';'
-    # persons_keys = [
-        # 'Lastname', 'Firstname', 'Nickname', 'Birthday', 'Keywords', 'Remarks',
-        # 'Home Phone', 'Home Mobile', 'Home E-Mail', 'Home Street', 'Home City', 'Homepage',
-        # 'Company', 'Business Phone', 'Business Mobile', 'Business E-Mail', 'Business Street', 'Business City',
-    # ]
-    # companies_keys = [
-        # 'Name', 'Owner', 'Homepage', 'Keywords', 'Open Times', 'Remarks',
-        # 'Phone', 'Mobile', 'E-Mail', 'Street', 'City',
-    # ]
 
 #-------------------------------------------------------------------------------
 
@@ -68,14 +59,9 @@ def main():
             prev_persons = persons
             
             cmd_list = cols_diff.create_cmd_list() + rows_diff.create_cmd_list()
-            # cols_json_data = cols_diff.create_json_data()
-            # rows_json_data = rows_diff.create_json_data()
             revisions.append(
                 Revision(datetime.datetime.today(), cmd_list))
-#            revisions.append(
-#                create_json_revision(datetime.datetime.today(), cols_json_data + rows_json_data))
                 
-    #print(dump_json(revisions))
     print(revisions.json())
             
 #-------------------------------------------------------------------------------
@@ -223,19 +209,6 @@ class ColumnsDiff:
     def map_col(self, col_name_old, col_name_new):
         self.mapping[col_name_old] = col_name_new
         
-    # def create_json_data(self):
-        # data = []
-        # for col in self.removed_cols:
-            # self._add_json_cmd(data, 'remove col', col)
-        # for col in self.added_cols:
-            # self._add_json_cmd(data, 'add col', col)
-        # for old_name, new_name in self.mapping.items():
-            # self._add_json_cmd(data, 'rename col', old_name, new_name)
-        # return data
-        
-    # def _add_json_cmd(self, data, cmd, *args):
-        # data.append(['{}'.format(cmd)] + ['{}'.format(x) for x in args])
-
     def create_cmd_list(self)->'[Command]':
         cmd_list  = [Command('remove col', [x])      for x      in self.removed_cols]
         cmd_list += [Command('add col',    [x])      for x      in self.added_cols]
@@ -259,17 +232,13 @@ class RowsComparer:
         keys1 = set(row_map1.keys())
         keys2 = set(row_map2.keys())
         for key in keys1 - keys2:
-            #diff.remove_row(row_map1[key])
             diff.remove_row(key)
         for key in keys2 - keys1:
-            #diff.add_row(row_map2[key])
             diff.add_row(key)
         for key in keys1 & keys2:
             row1 = row_map1[key]
             row2 = row_map2[key]
             if row1 != row2:
-                #diff.change_row(row1, row2)
-                #print('## {}\n   {}'.format(row1, row2))
                 diff.change_row(key)
         return diff
         
@@ -317,43 +286,22 @@ class RowsDiff:
     def change_row(self, row_key:str):
         self.changed_rows.append(row_key)
         
-    # def create_json_data(self)->[str]:
-        # data = []
-        # for row in self.removed_rows:
-            # self._add_json_cmd(data, 'remove row', row)
-        # for row in self.added_rows:
-            # self._add_json_cmd(data, 'add row', row)
-        # for old_row, new_row in self.changed_rows:
-            # self._add_json_cmd(data, 'change row', old_row, new_row)
-        # return data
-            
-    # def _add_json_cmd(self, data, cmd, *args):
-        # data.append(['{}'.format(cmd)] + ['{}'.format(x) for x in args])
-        
     def transfer_ids(self):
         for key in self.changed_rows:
             row_id = self.data1.get_row_id(key)
             self.data2.set_row_id(key, row_id)
             
     def create_cmd_list(self)->'[Command]':
-        cmd_list  = [Command('remove row', [self.data1.get_row_id(x)])      for x      in self.removed_rows]
-        cmd_list += [Command('add row',    [self.data2.get_row_id(x)])      for x      in self.added_rows]
+        cmd_list  = [Command('remove row', [self.data1.get_row_id(x)]) for x in self.removed_rows]
+        cmd_list += [Command('add row',    [self.data2.get_row_id(x)]) for x in self.added_rows]
+        
         #cmd_list += [Command('rename row', [x1, x2]) for x1, x2 in self.changed_rows]
+        for row_key in self.changed_rows:
+            self.data1.
+        
+        
         return cmd_list
         
-#---------------------------------------------------------------------------
-
-# def create_first_json_revision(date_time:datetime.datetime)->{str:object}:
-    # return create_json_revision(date_time, [
-        # ['crate table', 'persons'], 
-# #        ['crate table', 'companies'], 
-    # ])
-
-# #---------------------------------------------------------------------------
-
-# def create_json_revision(date_time:datetime.datetime, changes):
-    # return Revision(date_time, changes)
-    
 #---------------------------------------------------------------------------
 
 class Revision:
@@ -368,7 +316,6 @@ class Revision:
             "date":    self.date.strftime('%Y-%m-%d_%H:%M:%S'),
             "user":    self.user,
             "action":  self.action,
-#            "changes": '[{}]'.format(', '.join(x.json() for x in self.cmd_list)),
             "changes": [x.json() for x in self.cmd_list],
         }
 
@@ -385,11 +332,6 @@ class Revisions:
     def json(self)->{str:str}:
         data = [x.json() for x in self._revisions]
         return json.dumps(data, sort_keys=True, indent=4)
-
-#---------------------------------------------------------------------------
-
-# def dump_json(data):
-    # return json.dumps(data, sort_keys=True, indent=4)
 
 #---------------------------------------------------------------------------
 
