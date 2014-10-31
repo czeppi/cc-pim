@@ -31,22 +31,23 @@ class const:
 
 def main():
     revisions = Revisions()
-    revisions.append(
-        Revision(datetime.datetime.today(), [
-            Command('crate table', 'persons'), 
-            Command('crate table', 'companies'),
-            ]
-        )
-    )
     
     persons_key = ('Lastname', 'Firstname')
     persons_table_name = 'persons'
     prev_persons = CvsData(persons_table_name, persons_key)
+    table_created = False
     for zip_path in const.zip_pathes:
         with ZipFile(str(zip_path)) as data_zip:
             print('{}:'.format(zip_path))
             
+            zip_mtime    = zip_path.stat().st_mtime
+            zip_datetime = datetime.datetime.fromtimestamp(zip_mtime)
+            
             cmd_list = []
+            if not table_created:
+                cmd_list += [Command('crate table', 'persons'), Command('crate table', 'companies')]
+                table_created = True
+
             persons_file = data_zip.open(const.persons_filename)
             persons = CvsData(persons_table_name, persons_key)
             persons.read(persons_file)
@@ -76,12 +77,12 @@ def main():
                 cmd_list += row2.create_cmd_list(persons_table_name)
                 
             revisions.append(
-                Revision(datetime.datetime.today(), cmd_list))
+                Revision(zip_datetime, cmd_list))
                 
             prev_persons = persons
                 
     out_path = const.out_dir / const.json_filename
-    out_path.open('w').write(revisions.json())
+    out_path.open('w').write(revisions.create_json_string())
             
 #-------------------------------------------------------------------------------
 
@@ -257,7 +258,7 @@ class ColumnsDiff:
     def create_cmd_list(self, table_name) -> '[Command]':
         cmd_list  = [Command('remove col', table_name, x)      for x      in self.removed_col_names]
         cmd_list += [Command('add col',    table_name, x)      for x      in self.added_col_names]
-        cmd_list += [Command('rename col', table_name, x1, x2) for x1, x2 in self.mapping.items()]
+        cmd_list += [Command('rename col', table_name, x1, x2) for x1, x2 in self.mapping.items() if x1 != x2]
         return cmd_list
         
 #---------------------------------------------------------------------------
@@ -346,12 +347,12 @@ class Revision:
         self.action = 'import'
         self.cmd_list = cmd_list
         
-    def json(self)->{str:str}:
+    def create_json_dict(self)->{str:str}:
         return OrderedDict([
             ("date",    self.date.strftime('%Y-%m-%d_%H:%M:%S')),
             ("user",    self.user),
             ("action",  self.action),
-            ("changes", [x.json() for x in self.cmd_list]),
+            ("changes", [x.create_json_list() for x in self.cmd_list]),
         ])
 
 #---------------------------------------------------------------------------
@@ -364,8 +365,8 @@ class Revisions:
         assert isinstance(revision, Revision)
         self._revisions.append(revision)
         
-    def json(self)->{str:str}:
-        data = [x.json() for x in self._revisions]
+    def create_json_string(self)->{str:str}:
+        data = [x.create_json_dict() for x in self._revisions]
         return json.dumps(data, sort_keys=False, indent=const.json_ident)
 
 #---------------------------------------------------------------------------

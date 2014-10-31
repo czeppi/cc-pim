@@ -16,7 +16,7 @@ class Command:
         self._cmd_name = cmd_name
         self._parameters = list(parameters)
         
-    def json(self):
+    def create_json_list(self):
         return [self._cmd_name] + self._parameters
         
     def apply(self, model):
