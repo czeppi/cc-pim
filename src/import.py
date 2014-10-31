@@ -25,6 +25,7 @@ class const:
     companies_filename  = 'companies.csv'
     entry_sep           = ';'
     json_filename       = 'import.json'
+    json_ident          = 4  # None
 
 #-------------------------------------------------------------------------------
 
@@ -261,27 +262,6 @@ class ColumnsDiff:
         
 #---------------------------------------------------------------------------
 
-# class RowsIDTransmitter:
-    # def __init__(self, cvs_data1:'CvsData', cvs_data2:'CvsData'):
-        # """ Set IDs from cvs_data2.
-        # """
-        # assert isinstance(cvs_data1, CvsData)
-        # assert isinstance(cvs_data2, CvsData)
-        # self._cvs_data1 = cvs_data1
-        # self._cvs_data2 = cvs_data2
-        
-    # def transfer_ids(self):
-        # self.rows1 = {x.create_key() for x in self._cvs_data1.generate_rows()}
-        # self.rows2 = {x.create_key() for x in self._cvs_data2.generate_rows()}
-        
-        # common_keys = set(self.rows1.keys()) &  set(self.rows2.keys())
-        # for key in common_keys:
-            # row1 = self.rows1[key]
-            # row2 = self.rows2[key]
-            # row2.set_id(row1.id)
-        
-#---------------------------------------------------------------------------
-
 class RowsIdDiff:
     def __init__(self, cvs_data1:'CvsData', cvs_data2:'CvsData'):
         assert isinstance(cvs_data1, CvsData)
@@ -386,7 +366,7 @@ class Revisions:
         
     def json(self)->{str:str}:
         data = [x.json() for x in self._revisions]
-        return json.dumps(data, sort_keys=False, indent=None)
+        return json.dumps(data, sort_keys=False, indent=const.json_ident)
 
 #---------------------------------------------------------------------------
 

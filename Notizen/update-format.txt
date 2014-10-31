@@ -2,7 +2,7 @@ DB-Format:
 ---------
 Vorteil: Schnelle Deltabestimmung, um verschiedene Rechner zu synchronisieren
 
-Variant1 (bervorzugte Variante!):
+Variant1 (bervorzugte Variante! evtl aber auch csv-Format2):
   Vorteil vom json-string: er kann auch gleich für Übertragung zwischen Client und Server dienen
   Vorteil DB: schnelle Deltabestimmung
   
@@ -165,7 +165,7 @@ PersonAddress5648789 = PersonAddress(person=..., address=..., valid_form=...)
 // ManuelaGallaBurgemeister74a.valid_to = Date131019Umzug
 
 
-csv-Format:
+csv-Format1:
 -----------
 Vorteil: besser lesbar
 
@@ -183,6 +183,87 @@ rename column adresses.street s
 +person_address
 +person_address.person = key(persons)
 +person_address.address = key(addresses)
+
+
+csv-Format2 (141020):
+---------------------
+Vorteile: besser lesbar + kürzer
+
+Komplette bisherige persons-Struktur: (noch nicht ganz fertig!)
+
+create_table persons
+add_col persons.lastname str
+add_col persons.firstname str
+add_col persons.birthday date
+add_col persons.keywords [str]
+add_col persons.remarks str
+add_col persons.home_mobiles [PhoneNumber]
+add_col persons.home_emails [EMail]
+add_col persons.home_addresses [*addresses]
+add_col persons.homepages [Url]
+add_col persons.companies [*companies]
+add_col persons.business_addresses [*addresses]
+add_col persons.business_mobiles [PhoneNumber]
+create_table addresses
+add_col addresses.street str
+add_col addresses.city str
+add_col addresses.phone PhoneNumber
+
+extra:
+add_col persons.nickname str
+add_col persons.linkname str # für Darstellung bei Links
+add_col addresses.country str
+add_col persons.mother *persons
+add_col persons.father *persons
+add_col persons.partner [*persons]
+(add_col persons.children <-persons.mother+persons.father)
+
++zu jedem entry:
+ID
+link_name
+valid_from Event
+valid_to Event
+predecessor ID
+remark
+
+#fill-example
+add persons.17.lastname Czepluch id=101
+add persons.17.firstname Nicole id=102
+add persons.17.linkname SS id=103
+set persons.17.birthday 8.1.72
+add persons.17.home_addresses Schweiz... id=105
+
+
+
+Ausschnitt:
+
+*141020
+create_table persons
+add_col persons.name str: max_len=100
+add_col persons.phone PhoneNumber
+add_col persons.adresses refs addresses 
+insert_row persons: 1, abc, 32493, [34, 35]
+update_row persons: id=1, name=def
+create_table address
+add_col addresses.street str
+add_col addresses.persons refs persons
+tie_refs persons.addresses adresses.persons
+#add_col addresses.persons backrefs persons.addresses
+#add_connection n-n persons.addresses adress.persons
+#add connection 123123 123213
+
+noch kürzer:
+*141020
++persons
++persons.name str(max_len=100)
++persons.phone PhoneNumber
++persons.addresslist Adresslist
++persons.1 abc, 32493, [34, 35]
+persons.1 = name=def
++address
++address.street str
++n-n persons.addresses adress.persons
+=> Syntax nicht offensichtlich
 
 
 yaml-Format:
