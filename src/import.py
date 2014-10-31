@@ -167,9 +167,10 @@ class Row:
         self._id = row_id
         
     def create_cmd_list(self, table_name) -> '[Command]':
-        return [Command('set value', table_name, self.id, x, self._row_data[x])
-                for x in self._cvs_data.cols_name
-                if self._row_data[x] not in (None, '')]
+        # return [Command('set value', table_name, self.id, x, self._row_data[x])
+                # for x in self._cvs_data.cols_name
+                # if self._row_data[x] not in (None, '')]
+        return [Command('add row', table_name, self.id, *[self._row_data[x] for x in self._cvs_data.cols_name])]
         
 #---------------------------------------------------------------------------
 
@@ -256,9 +257,9 @@ class ColumnsDiff:
         self.mapping[col_name_old] = col_name_new
         
     def create_cmd_list(self, table_name) -> '[Command]':
-        cmd_list  = [Command('remove col', table_name, x)      for x      in self.removed_col_names]
-        cmd_list += [Command('add col',    table_name, x)      for x      in self.added_col_names]
-        cmd_list += [Command('rename col', table_name, x1, x2) for x1, x2 in self.mapping.items() if x1 != x2]
+        cmd_list  = [Command('remove col', table_name, x)        for x      in self.removed_col_names]
+        cmd_list += [Command('add col',    table_name, x, 'str') for x      in self.added_col_names]
+        cmd_list += [Command('rename col', table_name, x1, x2)   for x1, x2 in self.mapping.items() if x1 != x2]
         return cmd_list
         
 #---------------------------------------------------------------------------
@@ -279,7 +280,7 @@ class RowsIdDiff:
 
     def create_cmd_list(self, table_name) -> '[Command]':
         cmd_list  = [Command('remove row', table_name, x) for x in self.removed_id_list]
-        cmd_list += [Command('add row',    table_name, x) for x in self.added_id_list]
+        #cmd_list += [Command('add row',    table_name, x) for x in self.added_id_list]
         return cmd_list
         
 #---------------------------------------------------------------------------
