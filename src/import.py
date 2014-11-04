@@ -122,10 +122,10 @@ def PrintChangedRows(prev_persons, persons, rows_id_diff):
                          persons.get_row(row_id).data['Firstname'], 
                          persons.get_row(row_id).data['Lastname']) 
                          for row_id in rows_id_diff.added_id_list]
-    # common_persons = ['== {} {}'.format(
-                         # persons.get_row(row_id).data['Firstname'], 
-                         # persons.get_row(row_id).data['Lastname']) 
-                         # for row_id in rows_id_diff.common_id_list]
+    common_persons = ['== {} {}'.format(
+                         persons.get_row(row_id).data['Firstname'], 
+                         persons.get_row(row_id).data['Lastname']) 
+                         for row_id in rows_id_diff.common_id_list]
                          
     for line in sorted(remove_persons + add_persons, key=lambda x: x[2:] + x[0]):
         logging.debug('  {}'.format(line))
@@ -223,9 +223,6 @@ class Row:
         self._id = row_id
         
     def create_cmd_list(self, table_name) -> '[Command]':
-        # return [Command('set value', table_name, self.id, x, self._row_data[x])
-                # for x in self._cvs_data.cols_name
-                # if self._row_data[x] not in (None, '')]
         return [Command('add row', table_name, self.id, *[self._row_data[x] for x in self._cvs_data.cols_name])]
         
 #---------------------------------------------------------------------------
@@ -318,75 +315,6 @@ class ColumnsDiff:
         cmd_list += [Command('rename col', table_name, x1, x2)   for x1, x2 in self.mapping.items() if x1 != x2]
         return cmd_list
         
-#---------------------------------------------------------------------------
-
-class RowsIdMapper:
-    def __init__(self, cvs_data1:'CvsData', cvs_data2:'CvsData', cols_mapping):
-        assert isinstance(cvs_data1, CvsData)
-        assert isinstance(cvs_data2, CvsData)
-        assert isinstance(cols_mapping, dict)
-        self.cvs_data1 = cvs_data1
-        self.cvs_data2 = cvs_data2
-        self.cols_mapping = cols_mapping
-        
-    def map(self):
-        ids1 = self.cvs_data1.row_id_set()
-        ids2 = self.cvs_data2.row_id_set()
-        
-        id_mapping = {x: x for x in ids1 & ids2}
-        
-        removed_id_set = ids1 - ids2
-        added_id_set   = ids2 - ids1
-        ratio_counter = self._create_ratio_counter(removed_id_set, added_id_set)
-        
-        for (row_id1, row_id2), ratio in ratio_counter.most_common():
-            if ratio >= 2.0 and row_id1 in removed_id_set and row_id2 in added_id_set:
-                logging.debug('  ratio={}'.format(ratio))
-                old_str = str(self.cvs_data1.get_row(row_id1))
-                logging.debug('    {}'.format(self.cvs_data1.get_row(row_id1)))
-                logging.debug('    {}'.format(self.cvs_data2.get_row(row_id2)))
-                id_mapping[row_id1] = row_id2
-                removed_id_set.remove(row_id1)
-                added_id_set.remove(row_id2)
-                
-        return id_mapping
-            
-    def _create_ratio_counter(self, removed_id_set, added_id_set):
-        ratio_counter = Counter()
-        for row_id1 in removed_id_set:
-            for row_id2 in added_id_set:
-                row1 = self.cvs_data1.get_row(row_id1)
-                row2 = self.cvs_data2.get_row(row_id2)
-                ratio = self._calc_row_ratio(row1, row2)
-                ratio_counter[(row_id1, row_id2)] = ratio
-        return ratio_counter
-        
-    def _calc_row_ratio(self, row1, row2):
-        if not self._are_firstname_equal(row1, row2):
-            return 0.0
-        
-        n_sum = 0
-        ratio_sum = 0.0
-        
-        for col_name1, col_name2 in self.cols_mapping.items():
-            val1 = row1.data[col_name1]
-            val2 = row2.data[col_name2]
-            n = len(val1)  # Länge des alten Wertes! (möglich wäre auch der des Kürzeren)
-            n_sum += n
-            ratio = self._calc_val_ratio(val1, val2)
-            ratio_sum += n * ratio
-        return ratio_sum / (n_sum ** 0.5)  # noch unklar, sollte irgendwo zwischen ratio_sum/n_sum und ratio_sum liegen
-        
-    def _are_firstname_equal(self, row1, row2):
-        firstname1 = row1.data['Firstname'].lower()
-        firstname2 = row2.data['Firstname'].lower()
-        n = min(len(firstname1), len(firstname2))
-        return firstname1[:n] == firstname2[:n]
-            
-    def _calc_val_ratio(self, val1, val2):
-        matcher = SequenceMatcher(a=val1, b=val2)
-        return matcher.ratio()
-
 #---------------------------------------------------------------------------
 
 class RowsKeyMapper:
