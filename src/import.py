@@ -3,6 +3,28 @@
 ## Copyright 2013 by Christian Czepluch ##
 ##########################################
 
+# Import Log, der gelöschten Personen:
+#
+# G:\Eigene-Software\Python\cc-address\archive\data-02.zip:
+#   - Biene Fragel => doppelt (Bianca Fragel)
+#   - Rena Aglassinger
+# G:\Eigene-Software\Python\cc-address\archive\data-06.zip:
+#   - Christa Reeck? => doppelt
+#   - Hermann Reeck? => doppelt
+#   - Nicole Derbinski => doppelt
+# G:\Eigene-Software\Python\cc-address\archive\data-07.zip:
+#   - Uta => doppelt
+# G:\Eigene-Software\Python\cc-address\archive\data-08.zip:
+#   - Carola Begemann => Company
+#   - Christian Jacob => Company
+#   - Gritta Dunkel => Company
+#   - Jörg Pagel => Company
+#   - Yilmaz Kaakan => Company
+# G:\Eigene-Software\Python\cc-address\archive\data-09.zip:
+#   - Henner => doppelt
+#   - Jari?  = Annette Jahreis
+#   - Martin => doppelt (Martin Köbsch)
+
 import sys
 from pathlib import Path
 from zipfile import ZipFile
@@ -11,6 +33,9 @@ import io
 from collections import Counter, OrderedDict
 import json
 import datetime
+from difflib import SequenceMatcher
+import logging
+
 from db import Model, Table
 from cmd import Command
 
@@ -30,15 +55,17 @@ class const:
 #-------------------------------------------------------------------------------
 
 def main():
+    logging.basicConfig(filename='import.log',level=logging.DEBUG)
+
     revisions = Revisions()
     
-    persons_key = ('Lastname', 'Firstname')
+    persons_key = ('Lastname', 'Firstname', 'Keywords')
     persons_table_name = 'persons'
     prev_persons = CvsData(persons_table_name, persons_key)
     table_created = False
     for zip_path in const.zip_pathes:
         with ZipFile(str(zip_path)) as data_zip:
-            print('{}:'.format(zip_path))
+            logging.info('{}:'.format(zip_path))
             
             zip_mtime    = zip_path.stat().st_mtime
             zip_datetime = datetime.datetime.fromtimestamp(zip_mtime)
@@ -51,25 +78,25 @@ def main():
             persons_file = data_zip.open(const.persons_filename)
             persons = CvsData(persons_table_name, persons_key)
             persons.read(persons_file)
-            persons.init_id2rows(prev_persons)
-            
-            #print(len(persons.cols_name))
-            #print(persons.rows_data[0])
             
             cols_comparer = ColumnsComparer(prev_persons.cols_name, persons.cols_name)
             cols_diff = cols_comparer.compare()
-            #print(cols_diff)
+            #logging.debug(cols_diff)
             cmd_list += cols_diff.create_cmd_list(persons_table_name)
+
+            persons.init_id2rows(prev_persons, cols_diff.mapping)
             
             rows_id_diff = RowsIdDiff(prev_persons, persons)
             cmd_list += rows_id_diff.create_cmd_list(persons_table_name)
+            
+            PrintChangedRows(prev_persons, persons, rows_id_diff)
             
             for row_id in rows_id_diff.common_id_list:
                 row1 = prev_persons.get_row(row_id)
                 row2 = persons.get_row(row_id)
                 rows_comparer = RowsComparer(row1, row2, cols_diff)
                 rows_diff = rows_comparer.compare()
-                # print(rows_diff)
+                # logging.debug(rows_diff)
                 cmd_list += rows_diff.create_cmd_list(persons_table_name)
 
             for row_id in rows_id_diff.added_id_list:
@@ -86,6 +113,27 @@ def main():
             
 #-------------------------------------------------------------------------------
 
+def PrintChangedRows(prev_persons, persons, rows_id_diff):
+    remove_persons = ['- {} {}'.format(
+                         prev_persons.get_row(row_id).data['Firstname'], 
+                         prev_persons.get_row(row_id).data['Lastname']) 
+                         for row_id in rows_id_diff.removed_id_list]
+    add_persons    = ['+ {} {}'.format(
+                         persons.get_row(row_id).data['Firstname'], 
+                         persons.get_row(row_id).data['Lastname']) 
+                         for row_id in rows_id_diff.added_id_list]
+    # common_persons = ['== {} {}'.format(
+                         # persons.get_row(row_id).data['Firstname'], 
+                         # persons.get_row(row_id).data['Lastname']) 
+                         # for row_id in rows_id_diff.common_id_list]
+                         
+    for line in sorted(remove_persons + add_persons, key=lambda x: x[2:] + x[0]):
+        logging.debug('  {}'.format(line))
+#    for line in sorted(common_persons):
+#        logging.debug('  {}'.format(line))
+
+#-------------------------------------------------------------------------------
+
 class CvsData:
     def __init__(self, table_name, key_col_names):
         self._key_col_names = key_col_names
@@ -97,8 +145,7 @@ class CvsData:
         self.rows_data = []
         
     def read(self, fh):
-        print('fh: {}'.format(type(fh)))
-        text_wrapper = io.TextIOWrapper(fh, encoding='latin-1')
+        text_wrapper = io.TextIOWrapper(fh, encoding='Windows-1252') # nicht latin-1, wegen €-Zeichen
         reader = csv.DictReader(text_wrapper, delimiter=const.entry_sep, skipinitialspace=True)
         self.cols_name = reader.fieldnames
         self.rows_data = list(reader)
@@ -109,21 +156,23 @@ class CvsData:
         self._key2row = {}
         for i in range(len(self.rows_data)):
             row = Row(self, i)
-            key = (row.data[x] for x in self._key_col_names)
+            key = tuple(row.data[x] for x in self._key_col_names)
             if key in self._key2row:
                 raise Exception(key)
             self._key2row[key] = row
 
-    def init_id2rows(self, other):
+    def init_id2rows(self, other, col_mapping):
         self._id2row = {}
-        self._transfer_ids(other)
+        self._transfer_ids(other, col_mapping)
         self._fill_up_ids(other._next_id)
     
-    def _transfer_ids(self, other):
-        common_keys = set(self._key2row.keys()) &  set(other._key2row.keys())
-        for key in common_keys:
-            self_row  = self._key2row[key]
-            other_row = other._key2row[key]
+    def _transfer_ids(self, other, col_mapping):
+        rows_key_mapper = RowsKeyMapper(other._key2row, self._key2row, col_mapping)
+        rows_key_map = rows_key_mapper.map()
+        
+        for other_key, self_key in rows_key_map.items():
+            self_row  = self._key2row[self_key]
+            other_row = other._key2row[other_key]
             self_row.set_id(other_row.id)
             self._id2row[other_row.id] = self_row
 
@@ -149,6 +198,13 @@ class Row:
         self._row_data  = cvs_data.rows_data[index]
         self._index     = index
         self._id        = None
+        
+    def __str__(self):
+        items = ['{}: {}'.format(x, self._row_data[x]) for x in self._cvs_data.cols_name if len(self._row_data[x]) > 0]
+        return '{' + ', '.join(items) + '}'
+        
+    def __repr__(self):
+        return str(self)
         
     @property
     def id(self):
@@ -264,6 +320,151 @@ class ColumnsDiff:
         
 #---------------------------------------------------------------------------
 
+class RowsIdMapper:
+    def __init__(self, cvs_data1:'CvsData', cvs_data2:'CvsData', cols_mapping):
+        assert isinstance(cvs_data1, CvsData)
+        assert isinstance(cvs_data2, CvsData)
+        assert isinstance(cols_mapping, dict)
+        self.cvs_data1 = cvs_data1
+        self.cvs_data2 = cvs_data2
+        self.cols_mapping = cols_mapping
+        
+    def map(self):
+        ids1 = self.cvs_data1.row_id_set()
+        ids2 = self.cvs_data2.row_id_set()
+        
+        id_mapping = {x: x for x in ids1 & ids2}
+        
+        removed_id_set = ids1 - ids2
+        added_id_set   = ids2 - ids1
+        ratio_counter = self._create_ratio_counter(removed_id_set, added_id_set)
+        
+        for (row_id1, row_id2), ratio in ratio_counter.most_common():
+            if ratio >= 2.0 and row_id1 in removed_id_set and row_id2 in added_id_set:
+                logging.debug('  ratio={}'.format(ratio))
+                old_str = str(self.cvs_data1.get_row(row_id1))
+                logging.debug('    {}'.format(self.cvs_data1.get_row(row_id1)))
+                logging.debug('    {}'.format(self.cvs_data2.get_row(row_id2)))
+                id_mapping[row_id1] = row_id2
+                removed_id_set.remove(row_id1)
+                added_id_set.remove(row_id2)
+                
+        return id_mapping
+            
+    def _create_ratio_counter(self, removed_id_set, added_id_set):
+        ratio_counter = Counter()
+        for row_id1 in removed_id_set:
+            for row_id2 in added_id_set:
+                row1 = self.cvs_data1.get_row(row_id1)
+                row2 = self.cvs_data2.get_row(row_id2)
+                ratio = self._calc_row_ratio(row1, row2)
+                ratio_counter[(row_id1, row_id2)] = ratio
+        return ratio_counter
+        
+    def _calc_row_ratio(self, row1, row2):
+        if not self._are_firstname_equal(row1, row2):
+            return 0.0
+        
+        n_sum = 0
+        ratio_sum = 0.0
+        
+        for col_name1, col_name2 in self.cols_mapping.items():
+            val1 = row1.data[col_name1]
+            val2 = row2.data[col_name2]
+            n = len(val1)  # Länge des alten Wertes! (möglich wäre auch der des Kürzeren)
+            n_sum += n
+            ratio = self._calc_val_ratio(val1, val2)
+            ratio_sum += n * ratio
+        return ratio_sum / (n_sum ** 0.5)  # noch unklar, sollte irgendwo zwischen ratio_sum/n_sum und ratio_sum liegen
+        
+    def _are_firstname_equal(self, row1, row2):
+        firstname1 = row1.data['Firstname'].lower()
+        firstname2 = row2.data['Firstname'].lower()
+        n = min(len(firstname1), len(firstname2))
+        return firstname1[:n] == firstname2[:n]
+            
+    def _calc_val_ratio(self, val1, val2):
+        matcher = SequenceMatcher(a=val1, b=val2)
+        return matcher.ratio()
+
+#---------------------------------------------------------------------------
+
+class RowsKeyMapper:
+    def __init__(self, key2row1:'{str:Row}', key2row2:'{str:Row}', cols_mapping):
+        assert isinstance(key2row1, dict)
+        assert isinstance(key2row2, dict)
+        assert isinstance(cols_mapping, dict)
+        self.key2row1 = key2row1
+        self.key2row2 = key2row2
+        self.cols_mapping = cols_mapping
+        
+    def map(self):
+        keys1 = set(self.key2row1.keys())
+        keys2 = set(self.key2row2.keys())
+        
+        key_mapping = {x: x for x in keys1 & keys2}
+        
+        removed_key_set = keys1 - keys2
+        added_key_set   = keys2 - keys1
+        ratio_counter = self._create_ratio_counter(removed_key_set, added_key_set)
+        
+        for (key1, key2), ratio in ratio_counter.most_common():
+            if ratio >= 2.0 and key1 in removed_key_set and key2 in added_key_set:
+                row1 = self.key2row1[key1]
+                row2 = self.key2row2[key2]
+                
+                logging.debug('  ratio={}'.format(ratio))
+                logging.debug('    {}'.format(row1))
+                logging.debug('    {}'.format(row2))
+                
+                key_mapping[key1] = key2
+                removed_key_set.remove(key1)
+                added_key_set.remove(key2)
+        logging.debug('  remove:')
+        for key1 in removed_key_set:
+            row1 = self.key2row1[key1]
+            logging.debug('    {}'.format(row1))
+                
+        return key_mapping
+            
+    def _create_ratio_counter(self, removed_key_set, added_key_set):
+        ratio_counter = Counter()
+        for key1 in removed_key_set:
+            for key2 in added_key_set:
+                row1 = self.key2row1[key1]
+                row2 = self.key2row2[key2]
+                ratio = self._calc_row_ratio(row1, row2)
+                ratio_counter[(key1, key2)] = ratio
+        return ratio_counter
+        
+    def _calc_row_ratio(self, row1, row2):
+        if not self._are_firstname_equal(row1, row2):
+            return 0.0
+        
+        n_sum = 0
+        ratio_sum = 0.0
+        
+        for col_name1, col_name2 in self.cols_mapping.items():
+            val1 = row1.data[col_name1]
+            val2 = row2.data[col_name2]
+            n = len(val1)  # Länge des alten Wertes! (möglich wäre auch der des Kürzeren)
+            n_sum += n
+            ratio = self._calc_val_ratio(val1, val2)
+            ratio_sum += n * ratio
+        return ratio_sum / (n_sum ** 0.5)  # noch unklar, sollte irgendwo zwischen ratio_sum/n_sum und ratio_sum liegen
+        
+    def _are_firstname_equal(self, row1, row2):
+        firstname1 = row1.data['Firstname'].lower()
+        firstname2 = row2.data['Firstname'].lower()
+        n = min(len(firstname1), len(firstname2))
+        return firstname1[:n] == firstname2[:n]
+            
+    def _calc_val_ratio(self, val1, val2):
+        matcher = SequenceMatcher(a=val1, b=val2)
+        return matcher.ratio()
+        
+#---------------------------------------------------------------------------
+
 class RowsIdDiff:
     def __init__(self, cvs_data1:'CvsData', cvs_data2:'CvsData'):
         assert isinstance(cvs_data1, CvsData)
@@ -318,13 +519,15 @@ class RowsDiff:
     def __init__(self, row1:'Row', row2:'Row'):
         assert isinstance(row1, Row)
         assert isinstance(row2, Row)
+        assert row1.id == row2.id
+        self.row_id = row1.id
         self.row1 = row1
         self.row2 = row2
         self.diff_list = []
         
     def add(self, col_name2, value2):
         self.diff_list.append(
-            RowDiff(col_name2, value))
+            RowDiff(self.row_id, col_name2, value2))
         
     def create_cmd_list(self, table_name) -> '[Command]':
         return [x.create_cmd(table_name) for x in self.diff_list]
@@ -332,12 +535,13 @@ class RowsDiff:
 #---------------------------------------------------------------------------
 
 class RowDiff:
-    def __init__(self, col_name, value):
+    def __init__(self, row_id, col_name, value):
+        self.row_id   = row_id
         self.col_name = col_name
         self.value    = value
         
     def create_cmd(self, table_name) -> 'Command':
-        return Command('set value', table_name, row_id, self.col_name, value)
+        return Command('set value', table_name, self.row_id, self.col_name, self.value)
         
 #---------------------------------------------------------------------------
 
