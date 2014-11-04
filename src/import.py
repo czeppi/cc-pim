@@ -25,6 +25,17 @@
 #   - Jari?  = Annette Jahreis
 #   - Martin => doppelt (Martin Köbsch)
 
+# Import Log, der gelöschten Companies:
+#
+# G:\Eigene-Software\Python\cc-pim\data\cc-address-import\data-06.zip:
+  # - Kanustation Granzow => doppelt
+  # - Virchow Krankenhaus => doppelt
+  # - Virchow Krankenhaus => doppelt
+# G:\Eigene-Software\Python\cc-pim\data\cc-address-import\data-09.zip:
+  # - Bowling Hasenheide => doppelt (City-Bowling)
+# G:\Eigene-Software\Python\cc-pim\data\cc-address-import\data-14.zip:
+  # + => Rena, Second-Hand
+
 import sys
 from pathlib import Path
 from zipfile import ZipFile
@@ -41,7 +52,8 @@ from cmd import Command
 
 class const:
     root_dir            = Path(sys.argv[0]).resolve().parents[1]
-    archive_dir         = root_dir.parent / 'cc-address' / 'archive'
+    #archive_dir         = root_dir.parent / 'cc-address' / 'archive'
+    archive_dir         = root_dir / 'data' / 'cc-address-import'
     out_dir             = root_dir
     # zip_pathes          = list(archive_dir.glob('data-01.zip'))
     zip_pathes          = sorted(list(archive_dir.glob('data-??.zip')) +
@@ -59,9 +71,24 @@ def main():
 
     revisions = Revisions()
     
-    persons_key = ('Lastname', 'Firstname', 'Keywords')
-    persons_table_name = 'persons'
-    prev_persons = CvsData(persons_table_name, persons_key)
+    person_cmd_creator = TableCommandCreator(
+        file_name=const.persons_filename,
+        table_name='persons', 
+        key_col_names=['Lastname', 'Firstname', 'Keywords'],
+        show_col_names=['Lastname', 'Firstname'],
+    )
+        
+    company_cmd_creator = TableCommandCreator(
+        file_name=const.companies_filename,
+        table_name='companies', 
+        key_col_names=['Name', 'Keywords'],
+        show_col_names=['Name'],
+    )
+    
+    # persons_key = ('Lastname', 'Firstname', 'Keywords')
+    # persons_table_name = 'persons'
+    # prev_persons = CvsData(persons_table_name, persons_key)
+    
     table_created = False
     for zip_path in const.zip_pathes:
         with ZipFile(str(zip_path)) as data_zip:
@@ -74,64 +101,108 @@ def main():
             if not table_created:
                 cmd_list += [Command('crate table', 'persons'), Command('crate table', 'companies')]
                 table_created = True
+                
+            for cmd_creator in [person_cmd_creator, company_cmd_creator]:
+            #for cmd_creator in [company_cmd_creator]:
+                fh = data_zip.open(cmd_creator.file_name)
+                cmd_list += cmd_creator.create_commands(fh)
 
-            persons_file = data_zip.open(const.persons_filename)
-            persons = CvsData(persons_table_name, persons_key)
-            persons.read(persons_file)
+            # persons_file = data_zip.open(const.persons_filename)
+            # persons = CvsData(persons_table_name, persons_key)
+            # persons.read(persons_file)
             
-            cols_comparer = ColumnsComparer(prev_persons.cols_name, persons.cols_name)
-            cols_diff = cols_comparer.compare()
-            #logging.debug(cols_diff)
-            cmd_list += cols_diff.create_cmd_list(persons_table_name)
+            # cols_comparer = ColumnsComparer(prev_persons.cols_name, persons.cols_name)
+            # cols_diff = cols_comparer.compare()
+            # #logging.debug(cols_diff)
+            # cmd_list += cols_diff.create_cmd_list(persons_table_name)
 
-            persons.init_id2rows(prev_persons, cols_diff.mapping)
+            # persons.init_id2rows(prev_persons, cols_diff.mapping)
             
-            rows_id_diff = RowsIdDiff(prev_persons, persons)
-            cmd_list += rows_id_diff.create_cmd_list(persons_table_name)
+            # rows_id_diff = RowsIdDiff(prev_persons, persons)
+            # cmd_list += rows_id_diff.create_cmd_list(persons_table_name)
             
-            PrintChangedRows(prev_persons, persons, rows_id_diff)
+            # PrintChangedRows(prev_persons, persons, rows_id_diff)
             
-            for row_id in rows_id_diff.common_id_list:
-                row1 = prev_persons.get_row(row_id)
-                row2 = persons.get_row(row_id)
-                rows_comparer = RowsComparer(row1, row2, cols_diff)
-                rows_diff = rows_comparer.compare()
-                # logging.debug(rows_diff)
-                cmd_list += rows_diff.create_cmd_list(persons_table_name)
+            # for row_id in rows_id_diff.common_id_list:
+                # row1 = prev_persons.get_row(row_id)
+                # row2 = persons.get_row(row_id)
+                # rows_comparer = RowsComparer(row1, row2, cols_diff)
+                # rows_diff = rows_comparer.compare()
+                # #logging.debug(rows_diff)
+                # cmd_list += rows_diff.create_cmd_list(persons_table_name)
 
-            for row_id in rows_id_diff.added_id_list:
-                row2 = persons.get_row(row_id)
-                cmd_list += row2.create_cmd_list(persons_table_name)
+            # for row_id in rows_id_diff.added_id_list:
+                # row2 = persons.get_row(row_id)
+                # cmd_list += row2.create_cmd_list(persons_table_name)
                 
             revisions.append(
                 Revision(zip_datetime, cmd_list))
                 
-            prev_persons = persons
+            # prev_persons = persons
                 
     out_path = const.out_dir / const.json_filename
     out_path.open('w').write(revisions.create_json_string())
             
 #-------------------------------------------------------------------------------
 
-def PrintChangedRows(prev_persons, persons, rows_id_diff):
-    remove_persons = ['- {} {}'.format(
-                         prev_persons.get_row(row_id).data['Firstname'], 
-                         prev_persons.get_row(row_id).data['Lastname']) 
-                         for row_id in rows_id_diff.removed_id_list]
-    add_persons    = ['+ {} {}'.format(
-                         persons.get_row(row_id).data['Firstname'], 
-                         persons.get_row(row_id).data['Lastname']) 
-                         for row_id in rows_id_diff.added_id_list]
-    common_persons = ['== {} {}'.format(
-                         persons.get_row(row_id).data['Firstname'], 
-                         persons.get_row(row_id).data['Lastname']) 
-                         for row_id in rows_id_diff.common_id_list]
-                         
-    for line in sorted(remove_persons + add_persons, key=lambda x: x[2:] + x[0]):
-        logging.debug('  {}'.format(line))
-#    for line in sorted(common_persons):
-#        logging.debug('  {}'.format(line))
+class TableCommandCreator:
+    def __init__(self, file_name, table_name, key_col_names, show_col_names):
+        self.file_name = file_name
+        self.table_name = table_name
+        self.key_col_names = key_col_names
+        self.show_col_names = show_col_names
+        self.prev_data = CvsData(table_name, key_col_names)
+        
+    def create_commands(self, fh):
+        cmd_list = []
+        cvs_data = CvsData(self.table_name, self.key_col_names)
+        cvs_data.read(fh)
+        
+        cols_comparer = ColumnsComparer(self.prev_data.cols_name, cvs_data.cols_name)
+        cols_diff = cols_comparer.compare()
+        #logging.debug(cols_diff)
+        cmd_list += cols_diff.create_cmd_list(self.table_name)
 
+        cvs_data.init_id2rows(self.prev_data, cols_diff.mapping)
+        
+        rows_id_diff = RowsIdDiff(self.prev_data, cvs_data)
+        cmd_list += rows_id_diff.create_cmd_list(self.table_name)
+        
+        self._LogChangedRows(cvs_data, rows_id_diff)
+        
+        for row_id in rows_id_diff.common_id_list:
+            row1 = self.prev_data.get_row(row_id)
+            row2 = cvs_data.get_row(row_id)
+            rows_comparer = RowsComparer(row1, row2, cols_diff)
+            rows_diff = rows_comparer.compare()
+            # logging.debug(rows_diff)
+            cmd_list += rows_diff.create_cmd_list(self.table_name)
+
+        for row_id in rows_id_diff.added_id_list:
+            row2 = cvs_data.get_row(row_id)
+            cmd_list += row2.create_cmd_list(self.table_name)
+            
+        self.prev_data = cvs_data
+        return cmd_list
+
+    def _LogChangedRows(self, cur_cvs_data, rows_id_diff):
+        remove_rows = ['- ' + self._RowString(self.prev_data.get_row(row_id).data)
+                       for row_id in rows_id_diff.removed_id_list]
+                       
+        added_rows  = ['+ ' + self._RowString(cur_cvs_data.get_row(row_id).data)
+                       for row_id in rows_id_diff.added_id_list]
+                         
+        common_rows = ['== ' + self._RowString(cur_cvs_data.get_row(row_id).data)
+                       for row_id in rows_id_diff.common_id_list]
+                       
+        for line in sorted(remove_rows + added_rows, key=lambda x: x[2:] + x[0]):
+            logging.debug('  {}'.format(line))
+    #    for line in sorted(common_rows):
+    #        logging.debug('  {}'.format(line))
+
+    def _RowString(self, row_data):
+        return ' '.join([str(row_data[x]) for x in self.show_col_names])
+        
 #-------------------------------------------------------------------------------
 
 class CvsData:
@@ -337,7 +408,7 @@ class RowsKeyMapper:
         ratio_counter = self._create_ratio_counter(removed_key_set, added_key_set)
         
         for (key1, key2), ratio in ratio_counter.most_common():
-            if ratio >= 2.0 and key1 in removed_key_set and key2 in added_key_set:
+            if ratio >= 2.5 and key1 in removed_key_set and key2 in added_key_set:
                 row1 = self.key2row1[key1]
                 row2 = self.key2row2[key2]
                 
@@ -348,10 +419,6 @@ class RowsKeyMapper:
                 key_mapping[key1] = key2
                 removed_key_set.remove(key1)
                 added_key_set.remove(key2)
-        logging.debug('  remove:')
-        for key1 in removed_key_set:
-            row1 = self.key2row1[key1]
-            logging.debug('    {}'.format(row1))
                 
         return key_mapping
             
@@ -366,8 +433,8 @@ class RowsKeyMapper:
         return ratio_counter
         
     def _calc_row_ratio(self, row1, row2):
-        if not self._are_firstname_equal(row1, row2):
-            return 0.0
+        # if not self._are_firstname_equal(row1, row2):
+            # return 0.0
         
         n_sum = 0
         ratio_sum = 0.0
@@ -381,11 +448,11 @@ class RowsKeyMapper:
             ratio_sum += n * ratio
         return ratio_sum / (n_sum ** 0.5)  # noch unklar, sollte irgendwo zwischen ratio_sum/n_sum und ratio_sum liegen
         
-    def _are_firstname_equal(self, row1, row2):
-        firstname1 = row1.data['Firstname'].lower()
-        firstname2 = row2.data['Firstname'].lower()
-        n = min(len(firstname1), len(firstname2))
-        return firstname1[:n] == firstname2[:n]
+    # def _are_firstname_equal(self, row1, row2):
+        # firstname1 = row1.data['Firstname'].lower()
+        # firstname2 = row2.data['Firstname'].lower()
+        # n = min(len(firstname1), len(firstname2))
+        # return firstname1[:n] == firstname2[:n]
             
     def _calc_val_ratio(self, val1, val2):
         matcher = SequenceMatcher(a=val1, b=val2)
