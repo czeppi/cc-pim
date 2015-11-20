@@ -1,4 +1,4 @@
-﻿#! /usr/bin/env python
+﻿#! /usr/bin/env python3
 #-*- coding: utf-8 -*-
 
 # Copyright (C) 2014  Christian Czepluch
@@ -18,15 +18,47 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-Notes.  If not, see <http://www.gnu.org/licenses/>.
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
-     
+   
+GUI = 'wx'
+   
 import sys
-from PySide.QtCore import *
-from PySide.QtGui import *
-from pysidegui.mainwindow import MainWindow
+import traceback
+if GUI == 'wx':
+    import wx
+    import wxgui.frame
+elif GUI == 'pyside':
+    from PySide.QtCore import *
+    from PySide.QtGui import *
+    from pysidegui.mainwindow import MainWindow
  
 #-------------------------------------------------------------------------------
 
 def main():
+    if GUI == 'wx':
+        start_wx_app()
+    elif GUI == 'pyside':
+        start_pyside_app()
+
+#-------------------------------------------------------------------------------
+
+def start_wx_app():
+    start_fpath = None
+    if len(sys.argv) > 1:
+        start_fpath = sys.argv[1]
+
+    app = wx.App()
+        
+    try:
+        frame = wxgui.frame.Frame(start_fpath)
+        frame.Show()
+    except Exception as _e:
+        wx.MessageBox(traceback.format_exc(), "Exception")
+        
+    app.MainLoop()
+    
+#-------------------------------------------------------------------------------
+
+def start_pyside_app():
     app = QApplication(sys.argv)
     frame = MainWindow()
     frame.show()
