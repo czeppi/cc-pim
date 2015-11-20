@@ -22,10 +22,12 @@
 GUI = 'wx'
    
 import sys
+import os.path
 import traceback
+
 if GUI == 'wx':
     import wx
-    import wxgui.frame
+    import wxgui.mainframe
 elif GUI == 'pyside':
     from PySide.QtCore import *
     from PySide.QtGui import *
@@ -42,14 +44,15 @@ def main():
 #-------------------------------------------------------------------------------
 
 def start_wx_app():
-    start_fpath = None
-    if len(sys.argv) > 1:
-        start_fpath = sys.argv[1]
+    root_dir = None
+    if len(sys.argv) > 0:
+        start_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+        root_dir = os.path.dirname(start_dir)
 
     app = wx.App()
         
     try:
-        frame = wxgui.frame.Frame(start_fpath)
+        frame = wxgui.mainframe.MainFrame(root_dir)
         frame.Show()
     except Exception as _e:
         wx.MessageBox(traceback.format_exc(), "Exception")

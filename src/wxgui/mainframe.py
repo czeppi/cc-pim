@@ -19,6 +19,7 @@
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
 import wx
+import os.path
 
 class config:
     app_title = 'CC-PIM'
@@ -28,12 +29,13 @@ class config:
 
 #------------------------------------------------------------------------------
         
-class Frame(wx.Frame):
+class MainFrame(wx.Frame):
 
-    def __init__(self, start_fpath):
-        self._start_fpath = start_fpath
+    def __init__(self, root_dir):
+        self._root_dir = root_dir
         wx.Frame.__init__(self, None, -1, config.app_title, 
             config.frame_pos, config.frame_size)
+        self.SetIcon(self._read_icon('info.ico'))
         self._create_simple_win()
 
     def _create_simple_win(self):
@@ -41,4 +43,13 @@ class Frame(wx.Frame):
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(text_ctrl, 1, wx.EXPAND)
         self.SetSizer(sizer)
+        
+    def _read_icon(self, icon_name):
+        icon_dir = self._get_icon_dir()
+        path = os.path.join(icon_dir, icon_name)
+        return wx.Icon(path, wx.BITMAP_TYPE_ICO)
+
+    def _get_icon_dir(self):
+        return os.path.join(self._root_dir, "etc/icons")
+        
         
