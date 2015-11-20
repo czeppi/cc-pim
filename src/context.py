@@ -19,20 +19,53 @@
 # along with CC-Notes.  If not, see <http://www.gnu.org/licenses/>.
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
+#------------------------------------------------------------------------------
+
 class Context:
-    blog_pathname = "g:/cc/Blogs/BTC.txt"
-    blog_dir = "g:/cc/Blogs"
-    blog_names = [
-        "BTC",
-        "Info",
-        "Produkte",
-        "Programme",
-        "Programmierung",
-    ]
-    metamodel_pathname = '../etc/notes.ini'
-    sqlite3_pathname = '../etc/notes.sqlite3'
-    no_keywords_pathname = '../etc/no-keywords.txt'
-    template_pathname = '../etc/template.txt'    
-    user_css_pathname = '../etc/user.css'    
-    logging_enabled = False
-    out_dir = '../out'
+
+    def __init__(self, root_dir):
+        self._root_dir = root_dir
+        self._config = Config()
+        
+    @property
+    def config(self):
+        return self._config
+    
+    # def read_icon(self, icon_name):
+        # icon_dir = self._get_icon_dir()
+        # path = os.path.join(icon_dir, icon_name)
+        # return wx.Icon(path, wx.BITMAP_TYPE_ICO)
+
+    # def read_bitmap(self, bmp_name):
+        # icon_dir = self._get_icon_dir()
+        # path = os.path.join(icon_dir, bmp_name)
+        # return wx.Bitmap(path)
+        
+    @property
+    def icon_dir(self):
+        return self._root_dir / 'etc' / 'icons'
+    
+#------------------------------------------------------------------------------
+
+class Config:
+    
+    @property
+    def app_title(self):
+        return 'CC-PIM'
+        
+    @property
+    def frame_pos(self):
+        return (0,0)
+        
+    @property
+    def frame_size(self):
+        return (1200, 800)
+     
+    @property
+    def search_width(self):
+        return 400
+        
+    @property
+    def margin(self):
+        return 5
+     

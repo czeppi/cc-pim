@@ -19,37 +19,69 @@
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
 import wx
-import os.path
 
-class config:
-    app_title = 'CC-PIM'
-    frame_pos = (0,0)
-    frame_size = (800, 600)
-
+from wxgui.aboutdialog import AboutDialog
+from wxgui.searchview import SearchView
+from wxgui.notebook import Notebook
 
 #------------------------------------------------------------------------------
         
 class MainFrame(wx.Frame):
 
-    def __init__(self, root_dir):
-        self._root_dir = root_dir
-        wx.Frame.__init__(self, None, -1, config.app_title, 
-            config.frame_pos, config.frame_size)
-        self.SetIcon(self._read_icon('info.ico'))
-        self._create_simple_win()
+    def __init__(self, context):
+        self._context = context
+        cfg = context.config
+        wx.Frame.__init__(self, None, -1, cfg.app_title, cfg.frame_pos, cfg.frame_size)
+        icon = wx.Icon( str(self._context.icon_dir / 'info.ico'), wx.BITMAP_TYPE_ICO)
+        self.SetIcon(icon)
+        self._create_menubar()
+        self._create_toolbar()
+        self._create_splitter_window()
+        self._create_statusbar()
 
-    def _create_simple_win(self):
-        text_ctrl = wx.TextCtrl(self, value="bla", style=wx.TE_MULTILINE)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(text_ctrl, 1, wx.EXPAND)
-        self.SetSizer(sizer)
+    def _create_menubar(self):
+        self._menubar = wx.MenuBar()
         
-    def _read_icon(self, icon_name):
-        icon_dir = self._get_icon_dir()
-        path = os.path.join(icon_dir, icon_name)
-        return wx.Icon(path, wx.BITMAP_TYPE_ICO)
+        # helpmenu
+        menu = wx.Menu()
+        self._add_menuitem(menu, 'About', '', self.on_menu_help_about)
+        self._menubar.Append(menu, 'Help')
+        
+        self.SetMenuBar(self._menubar)
+        
+    def _add_menuitem(self, menu, text, description, handler):
+        new_id = wx.NewId()
+        menu.Append(new_id, text, description)
+        self.Bind(wx.EVT_MENU, handler, id=new_id)
+        return new_id
+        
+    def _create_toolbar(self):
+        toolbar = wx.Frame.CreateToolBar(self)
+        self._add_toolitem(toolbar, "info.ico", self.on_menu_help_about, tooltip='')
+        toolbar.Realize()
 
-    def _get_icon_dir(self):
-        return os.path.join(self._root_dir, "etc/icons")
+    def _add_toolitem(self, toolbar, icon_name, handler, tooltip=""):
+        new_id = wx.NewId()
+        bmp = wx.Bitmap(str(self._context.icon_dir / 'info.ico'), wx.BITMAP_TYPE_ICO)
+        toolbar.AddTool(new_id, '', bmp, shortHelp=tooltip)        
+        self.Bind(wx.EVT_TOOL, handler, id=new_id)
+        return new_id
+        
+    def _create_splitter_window(self):
+        self._splitter  = wx.SplitterWindow (self, -1, style=wx.SP_LIVE_UPDATE)
+        self._search_view  = SearchView(self._splitter, self._context)
+        self._notebook_win = Notebook(self._splitter, self._context)
+        
+        self._splitter.SplitVertically (self._search_view, self._notebook_win, self._context.config.search_width)
+        
+    def _create_statusbar(self):
+        bar = wx.Frame.CreateStatusBar(self, 2)
+        self.GetStatusBar().SetStatusWidths([-1, 50])
+        
+    def on_menu_help_about(self, event):
+        dlg = AboutDialog(self)
+        if dlg.ShowModal() == wx.ID_OK:
+            # wx.MessageBox('OK', 'on_menu_help_About')
+            pass
         
         

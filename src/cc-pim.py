@@ -24,6 +24,7 @@ GUI = 'wx'
 import sys
 import os.path
 import traceback
+from pathlib import Path
 
 if GUI == 'wx':
     import wx
@@ -32,27 +33,31 @@ elif GUI == 'pyside':
     from PySide.QtCore import *
     from PySide.QtGui import *
     from pysidegui.mainwindow import MainWindow
+    
+from context import Context
  
 #-------------------------------------------------------------------------------
 
 def main():
+    root_dir = None
+    if len(sys.argv) > 0:
+        start_dir = Path(sys.argv[0]).resolve().parent
+        root_dir = start_dir.parent
+
+    context = Context(root_dir)
+    
     if GUI == 'wx':
-        start_wx_app()
+        start_wx_app(context)
     elif GUI == 'pyside':
-        start_pyside_app()
+        start_pyside_app(context)
 
 #-------------------------------------------------------------------------------
 
-def start_wx_app():
-    root_dir = None
-    if len(sys.argv) > 0:
-        start_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-        root_dir = os.path.dirname(start_dir)
-
+def start_wx_app(context):
     app = wx.App()
         
     try:
-        frame = wxgui.mainframe.MainFrame(root_dir)
+        frame = wxgui.mainframe.MainFrame(context)
         frame.Show()
     except Exception as _e:
         wx.MessageBox(traceback.format_exc(), "Exception")
@@ -61,7 +66,7 @@ def start_wx_app():
     
 #-------------------------------------------------------------------------------
 
-def start_pyside_app():
+def start_pyside_app(context):
     app = QApplication(sys.argv)
     frame = MainWindow()
     frame.show()
