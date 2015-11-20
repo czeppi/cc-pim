@@ -22,7 +22,7 @@
 import sys
 from PySide.QtCore import *
 from PySide.QtGui import *
-from gui.mainwindow import MainWindow
+from pysidegui.mainwindow import MainWindow
  
 #-------------------------------------------------------------------------------
 
