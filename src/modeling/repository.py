@@ -113,15 +113,68 @@ class Repo:
         cursor.execute(sql_cmd)
         return cursor
     
+    
+class Revision: # alias Commit
+
+    def __init__(self, serial, timestamp, comment="", changes=[]):
+        self._serial = serial
+        self._timestamp = timestamp
+        self._comment = comment
+        self._changes = changes
+        
+    @property
+    def serial(self):
+        return self._serial
+
+    @property
+    def timestamp(self):
+        return self._timestamp
+
+    @property
+    def comment(self):
+        return self._comment
+
+    @property
+    def changes(self):
+        return self._changes
+        
+    
+class Fact:
+
+    def __init__(self, serial, predicate_serial, object_serial, value, note, time_begin=None, time_end=None):
+        self.serial = serial
+        self.predicate_serial = predicate_serial
+        self.object_serial = object_serial
+        self.value = value
+        self.time_begin = time_begin
+        self.time_end = time_end
+        self.note = note
+
+    
+class FactChange:
+
+    def __init__(self, serial, fact, revision_serial):
+        self.serial = serial
+        self.fact = fact
+        self.revision_serial = revision_serial
+    
+    
+    
+    
+    
+    
+    
+    
+    
 #------------------------------------------------------------------------------
 
-class Relation:
+# class Relation:
 
-    def __init__(self, serial, subject, predicate, object):
-        self._serial = serial
-        self._subject = subject
-        self._predicate = predicate
-        self._object = object
+    # def __init__(self, serial, subject, predicate, object):
+        # self._serial = serial
+        # self._subject = subject
+        # self._predicate = predicate
+        # self._object = object
 
 #------------------------------------------------------------------------------
 
@@ -173,38 +226,8 @@ class Relation:
         
 #------------------------------------------------------------------------------
         
-class Revision: # alias Commit
-
-    def __init__(self, serial, timestamp, comment="", changes=[]):
-        self._serial = serial
-        self._timestamp = timestamp
-        self._comment = comment
-        self._changes = changes
-        
-    @property
-    def serial(self):
-        return self._serial
-
-    @property
-    def timestamp(self):
-        return self._timestamp
-
-    @property
-    def comment(self):
-        return self._comment
-
-    @property
-    def changes(self):
-        return self._changes
-        
 #------------------------------------------------------------------------------
   
-class FactChange:
-
-    def __init__(self, serial, fact, revision_serial):
-        self.serial = serial
-        self.fact = fact
-        self.revision_serial = revision_serial
 
 
 
@@ -212,43 +235,43 @@ class FactChange:
 
 
 
-#------------------------------------------------------------------------------
+# # ------------------------------------------------------------------------------
   
-class AttributeChange:
+# class AttributeChange:
 
-    def __init__(self, attr, value):
-        self._attr = attr
-        self._value = value
+    # def __init__(self, attr, value):
+        # self._attr = attr
+        # self._value = value
 
-    @property
-    def attr(self):
-        return self._attr
+    # @property
+    # def attr(self):
+        # return self._attr
         
-    @property
-    def obj_type(self):
-        return self._attr.obj_type
+    # @property
+    # def obj_type(self):
+        # return self._attr.obj_type
 
-    @property
-    def attr_name(self):
-        return self._attr.name
+    # @property
+    # def attr_name(self):
+        # return self._attr.name
         
-    @property
-    def value(self):
-        return self._value
+    # @property
+    # def value(self):
+        # return self._value
         
-#------------------------------------------------------------------------------
+# # ------------------------------------------------------------------------------
 
-class Attribute:
+# class Attribute:
 
-    def __init__(self, obj_type, name):
-        self._obj_type = obj_type
-        self._name = name
+    # def __init__(self, obj_type, name):
+        # self._obj_type = obj_type
+        # self._name = name
         
-    @property
-    def obj_type(self):
-        return self._obj_type
+    # @property
+    # def obj_type(self):
+        # return self._obj_type
 
-    @property
-    def name(self):
-        return self._name
+    # @property
+    # def name(self):
+        # return self._name
 
