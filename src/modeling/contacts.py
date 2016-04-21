@@ -18,9 +18,9 @@
 # along with CC-Notes.  If not, see <http://www.gnu.org/licenses/>.
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from enum import Enum
-from basetypes import Name, Date, EMail, PhoneNumber, Url, Str, Text, Ref
+from .basetypes import Name, Date, EMail, PhoneNumber, Url, Str, Text, Ref
 
 
 class ContactTypes(Enum):
@@ -29,7 +29,7 @@ class ContactTypes(Enum):
     company = 2
     address = 3
 
-    
+
 class Predicate:
 
     def __init__(self, serial, subject_class, name, value_type):
@@ -48,12 +48,10 @@ class Attribute:
         
 class ContactObject:
 
-    def __init__(self, values):
-        self.values = values  # name -> list of values
+    def __init__(self, serial):
+        self.serial = serial
+        self._facts_map = defaultdict(list)  # attr-name -> list of facts
         
-    @classmethod
-    def 
-    
     @classmethod
     def iter_attributes(cls):
         yield from cls.attributes.values()
@@ -66,36 +64,86 @@ class ContactObject:
     def find_attribute(cls, attr_name):
         return cls.get(attr_name, None)
 
-    def get_attr_value(self, attr_name):
-        return self.values[attr_name]
+    @property
+    def id(self):
+        return self.type_id, self.serial
+
+    def add_fact(self, attr_name, fact):
+        self._facts_map[attr_name].append(fact)
+
+    def get_facts(self, attr_name):
+        return self._facts_map.get(attr_name, [])
+
+    def contains_keyword(self, keyword):
+        lower_keyword = keyword.lower()
+        return any(lower_keyword in str(fact.value).lower()
+                   for fact_list in self._facts_map.values()
+                   for fact in fact_list)
+
+    def contains_all_keywords(self, keywords):
+        return all(self.contains_keyword(x) for x in keywords)
         
         
 class Person(ContactObject):
 
-    type_serial = ContactTypes.person
+    type_id = ContactTypes.person.value
     type_name = 'person'
     attributes = OrderedDict()
     last_serial = 0
 
     @property
     def title(self):
-        return self.get_value('first_name') + self.get_value('last_name')
-        
+        first_names = [x.value for x in self._facts_map['firstname']]
+        last_names  = [x.value for x in self._facts_map['lastname']]
+        names_parts = []
+        if first_names:
+            names_parts.append(first_names[-1])
+        if last_names:
+            names_parts.append(last_names[-1])
+        if len(names_parts) == 0:
+            return '???'
+        return ' '.join(names_parts)
+
 
 class Company(ContactObject):
 
-    type_serial = ContactTypes.person
+    type_id = ContactTypes.company.value
     type_name = 'person'
     attributes = OrderedDict()
     last_serial = 0
 
-    
+    @property
+    def title(self):
+        names = [x.value for x in self._facts_map['name']]
+        if names:
+            return names[-1]
+        else:
+            return '???'
+
+
 class Address(ContactObject):
 
-    type_serial = ContactTypes.person
+    type_id = ContactTypes.address.value
     type_name = 'person'
     attributes = OrderedDict()
     last_serial = 0
+
+    @property
+    def title(self):
+        streets = [x.value for x in self._facts_map['street']]
+        if streets:
+            return streets[-1]
+        else:
+            return '???'
+
+
+def _create_contact_object(type_id, obj_serial):
+    cls_map = {
+        Person.type_id:  Person,
+        Company.type_id: Company,
+        Address.type_id: Address,
+    }
+    return cls_map[type_id](obj_serial)
 
 
 def _iter_predicates_data():
@@ -120,16 +168,15 @@ def _iter_predicates_data():
     yield 19, Company, 'owner',            Str
     yield 20, Company, 'address',          Ref(Address, 'companies')
     yield 21, Company, 'homepage',         Url
-    yield 22, Company, 'phone',            PhoneNumber
-    yield 23, Company, 'mobile',           PhoneNumber
-    yield 24, Company, 'email',            EMail
-    yield 25, Company, 'open_times',       Str
-    yield 26, Company, 'keywords',         Str
-    yield 27, Company, 'remark',           Text
-    yield 28, Address, 'street',           Str
-    yield 29, Address, 'city',             Str
-    yield 30, Address, 'country',          Str
-    yield 31, Address, 'phone',            PhoneNumber
+    yield 22, Company, 'mobile',           PhoneNumber
+    yield 23, Company, 'email',            EMail
+    yield 24, Company, 'open_times',       Str
+    yield 25, Company, 'keywords',         Str
+    yield 26, Company, 'remark',           Text
+    yield 27, Address, 'street',           Str
+    yield 28, Address, 'city',             Str
+    yield 29, Address, 'country',          Str
+    yield 30, Address, 'phone',            PhoneNumber
 
     
 class Contacts:
@@ -145,12 +192,28 @@ class Contacts:
         yield Company
         yield Address
         
-    def __init__(self):
-        self._fact_dates = {}
-        self._persons = {}
-        self._companies = {}
-        self._addresses = {}
-        
+    def __init__(self, date_changes, fact_changes):
+        self._date_changes = date_changes
+        self._fact_changes = fact_changes
+        self._revision_number = None
+        self._init_data()
+
+    def _init_data(self):
+        self._data = {}  # (type_id, serial) -> ContactObject
+        for fact in self._fact_changes.values():
+            predicate = self.predicates[fact.predicate_serial]
+            type_id = predicate.subject_class.type_id
+            obj_serial = fact.subject_serial
+            obj_id = (type_id, obj_serial)
+            obj = self._data.get(obj_id, None)
+            if obj is None:
+                obj = _create_contact_object(type_id, obj_serial)
+                self._data[obj_id] = obj
+            obj.add_fact(predicate.name, fact)
+
+    def iter_objects(self):
+        yield from self._data.values()
+
     def update(self):
         pass
         
@@ -160,53 +223,23 @@ class Contacts:
     def revert_changes(self):
         pass
         
-    def get_person(self, person_serial):
-        return self._persons[person_serial]
+    def get(self, type_id, obj_serial):
+        return self._data[type_id][obj_serial]
         
-    def get_company(self, company_serial):
-        return self._companies[company_serial]
-        
-    def get_address(self, address_serial):
-        return self._addresss[address_serial]
-        
-    def find_persons(self, search_parameters):
-        yield from self._find_objects(ContactType.person, search_parameters)
-        
-    def find_companies(self, search_parameters):
-        yield from self._find_objects(ContactType.company, search_parameters)
-        
-    def find_addresses(self, search_parameters):
-        yield from self._find_objects(ContactType.address, search_parameters)
-        
-    def _find_objects(self, object_type, search_parameters):
+    def find(self, search_parameters):
         pass
         
-    def add_person(self, person):
-        new_serial = len(self._persons) + 1
-        assert new_serial not in self._persons
-        self._persons[new_serial] = person
+    # def add(self, new_obj):
+    #     obj_map = self._data[new_obj.type_id]
+    #     new_serial = len(obj_map) + 1
+    #     assert new_serial not in obj_map
+    #     obj_map[new_serial] = new_obj
+    #
+    # def change(self, serial, obj):
+    #     obj_map = self._data[new_obj.type_id]
+    #     assert serial in obj_map
+    #     obj_map[serial] = person
 
-    def add_company(self, company):
-        new_serial = len(self._companys) + 1
-        assert new_serial not in self._companies
-        self._companies[new_serial] = company
-
-    def add_address(self, address):
-        new_serial = len(self._addresses) + 1
-        assert new_serial not in self._addresses
-        self._addresses[new_serial] = address
-        
-    def change_person(self, serial, person):
-        assert serial in self._persons
-        self._persons[serial] = person
-
-    def change_company(self, serial, company):
-        assert serial in self._companies
-        self._companies[serial] = company
-        
-    def change_address(self, serial, address):
-        assert serial in self._addresses
-        self._addresses[serial] = address
 
 
         

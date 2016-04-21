@@ -19,8 +19,12 @@
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
 import unittest
-from repository import Repository
-from contacts import Person
+import os
+import sys
+sys.path += [
+    os.path.join(os.path.dirname(__file__), '..'),
+]
+from modeling.repository import Repository, Revision, Fact
 
 
 class TestRepo(unittest.TestCase):
@@ -28,85 +32,59 @@ class TestRepo(unittest.TestCase):
     def setUp(self):
         self._repo = Repository()
         
-    def test_add_person(self)
-        n = self._repo.count_persons()
-        new_id = self._repo.add_person(_create_person_attributes())
-        self.assertTrue(self._repo.count_persons() == n + 1)
+    def test_empty_repo(self):
+        n = self._repo.count_revisions()
+        self.assertTrue(n == 0)
         
-    def test_find_persons(self):
-        n = 0
-        for person in self._repo.find_persons(text='Lutz'):
-        self.assertTrue(isinstance(person, Person))
-            n += 1
-        self.assertTrue(n > 0)
-        
-    def test_get_person(self):
-        person = self._repo.find_person(person_serial)
-        self.assertTrue(isinstance(person, Person))
-        
-        
-class TestPerson(unittest.TestCase):
+    def test_add_empty_revision(self):
+        new_rev = self._repo.commit(comment='empty change', date_changes={}, fact_changes={})
+        self.assertIsInstance(new_rev, Revision)
+        self.assertEqual(new_rev.serial, 1)
+        self._repo.reload()
+        self.assertEqual(self._repo.count_revisions(), 1)
 
-    def test_iter_attribute(self):
-        n = 0
-        for attr in Person.iter_attributes():
-            self.assertTrue( isinstance(attr, Attribute) )
-            n += 1
-        self.assertTrue(n > 0)
-        
-    def test_get_attribute(self):
-        attr = Person.get_attribute('name')
-        self.assertTrue( isinstance(attr, Attribute) )
-        
-    def test_iter_facts(self):
-        person = Person( _create_person1_attributes() )
-        for name_fact in person.iter_facts('name'):
-            self.assertTrue( isinstance(name_fact, str) )
-            
-    def test_add_facts(self):
-        person = Person( _create_person1_attributes() )
-        address = Address( _create_address1_attributes() )
-        fact_serial = person.add_fact('address', address1, t_begin=None, t_end=None)
-        n1 = person.count_facts()
+    def test_add_revision_with_one_new_fact(self):
+        fact_changes = {
+            self._repo.get_new_fact_serial(): Fact(serial=1, predicate_serial=1, subject_serial=1, value='Mustermann')
+        }
+        new_rev = self._repo.commit(comment='empty change',
+                                    date_changes={},
+                                    fact_changes=fact_changes)
+        self.assertIsInstance(new_rev, Revision)
+        self.assertEqual(new_rev.serial, 1)
+        self.assertEqual(len(new_rev.fact_changes), 1)
 
-        address2 = Address( _create_address2_attributes() )
-        person.change_fact(fact_serial, 'address', address2, t_begin=None, t_end=None)
-        n2 = person.count_facts()
-        self.assertTrue( n1 + 1 == n2 )
-        
-    def test_change_fact(self):
-        person = Person( _create_person1_attributes() )
-        address1 = Address( _create_address1_attributes() )
-        fact_serial = person.add_fact('address', address1, t_begin=None, t_end=None)
-        n1 = person.count_facts()
-        
-        address2 = Address( _create_address2_attributes() )
-        person.change_fact(fact_serial, 'address', address2, t_begin=None, t_end=None)
-        n2 = person.count_facts()
-        self.assertTrue( n1 == n2 )
-        
-        
-def _create_person1_attributes(self):
+        self._repo.reload()
+        self.assertEqual(self._repo.count_revisions(), 1)
+        rev = self._repo.get_revision(1)
+        self.assertEqual(len(rev.fact_changes), 1)
+        fact1 = rev.fact_changes[1]
+        self.assertEqual(fact1.subject_serial, 1)
+        self.assertEqual(fact1.value, 'Mustermann')
+
+
+def _create_person1_attributes():
     return {
         'first_name': 'Max',
         'last_name': 'Mustermann',
-        'e-mail': 'max@mustermann.de'
+        'e-mail': 'max@mustermann.de',
         'birth_date': '01.01.1970',
     }
-    
-def _create_address1_attributes(self):
+
+
+def _create_address1_attributes():
     return {
-        'street': 'Musterstraße 1',
+        'street': 'MusterstraÃŸe 1',
         'place': '12345 Berlin',
     }
 
-def _create_address2_attributes(self):
+
+def _create_address2_attributes():
     return {
-        'street': 'Musterstraße 2',
+        'street': 'MusterstraÃŸe 2',
         'place': '12345 Berlin',
     }
 
     
 if __name__ == '__main__':
     unittest.main()
-    

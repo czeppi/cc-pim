@@ -57,38 +57,118 @@
         => evtl. merge_dialog bei Konflikten
 
 """
-#------------------------------------------------------------------------------
 
-class Repo:
+import sqlite3
+import time
+from pathlib import Path
+from .basetypes import VagueDate
 
-    def __init__(self, path):
-        self._path = path
-        self._conn = ...
-        self._revisions = []
+
+class Repository:
+
+    def __init__(self, db_source=':memory:'):
+        self._db_source = db_source
+        self._revisions = {}
         self._logging_enabled = False
+        self._create_conn()
+        self._commited_date_serial_set = set()
+        self._commited_fact_serial_set = set()
+        self._uncommited_date_serial_set = set()
+        self._uncommited_fact_serial_set = set()
+
+    def _create_conn(self):
+        exists_db = self._exists_db()
+        self._conn = sqlite3.connect(str(self._db_source))
+        self._conn.row_factory = sqlite3.Row
+        if not exists_db:
+            self._create_db()
+
+    def _exists_db(self):
+        if self._db_source == ':memory:':
+            return False
+        else:
+            return self._get_db_path().exists()
+
+    def _get_db_path(self):
+        if isinstance(self._db_source, Path):
+            return self._db_source
+        else:
+            return Path(self._db_source)
+
+    def _create_db(self):
+        self._execute_sql("create table revisions (serial integer primary key, timestamp int, comment text)")
+        self._execute_sql("create table dates (serial integer primary key, revision int, date text)")
+        self._execute_sql("create table facts (serial integer primary key, revision int, predicate int, subject int, value text, note text, date_begin int, date_end int)")
+        self._conn.commit()
+
+    def count_revisions(self):
+        return len(self._revisions)
+
+    def get_new_date_serial(self):
+        dates = self._commited_date_serial_set | self._uncommited_date_serial_set
+        new_serial = 1 if len(dates) == 0 else max(dates) + 1
+        self._uncommited_date_serial_set.add(new_serial)
+        return new_serial
+
+    def get_new_fact_serial(self):
+        facts = self._commited_fact_serial_set | self._uncommited_fact_serial_set
+        new_serial = 1 if len(facts) == 0 else max(facts) + 1
+        self._uncommited_fact_serial_set.add(new_serial)
+        return new_serial
+
+    def reload(self):
+        self._revisions.clear()
+        self._load_revisions()
+        self._load_dates()
+        self._load_facts()
+
+    def _load_revisions(self):
+        for rev_no, timestamp, comment in self._execute_sql("select serial, timestamp, comment from revisions"):
+            new_rev = Revision(rev_no, timestamp, comment)
+            self._revisions[rev_no] = new_rev
+
+    def _load_dates(self):
+        for serial, rev_no, date_str in self._execute_sql("select serial, revision, date from dates"):
+            self._revisions[rev_no].dates[serial] = VagueDate(date_str)
+
+    def _load_facts(self):
+        for serial, rev_no, predicate_serial, subject_serial, value, note, date_begin_serial, date_end_serial \
+        in self._execute_sql("select serial, revision, predicate, subject, value, note, date_begin, date_end from facts"):
+            self._revisions[rev_no].fact_changes[serial] = Fact(serial, predicate_serial, subject_serial, value, note, date_begin_serial, date_end_serial)
 
     def update(self):
         pass
         
-    def commit(self, comment, changes):
-        new_revision_number = ...
-        cur_timestamp = ...
-        new_revision = Revision(new_revision_number, cur_timestamp, comment, changes)
-        
-    def get_contacts(self, revision_number=None):
-        revisions = self._revisions if (revision_number is None) else self._revisions[:revision_number+1]
-        contacts = Contacts()
-        for revision in revisions:
-            for attr_change in revision.changes:
-                self._update_contacts(contacts, attr_change)
-        return contacts
+    def commit(self, comment, date_changes, fact_changes):
+        rev_no = len(self._revisions) + 1
+        now = time.time()
+        new_rev = Revision(rev_no, now, comment, date_changes, fact_changes)
+        self._execute_sql("insert into revisions (serial, timestamp, comment) values (?, ?, ?)", (rev_no, now, comment))
+        for date_serial, date in new_rev.date_changes.items():
+            self._execute_sql("insert into dates (serial, revision, date) values (?, ?, ?)", (date_serial, rev_no, str(date)))
+            if date_serial in self._uncommited_date_serial_set:
+                self._uncommited_date_serial_set.remove(date_serial)
+                self._commited_date_serial_set.add(date_serial)
+        for fact_serial, fact in new_rev.fact_changes.items():
+            self._execute_sql("insert into facts (serial, revision, predicate, subject, value, note, date_begin, date_end) values (?, ?, ?, ?, ?, ?, ?, ?)",
+                              (fact_serial, rev_no, fact.predicate_serial, fact.subject_serial, fact.value, fact.note, fact.date_begin_serial, fact.date_end_serial))
+            if fact_serial in self._uncommited_fact_serial_set:
+                self._uncommited_fact_serial_set.remove(fact_serial)
+                self._commited_fact_serial_set.add(fact_serial)
+        self._conn.commit()
+        return new_rev
+
+
+    # def get_contacts(self, revision_number=None):
+    #     revisions = self._revisions if (revision_number is None) else self._revisions[:revision_number+1]
+    #     contacts = Contacts()
+    #     for revision in revisions:
+    #         for attr_change in revision.changes:
+    #             self._update_contacts(contacts, attr_change)
+    #     return contacts
             
-    def _update_contacts(self, contacts, attr_change):
-            
-   
-   
-   
-   
+    #def _update_contacts(self, contacts, attr_change):
+
     def _select_one(self, col_names, table_name, where=None):
         cursor = self._select(col_names, table_name, where)
         return cursor.fetchone()
@@ -105,22 +185,43 @@ class Repo:
         cursor = self._sql_execute(sql_cmd)
         return cursor
 
-    def _sql_execute(self, sql_cmd):
-        if self._logging_enabled:
-            print(sql_cmd)
-            
-        cursor = self._conn.cursor() 
-        cursor.execute(sql_cmd)
+    def _execute_sql(self, sql_cmd, values=None):
+        cursor = self._conn.cursor()
+        if values is None:
+            if self._logging_enabled:
+                print(sql_cmd)
+            cursor.execute(sql_cmd)
+        else:
+            if self._logging_enabled:
+                print(sql_cmd, values)
+            cursor.execute(sql_cmd, values)
         return cursor
-    
+
+    def get_revision(self, rev_no):
+        return self._revisions[rev_no]
+
+    def aggregate_revisions(self, rev_begin=None, rev_end=None):
+        date_changes = {}
+        fact_changes = {}
+        for rev_no in sorted(self._revisions.keys()):
+            if  (rev_begin is None or rev_no >= rev_begin) \
+            and (rev_end   is None or rev_no < rev_end):
+                rev = self._revisions[rev_no]
+                date_changes.update(rev.date_changes)
+                fact_changes.update(rev.fact_changes)
+        return date_changes, fact_changes
+
     
 class Revision: # alias Commit
 
-    def __init__(self, serial, timestamp, comment="", changes=[]):
+    def __init__(self, serial, timestamp=None, comment="", date_changes={}, fact_changes={}):
         self._serial = serial
+        if timestamp is None:
+            timestamp = time.time()
         self._timestamp = timestamp
         self._comment = comment
-        self._changes = changes
+        self._date_changes = date_changes  # serial -> VagueDate
+        self._fact_changes = fact_changes  # serial -> Fact
         
     @property
     def serial(self):
@@ -135,28 +236,43 @@ class Revision: # alias Commit
         return self._comment
 
     @property
-    def changes(self):
-        return self._changes
+    def date_changes(self):
+        return self._date_changes
         
-    
+    @property
+    def fact_changes(self):
+        return self._fact_changes
+
+        
 class Fact:
 
-    def __init__(self, serial, predicate_serial, object_serial, value, note, time_begin=None, time_end=None):
+    def __init__(self, serial, predicate_serial, subject_serial, value, note=None, date_begin_serial=None, date_end_serial=None):
         self.serial = serial
         self.predicate_serial = predicate_serial
-        self.object_serial = object_serial
+        self.subject_serial = subject_serial
         self.value = value
-        self.time_begin = time_begin
-        self.time_end = time_end
+        self.date_begin_serial = date_begin_serial
+        self.date_end_serial = date_end_serial
         self.note = note
 
-    
-class FactChange:
 
-    def __init__(self, serial, fact, revision_serial):
-        self.serial = serial
-        self.fact = fact
-        self.revision_serial = revision_serial
+# class FactData:
+#
+#     def __init__(self, predicate_serial, object_serial, value, note=None, date_begin=None, date_end=None):
+#         self.predicate_serial = predicate_serial
+#         self.object_serial = object_serial
+#         self.value = value
+#         self.date_begin = date_begin
+#         self.date_end = date_end
+#         self.note = note
+
+
+# class FactChange:
+#
+#     def __init__(self, serial, fact, revision_serial):
+#         self.serial = serial
+#         self.fact = fact
+#         self.revision_serial = revision_serial
     
     
     

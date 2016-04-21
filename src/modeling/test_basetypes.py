@@ -19,7 +19,12 @@
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
 import unittest
-from basetypes import VagueDate
+import os
+import sys
+sys.path += [
+    os.path.join(os.path.dirname(__file__), '..'),
+]
+from modeling.basetypes import VagueDate
 
 
 class TestVagueDate(unittest.TestCase):

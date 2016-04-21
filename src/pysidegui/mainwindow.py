@@ -24,23 +24,30 @@ from PySide.QtGui import QLabel
 from PySide.QtGui import QCompleter
 from PySide.QtGui import QListWidgetItem
 from PySide.QtCore import Qt
-from gui._ui_.ui_mainwindow import Ui_MainWindow
+from pysidegui._ui_.ui_mainwindow import Ui_MainWindow
 from context import Context
 #from modeling.notesmodel import NotesModel
 #from modeling.notesmodel import Note
+from modeling.repository import Repository
+from modeling.contacts import Contacts
 
-#-------------------------------------------------------------------------------
 
 class MainWindow(QMainWindow):
-    def __init__(self, parent=None):
+
+    def __init__(self, context, parent=None):
         super(MainWindow, self).__init__(parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         
         self.ui.splitter.setStretchFactor(0, 0)
         self.ui.splitter.setStretchFactor(1, 1)
-        
-        context = Context()
+
+        self._contact_repo = Repository(context.contacts_db_path)
+        self._contact_repo.reload()
+        date_changes, fact_changes = self._contact_repo.aggregate_revisions()
+        self._contacts = Contacts(date_changes, fact_changes)
+
+
         # self._notes_model = NotesModel(context)
         # self._notes_model.read()
         
@@ -78,8 +85,8 @@ class MainWindow(QMainWindow):
         
     def on_search_text_changed(self, new_text):
         stripped_text = new_text.strip()
-        if new_text == '' or len(stripped_text) > 0 and stripped_text[-1] == ',':
-            self._update_list()
+        #if new_text == '' or len(stripped_text) > 0 and stripped_text[-1] == ',':
+        self._update_list()
         
     def on_cur_list_item_changed(self, item, previous_item):
         self.ui.action_edit_note.setEnabled(item is not None)
@@ -113,29 +120,35 @@ class MainWindow(QMainWindow):
     def _update_list(self):
         keywords_str = self.ui.search_edit.text()
         keywords = [x.strip() for x in keywords_str.split(',') if x.strip() != '']
-        filtered_notes = self._get_filtered_notes_iter(keywords)
-        sorted_notes = self._sort_notes(filtered_notes)
+        filtered_contacts = self._iter_filtered_contacts(keywords)
+        sorted_contacts = self._sort_contacts(filtered_contacts)
         
         self.ui.search_result_list.clear()
-        for note in sorted_notes:
-            self._add_note_item(note)
+        for contact in sorted_contacts:
+            self._add_contact_item(contact)
             
-    def _get_filtered_notes_iter(self, keywords):
-        if False:
-            yield None
-        # for note in self._notes_model.notes:
-            # if note.last_revision.contains_all_keyword(keywords):
-                # yield note
-    
-    def _sort_notes(self, notes):
-        return sorted(notes, key=lambda x: x.id, reverse=True)
+        # self._add_test_item('aaa', foreign_key=1)
+        # self._add_test_item('bbb', foreign_key=2)
+        # self._add_test_item('ccc', foreign_key=3)
+
+    def _add_test_item(self, header, foreign_key):
+        new_item = QListWidgetItem(header)
+        new_item.setData(Qt.UserRole, foreign_key)
+        self.ui.search_result_list.addItem(new_item)
+            
+    def _iter_filtered_contacts(self, keywords):
+        for contact in self._contacts.iter_objects():
+            if contact.contains_all_keywords(keywords):
+                yield contact
+
+    def _sort_contacts(self, contacts):
+        return sorted(contacts, key=lambda x: x.id)
         
-    def _add_note_item(self, note):
-        new_item = self._create_new_list_item(note)
+    def _add_contact_item(self, contact):
+        new_item = self._create_new_list_item(contact)
         self.ui.search_result_list.addItem(new_item)
         
-    def _create_new_list_item(self, note):
-        new_item = QListWidgetItem(note.get_header())
-        new_item.setData(Qt.UserRole, note.id)
+    def _create_new_list_item(self, contact):
+        new_item = QListWidgetItem(contact.title)
+        new_item.setData(Qt.UserRole, contact.id)
         return new_item
-            

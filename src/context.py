@@ -19,7 +19,6 @@
 # along with CC-Notes.  If not, see <http://www.gnu.org/licenses/>.
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
-#------------------------------------------------------------------------------
 
 class Context:
 
@@ -45,7 +44,14 @@ class Context:
     def icon_dir(self):
         return self._root_dir / 'etc' / 'icons'
     
-#------------------------------------------------------------------------------
+    @property
+    def data_dir(self):
+        return self._root_dir / 'data'
+
+    @property
+    def contacts_db_path(self):
+        return self.data_dir / 'contacts.sqlite'
+
 
 class Config:
     
@@ -68,4 +74,3 @@ class Config:
     @property
     def margin(self):
         return 5
-     

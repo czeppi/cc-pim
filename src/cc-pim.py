@@ -19,7 +19,7 @@
 # along with CC-Notes.  If not, see <http://www.gnu.org/licenses/>.
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
    
-GUI = 'wx'
+GUI = 'pyside'
    
 import sys
 import os.path
@@ -68,7 +68,7 @@ def start_wx_app(context):
 
 def start_pyside_app(context):
     app = QApplication(sys.argv)
-    frame = MainWindow()
+    frame = MainWindow(context)
     frame.show()
     sys.exit(app.exec_())
 
