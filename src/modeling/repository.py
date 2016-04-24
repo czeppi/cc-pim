@@ -61,7 +61,7 @@
 import sqlite3
 import time
 from pathlib import Path
-from .basetypes import VagueDate
+from modeling.basetypes import VagueDate
 
 
 class Repository:

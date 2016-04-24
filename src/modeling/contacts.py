@@ -20,7 +20,7 @@
 
 from collections import OrderedDict, defaultdict
 from enum import Enum
-from .basetypes import Name, Date, EMail, PhoneNumber, Url, Str, Text, Ref
+from modeling.basetypes import Name, Date, EMail, PhoneNumber, Url, Str, Text, Ref
 
 
 class ContactTypes(Enum):
@@ -82,7 +82,64 @@ class ContactObject:
 
     def contains_all_keywords(self, keywords):
         return all(self.contains_keyword(x) for x in keywords)
-        
+
+    def get_html_text(self, contacts):
+        creator = ContactHtmlCreator(self, contacts)
+        return creator.create_html_text()
+
+
+class ContactHtmlCreator:
+
+    def __init__(self, contact_obj, contacts):
+        self._contact_obj = contact_obj
+        self._contacts = contacts
+
+    def create_html_text(self):
+        self._lines = []
+        self._add_header()
+        self._add_title()
+        self._add_table()
+        self._add_footer()
+        return '\n'.join(self._lines)
+
+    def _add_header(self):
+        self._add('<html>')
+        self._add('<head>')
+        #self._add('  <style> table, td, th { border: 1px solid black; } </style>')
+        self._add('</head>')
+        self._add('<body>')
+
+    def _add_title(self):
+        self._add('<h1 align="center">{}</h1>'.format(self._contact_obj.title))
+
+    def _add_table(self):
+        self._add('<table align="center" cellspacing="10" cellpadding="1">')
+        for attr in self._contact_obj.iter_attributes():
+            for fact in self._contact_obj.get_facts(attr.name):
+                val = self._get_fact_value(fact, attr)
+                self._add('  <tr>')
+                self._add('    <td>{}</td>'.format(attr.name))
+                self._add('    <td>{}</td>'.format(val))
+                self._add('  </tr>')
+        self._add('</table)>')
+
+    def _get_fact_value(self, fact, attr):
+        if isinstance(attr.value_type, Ref):
+            type_id = attr.value_type.target_class.type_id
+            serial = int(fact.value)
+            #return '{}.{}'.format(type_id, serial)
+            obj = self._contacts.get(type_id, serial)
+            return obj.title
+        else:
+            return fact.value
+
+    def _add_footer(self):
+        self._add('</body>')
+        self._add('</html>')
+
+    def _add(self, line):
+        self._lines.append(line)
+
         
 class Person(ContactObject):
 
@@ -224,7 +281,8 @@ class Contacts:
         pass
         
     def get(self, type_id, obj_serial):
-        return self._data[type_id][obj_serial]
+        return self._data[(type_id, obj_serial)]
+#        return self._data.get((type_id, obj_serial), '{}.{}?'.format(type_id, obj_serial))
         
     def find(self, search_parameters):
         pass

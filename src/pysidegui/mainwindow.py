@@ -26,8 +26,6 @@ from PySide.QtGui import QListWidgetItem
 from PySide.QtCore import Qt
 from pysidegui._ui_.ui_mainwindow import Ui_MainWindow
 from context import Context
-#from modeling.notesmodel import NotesModel
-#from modeling.notesmodel import Note
 from modeling.repository import Repository
 from modeling.contacts import Contacts
 
@@ -57,13 +55,13 @@ class MainWindow(QMainWindow):
         self._update_list()
         self.ui.search_edit.setFocus()
         
-        # self.ui.action_new_note.triggered.connect(self.on_new_note)
-        # self.ui.action_edit_note.triggered.connect(self.on_edit_note)
+        self.ui.action_new_contact.triggered.connect(self.on_new_contact)
+        self.ui.action_edit_contact.triggered.connect(self.on_edit_contact)
         self.ui.search_edit.textChanged.connect(self.on_search_text_changed)
         self.ui.search_result_list.currentItemChanged.connect(self.on_cur_list_item_changed)
         self.ui.search_result_list.itemActivated.connect(self.on_list_item_activated)
         
-    def on_new_note(self):
+    def on_new_contact(self):
         new_note = self._notes_model.create_new_note()
         dlg = NoteEditDialog(self, note=new_note, notes_model=self._notes_model)
         if dlg.exec() == dlg.Accepted:
@@ -76,7 +74,7 @@ class MainWindow(QMainWindow):
             self.ui.search_result_list.insertItem(0, new_item)
             self.ui.search_result_list.setCurrentItem(new_item)
 
-    def on_edit_note(self):
+    def on_edit_contact(self):
         cur_item = self.ui.search_result_list.currentItem()
         if cur_item is None:
             raise Exception('')
@@ -89,16 +87,18 @@ class MainWindow(QMainWindow):
         self._update_list()
         
     def on_cur_list_item_changed(self, item, previous_item):
-        self.ui.action_edit_note.setEnabled(item is not None)
+        self.ui.action_edit_contact.setEnabled(item is not None)
 
         if item is not None:
-            note_id = item.data(Qt.UserRole)
-            note = self._notes_model.get_note(note_id)
-            html_text = note.last_revision.get_html_text()
+            type_id, obj_serial = item.data(Qt.UserRole)
+#            print('type_id={}, serial={}'.format(type_id, obj_serial))
+            contact_obj = self._contacts.get(type_id, obj_serial)
+            html_text = contact_obj.get_html_text(self._contacts)
         else:
             html_text = ''
         
-        self.ui.html_edit.setText(html_text)
+        #self.ui.html_edit.setText(html_text)
+        self.ui.output_edit.setText(html_text)
         
     def on_list_item_activated(self, item):
         self._edit_item(item)
