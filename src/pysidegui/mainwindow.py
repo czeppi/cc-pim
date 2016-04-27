@@ -28,7 +28,7 @@ from pysidegui._ui_.ui_mainwindow import Ui_MainWindow
 from pysidegui.contacteditdialog import ContactEditDialog
 from context import Context
 from modeling.repository import Repository
-from modeling.contacts import Contacts
+from modeling.contactmodel import ContactModel
 
 
 class MainWindow(QMainWindow):
@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
         self._contact_repo = Repository(context.contacts_db_path)
         self._contact_repo.reload()
         date_changes, fact_changes = self._contact_repo.aggregate_revisions()
-        self._contacts = Contacts(date_changes, fact_changes)
+        self._contact_model = ContactModel(date_changes, fact_changes)
 
 
         # self._notes_model = NotesModel(context)
@@ -95,8 +95,8 @@ class MainWindow(QMainWindow):
         if item is not None:
             type_id, obj_serial = item.data(Qt.UserRole)
 #            print('type_id={}, serial={}'.format(type_id, obj_serial))
-            contact_obj = self._contacts.get(type_id, obj_serial)
-            html_text = contact_obj.get_html_text(self._contacts)
+            contact_obj = self._contact_model.get(type_id, obj_serial)
+            html_text = contact_obj.get_html_text(self._contact_model)
         else:
             html_text = ''
         
@@ -108,11 +108,11 @@ class MainWindow(QMainWindow):
         
     def _edit_item(self, item):
         type_id, obj_serial = item.data(Qt.UserRole)
-        contact_obj = self._contacts.get(type_id, obj_serial)
+        contact_obj = self._contact_model.get(type_id, obj_serial)
 
-        dlg = ContactEditDialog(self, contact_obj, self._contacts)
+        dlg = ContactEditDialog(self, contact_obj, self._contact_model)
         if dlg.exec() == dlg.Accepted:
-            self._contacts.add_changes(
+            self._contact_model.add_changes(
                 date_changes=dlg.date_changes,
                 fact_changes=dlg.fact_changes
             )
@@ -126,19 +126,19 @@ class MainWindow(QMainWindow):
         self._update_icons()
 
     def _update_icons(self):
-        exists_uncommited_changes = self._contacts.exists_uncommited_changes()
+        exists_uncommited_changes = self._contact_model.exists_uncommited_changes()
         self.ui.action_save_all.setEnabled(exists_uncommited_changes)
         self.ui.action_revert_changes.setEnabled(exists_uncommited_changes)
 
     def on_save_all(self):
         comment, ok = QInputDialog.getText(None, 'Commit', 'please enter a comment')
         if ok:
-            self._contacts.commit(comment, self._contact_repo)
+            self._contact_model.commit(comment, self._contact_repo)
             self._update_icons()
 
     def on_revert_changed(self):
         date_changes, fact_changes = self._contact_repo.aggregate_revisions()
-        self._contacts = Contacts(date_changes, fact_changes)
+        self._contact_model = ContactModel(date_changes, fact_changes)
         self._update_list()
         self._update_icons()
 
@@ -162,7 +162,7 @@ class MainWindow(QMainWindow):
         self.ui.search_result_list.addItem(new_item)
             
     def _iter_filtered_contacts(self, keywords):
-        for contact in self._contacts.iter_objects():
+        for contact in self._contact_model.iter_objects():
             if contact.contains_all_keywords(keywords):
                 yield contact
 

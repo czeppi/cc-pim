@@ -21,7 +21,7 @@
 from PySide.QtGui import (QApplication, QDialog, QDialogButtonBox, QGridLayout, QLabel, QLayout, QLineEdit, QSplitter,
                           QTextEdit, QVBoxLayout, QWidget)
 from PySide.QtCore import Qt, QObject, QMetaObject, SIGNAL
-from modeling.contacts import ContactHtmlCreator
+from modeling.contactmodel import ContactHtmlCreator
 from modeling.basetypes import Ref
 
 

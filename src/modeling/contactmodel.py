@@ -89,8 +89,8 @@ class ContactObject:
     def contains_all_keywords(self, keywords):
         return all(self.contains_keyword(x) for x in keywords)
 
-    def get_html_text(self, contacts):
-        creator = ContactHtmlCreator(self, contacts)
+    def get_html_text(self, contact_model):
+        creator = ContactHtmlCreator(self, contact_model)
         return creator.create_html_text()
 
     def copy(self):
@@ -103,9 +103,9 @@ class ContactObject:
 
 class ContactHtmlCreator:
 
-    def __init__(self, contact_obj, contacts):
+    def __init__(self, contact_obj, contact_model):
         self._contact_obj = contact_obj
-        self._contacts = contacts
+        self._contact_model = contact_model
 
     def create_html_text(self):
         self._lines = []
@@ -130,7 +130,7 @@ class ContactHtmlCreator:
         for attr in self._contact_obj.iter_attributes():
             for fact in self._contact_obj.get_facts(attr.name):
                 #val = self._get_fact_value(fact, attr)
-                val = self._contacts.get_fact_value(fact, attr)
+                val = self._contact_model.get_fact_value(fact, attr)
                 self._add('  <tr>')
                 self._add('    <td>{}</td>'.format(attr.name))
                 self._add('    <td>{}</td>'.format(val))
@@ -240,7 +240,7 @@ def _iter_predicates_data():
     yield 30, Address, 'phone',            PhoneNumber
 
     
-class Contacts:
+class ContactModel:
 
     predicates = OrderedDict()
     for serial, subject_class, name, object_type in _iter_predicates_data():

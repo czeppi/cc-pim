@@ -24,11 +24,11 @@ import sys
 sys.path += [
     os.path.join(os.path.dirname(__file__), '..'),
 ]
-from modeling.contacts import Person, Attribute
+from modeling.contactmodel import Person, Attribute
 from modeling.repository import Repository
 
 
-class TestContacts(unittest.TestCase):
+class TestContactModel(unittest.TestCase):
 
     def setUp(self):
         self._repo = Repository()
