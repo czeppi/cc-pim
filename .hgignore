@@ -1,5 +1,11 @@
 syntax: glob
+*.pyc
+__pycache__
+ui_*.py
+.idea
 data
-src/__pycache__
-src/pysidegui/__pycache__
-src/pysidegui/_ui_
+import
+Notizen
+import.log
+import.json
+import.zip

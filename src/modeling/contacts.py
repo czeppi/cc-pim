@@ -74,6 +74,12 @@ class ContactObject:
     def get_facts(self, attr_name):
         return self._facts_map.get(attr_name, [])
 
+    def get_fact(self, fact_serial):
+        for facts in self._facts_map.values():
+            for fact in facts:
+                if fact.serial == fact_serial:
+                    return fact
+
     def contains_keyword(self, keyword):
         lower_keyword = keyword.lower()
         return any(lower_keyword in str(fact.value).lower()
@@ -86,6 +92,13 @@ class ContactObject:
     def get_html_text(self, contacts):
         creator = ContactHtmlCreator(self, contacts)
         return creator.create_html_text()
+
+    def copy(self):
+        new_contact = _create_contact_object(self.type_id, self.serial)
+        for attr_name, fact_list in self._facts_map.items():
+            for fact in fact_list:
+                new_contact.add_fact(attr_name, fact.copy())
+        return new_contact
 
 
 class ContactHtmlCreator:
@@ -116,22 +129,13 @@ class ContactHtmlCreator:
         self._add('<table align="center" cellspacing="10" cellpadding="1">')
         for attr in self._contact_obj.iter_attributes():
             for fact in self._contact_obj.get_facts(attr.name):
-                val = self._get_fact_value(fact, attr)
+                #val = self._get_fact_value(fact, attr)
+                val = self._contacts.get_fact_value(fact, attr)
                 self._add('  <tr>')
                 self._add('    <td>{}</td>'.format(attr.name))
                 self._add('    <td>{}</td>'.format(val))
                 self._add('  </tr>')
         self._add('</table)>')
-
-    def _get_fact_value(self, fact, attr):
-        if isinstance(attr.value_type, Ref):
-            type_id = attr.value_type.target_class.type_id
-            serial = int(fact.value)
-            #return '{}.{}'.format(type_id, serial)
-            obj = self._contacts.get(type_id, serial)
-            return obj.title
-        else:
-            return fact.value
 
     def _add_footer(self):
         self._add('</body>')
@@ -252,6 +256,8 @@ class Contacts:
     def __init__(self, date_changes, fact_changes):
         self._date_changes = date_changes
         self._fact_changes = fact_changes
+        self._uncommited_date_changes = {}
+        self._uncommited_fact_changes = {}
         self._revision_number = None
         self._init_data()
 
@@ -286,7 +292,34 @@ class Contacts:
         
     def find(self, search_parameters):
         pass
-        
+
+    def get_fact_value(self, fact, attr):
+        if isinstance(attr.value_type, Ref):
+            type_id = attr.value_type.target_class.type_id
+            serial = int(fact.value)
+            #return '{}.{}'.format(type_id, serial)
+            obj = self.get(type_id, serial)
+            return obj.title
+        else:
+            return fact.value
+
+    def add_changes(self, date_changes, fact_changes):
+        self._date_changes.update(date_changes)
+        self._fact_changes.update(fact_changes)
+        self._uncommited_date_changes.update(date_changes)
+        self._uncommited_fact_changes.update(fact_changes)
+        self._init_data()
+
+    def exists_uncommited_changes(self):
+        return len(self._uncommited_date_changes) > 0 or len(self._uncommited_fact_changes) > 0
+
+    def commit(self, comment, repo):
+        repo.commit(comment,
+                    date_changes=self._uncommited_date_changes,
+                    fact_changes=self._uncommited_fact_changes)
+        self._uncommited_date_changes.clear()
+        self._uncommited_fact_changes.clear()
+
     # def add(self, new_obj):
     #     obj_map = self._data[new_obj.type_id]
     #     new_serial = len(obj_map) + 1
@@ -343,3 +376,13 @@ class Contacts:
                 # object_type = self._object_types[link.type_name]
                 # object_type.add_backlink_attribute(link.type_name, link.attr_name)
                 
+
+
+# class ContactChanges:
+#
+#     def __init__(self, last_date_serial, last_fact_serial):
+#         self.last_date_serial = last_date_serial
+#         self.last_fact_serial = last_fact_serial
+#         self.date_changes = {}  # date_serial -> new_date
+#         self.fact_changes = {}  # fact_serial -> new_fact
+

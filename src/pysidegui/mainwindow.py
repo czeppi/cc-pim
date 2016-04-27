@@ -22,9 +22,10 @@
 from PySide.QtGui import QMainWindow
 from PySide.QtGui import QLabel
 from PySide.QtGui import QCompleter
-from PySide.QtGui import QListWidgetItem
+from PySide.QtGui import QListWidgetItem, QInputDialog
 from PySide.QtCore import Qt
 from pysidegui._ui_.ui_mainwindow import Ui_MainWindow
+from pysidegui.contacteditdialog import ContactEditDialog
 from context import Context
 from modeling.repository import Repository
 from modeling.contacts import Contacts
@@ -57,13 +58,15 @@ class MainWindow(QMainWindow):
         
         self.ui.action_new_contact.triggered.connect(self.on_new_contact)
         self.ui.action_edit_contact.triggered.connect(self.on_edit_contact)
+        self.ui.action_save_all.triggered.connect(self.on_save_all)
+        self.ui.action_revert_changes.triggered.connect(self.on_revert_changed)
         self.ui.search_edit.textChanged.connect(self.on_search_text_changed)
         self.ui.search_result_list.currentItemChanged.connect(self.on_cur_list_item_changed)
         self.ui.search_result_list.itemActivated.connect(self.on_list_item_activated)
         
     def on_new_contact(self):
         new_note = self._notes_model.create_new_note()
-        dlg = NoteEditDialog(self, note=new_note, notes_model=self._notes_model)
+        dlg = ContactEditDialog(self, note=new_note, notes_model=self._notes_model)
         if dlg.exec() == dlg.Accepted:
             dlg_values = dlg.get_values()  # { attr-name -> new-value }
             new_note_rev = new_note.create_new_revision(**dlg_values)
@@ -104,19 +107,41 @@ class MainWindow(QMainWindow):
         self._edit_item(item)
         
     def _edit_item(self, item):
-        note_id = item.data(Qt.UserRole)
-        note = self._notes_model.get_note(note_id)
-            
-        dlg = NoteEditDialog(self, note, notes_model=self._notes_model)
+        type_id, obj_serial = item.data(Qt.UserRole)
+        contact_obj = self._contacts.get(type_id, obj_serial)
+
+        dlg = ContactEditDialog(self, contact_obj, self._contacts)
         if dlg.exec() == dlg.Accepted:
-            dlg_values = dlg.get_values()  # { attr-name -> new-value }
-            if note.last_revision.have_values_changed(dlg_values):
-                new_note_rev = note.create_new_revision(**dlg_values)
-                self._notes_model.add_note_revision(new_note_rev)
-                
-                html_text = note.last_revision.get_html_text()
-                self.ui.html_edit.setText(html_text)
-    
+            self._contacts.add_changes(
+                date_changes=dlg.date_changes,
+                fact_changes=dlg.fact_changes
+            )
+            # if note.last_revision.have_values_changed(dlg_values):
+            #     new_note_rev = note.create_new_revision(**dlg_values)
+            #     self._notes_model.add_note_revision(new_note_rev)
+            #
+            #     html_text = note.last_revision.get_html_text()
+            #     self.ui.html_edit.setText(html_text)
+
+        self._update_icons()
+
+    def _update_icons(self):
+        exists_uncommited_changes = self._contacts.exists_uncommited_changes()
+        self.ui.action_save_all.setEnabled(exists_uncommited_changes)
+        self.ui.action_revert_changes.setEnabled(exists_uncommited_changes)
+
+    def on_save_all(self):
+        comment, ok = QInputDialog.getText(None, 'Commit', 'please enter a comment')
+        if ok:
+            self._contacts.commit(comment, self._contact_repo)
+            self._update_icons()
+
+    def on_revert_changed(self):
+        date_changes, fact_changes = self._contact_repo.aggregate_revisions()
+        self._contacts = Contacts(date_changes, fact_changes)
+        self._update_list()
+        self._update_icons()
+
     def _update_list(self):
         keywords_str = self.ui.search_edit.text()
         keywords = [x.strip() for x in keywords_str.split(',') if x.strip() != '']
@@ -152,3 +177,4 @@ class MainWindow(QMainWindow):
         new_item = QListWidgetItem(contact.title)
         new_item.setData(Qt.UserRole, contact.id)
         return new_item
+

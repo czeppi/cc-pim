@@ -97,8 +97,8 @@ class Repository:
 
     def _create_db(self):
         self._execute_sql("create table revisions (serial integer primary key, timestamp int, comment text)")
-        self._execute_sql("create table dates (serial integer primary key, revision int, date text)")
-        self._execute_sql("create table facts (serial integer primary key, revision int, predicate int, subject int, value text, note text, date_begin int, date_end int)")
+        self._execute_sql("create table dates (serial integer, revision int, date text)")
+        self._execute_sql("create table facts (serial integer, revision int, predicate int, subject int, value text, note text, date_begin int, date_end int)")
         self._conn.commit()
 
     def count_revisions(self):
@@ -254,6 +254,17 @@ class Fact:
         self.date_begin_serial = date_begin_serial
         self.date_end_serial = date_end_serial
         self.note = note
+
+    def copy(self):
+        return Fact(
+            serial=self.serial,
+            predicate_serial=self.predicate_serial,
+            subject_serial=self.subject_serial,
+            value=self.value,
+            note=self.note,
+            date_begin_serial=self.date_begin_serial,
+            date_end_serial=self.date_end_serial
+        )
 
 
 # class FactData:

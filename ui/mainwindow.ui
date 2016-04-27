@@ -64,13 +64,74 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="action_new_contact"/>
+   <addaction name="action_edit_contact"/>
+   <addaction name="action_save_all"/>
+   <addaction name="action_revert_changes"/>
   </widget>
+  <action name="action_edit_contact">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>../etc/icons/edit-contact.ico</normaloff>../etc/icons/edit-contact.ico</iconset>
+   </property>
+   <property name="text">
+    <string>EditContact</string>
+   </property>
+   <property name="toolTip">
+    <string>edit contact</string>
+   </property>
+  </action>
+  <action name="action_new_contact">
+   <property name="icon">
+    <iconset>
+     <normaloff>../etc/icons/new-contact.ico</normaloff>../etc/icons/new-contact.ico</iconset>
+   </property>
+   <property name="text">
+    <string>NewContact</string>
+   </property>
+   <property name="toolTip">
+    <string>new contact</string>
+   </property>
+  </action>
+  <action name="action_save_all">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>../etc/icons/save.ico</normaloff>../etc/icons/save.ico</iconset>
+   </property>
+   <property name="text">
+    <string>SaveAll</string>
+   </property>
+   <property name="toolTip">
+    <string>save all</string>
+   </property>
+  </action>
+  <action name="action_revert_changes">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>../etc/icons/revert.ico</normaloff>../etc/icons/revert.ico</iconset>
+   </property>
+   <property name="text">
+    <string>RevertChanges</string>
+   </property>
+   <property name="toolTip">
+    <string>revert changes</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
    <class>SearchEdit</class>
    <extends>QLineEdit</extends>
-   <header>gui.searchedit</header>
+   <header>pysidegui.searchedit</header>
   </customwidget>
  </customwidgets>
  <resources/>
