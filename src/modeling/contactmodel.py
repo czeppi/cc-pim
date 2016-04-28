@@ -46,7 +46,7 @@ class Attribute:
         self.value_type = value_type
     
         
-class ContactObject:
+class Contact:
 
     def __init__(self, serial):
         self.serial = serial
@@ -94,7 +94,7 @@ class ContactObject:
         return creator.create_html_text()
 
     def copy(self):
-        new_contact = _create_contact_object(self.type_id, self.serial)
+        new_contact = _create_contact(self.type_id, self.serial)
         for attr_name, fact_list in self._facts_map.items():
             for fact in fact_list:
                 new_contact.add_fact(attr_name, fact.copy())
@@ -103,8 +103,8 @@ class ContactObject:
 
 class ContactHtmlCreator:
 
-    def __init__(self, contact_obj, contact_model):
-        self._contact_obj = contact_obj
+    def __init__(self, contact, contact_model):
+        self._contact = contact
         self._contact_model = contact_model
 
     def create_html_text(self):
@@ -123,12 +123,12 @@ class ContactHtmlCreator:
         self._add('<body>')
 
     def _add_title(self):
-        self._add('<h1 align="center">{}</h1>'.format(self._contact_obj.title))
+        self._add('<h1 align="center">{}</h1>'.format(self._contact.title))
 
     def _add_table(self):
         self._add('<table align="center" cellspacing="10" cellpadding="1">')
-        for attr in self._contact_obj.iter_attributes():
-            for fact in self._contact_obj.get_facts(attr.name):
+        for attr in self._contact.iter_attributes():
+            for fact in self._contact.get_facts(attr.name):
                 #val = self._get_fact_value(fact, attr)
                 val = self._contact_model.get_fact_value(fact, attr)
                 self._add('  <tr>')
@@ -145,7 +145,7 @@ class ContactHtmlCreator:
         self._lines.append(line)
 
         
-class Person(ContactObject):
+class Person(Contact):
 
     type_id = ContactTypes.person.value
     type_name = 'person'
@@ -166,7 +166,7 @@ class Person(ContactObject):
         return ' '.join(names_parts)
 
 
-class Company(ContactObject):
+class Company(Contact):
 
     type_id = ContactTypes.company.value
     type_name = 'company'
@@ -182,7 +182,7 @@ class Company(ContactObject):
             return '???'
 
 
-class Address(ContactObject):
+class Address(Contact):
 
     type_id = ContactTypes.address.value
     type_name = 'address'
@@ -198,7 +198,7 @@ class Address(ContactObject):
             return '???'
 
 
-def _create_contact_object(type_id, obj_serial):
+def _create_contact(type_id, obj_serial):
     cls_map = {
         Person.type_id:  Person,
         Company.type_id: Company,
@@ -271,7 +271,7 @@ class ContactModel:
             obj_id = (type_id, obj_serial)
             obj = self._data.get(obj_id, None)
             if obj is None:
-                obj = _create_contact_object(type_id, obj_serial)
+                obj = _create_contact(type_id, obj_serial)
                 self._data[obj_id] = obj
             obj.add_fact(predicate.name, fact)
 
@@ -330,6 +330,6 @@ class ContactModel:
         assert type_id in self._last_serial_map
         new_serial = self._last_serial_map[type_id] + 1
         self._last_serial_map[type_id] = new_serial
-        new_contact = _create_contact_object(type_id, new_serial)
+        new_contact = _create_contact(type_id, new_serial)
         return new_contact
 

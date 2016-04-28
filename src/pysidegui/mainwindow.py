@@ -111,8 +111,8 @@ class MainWindow(QMainWindow):
         if item is not None:
             type_id, obj_serial = item.data(Qt.UserRole)
 #            print('type_id={}, serial={}'.format(type_id, obj_serial))
-            contact_obj = self._contact_model.get(type_id, obj_serial)
-            html_text = contact_obj.get_html_text(self._contact_model)
+            contact = self._contact_model.get(type_id, obj_serial)
+            html_text = contact.get_html_text(self._contact_model)
         else:
             html_text = ''
         
@@ -124,9 +124,9 @@ class MainWindow(QMainWindow):
         
     def _edit_item(self, item):
         type_id, obj_serial = item.data(Qt.UserRole)
-        contact_obj = self._contact_model.get(type_id, obj_serial)
+        contact = self._contact_model.get(type_id, obj_serial)
 
-        dlg = ContactEditDialog(self, contact_obj, self._contact_model)
+        dlg = ContactEditDialog(self, contact, self._contact_model)
         if dlg.exec() == dlg.Accepted:
             self._contact_model.add_changes(
                 date_changes=dlg.date_changes,
