@@ -41,9 +41,10 @@ class Predicate:
         
 class Attribute:
 
-    def __init__(self, name, value_type):
+    def __init__(self, name, value_type, predicate_serial):
         self.name = name
         self.value_type = value_type
+        self.predicate_serial = predicate_serial
     
         
 class Contact:
@@ -245,7 +246,7 @@ class ContactModel:
     predicates = OrderedDict()
     for serial, subject_class, name, object_type in _iter_predicates_data():
         predicates[serial] = Predicate(serial, subject_class, name, object_type)
-        subject_class.attributes[name] = Attribute(name, object_type)
+        subject_class.attributes[name] = Attribute(name, object_type, serial)
         
     @staticmethod
     def iter_object_classes():
@@ -261,6 +262,7 @@ class ContactModel:
         self._revision_number = None
         self._init_data()
         self._init_last_serial_map()
+        self._init_last_fact_serial()
 
     def _init_data(self):
         self._data = {}  # (type_id, serial) -> ContactObject
@@ -280,6 +282,9 @@ class ContactModel:
             cls.type_id: max((serial for type_id, serial in self._data.keys() if type_id == cls.type_id), default=0)
             for cls in self.iter_object_classes()
         }
+
+    def _init_last_fact_serial(self):
+        self._last_fact_serial = max(fact.serial for fact in self._fact_changes.values())
 
     def iter_objects(self):
         yield from self._data.values()
@@ -332,4 +337,12 @@ class ContactModel:
         self._last_serial_map[type_id] = new_serial
         new_contact = _create_contact(type_id, new_serial)
         return new_contact
+
+    def create_fact_serial(self):
+        new_serial = self._last_fact_serial + 1
+        self._last_fact_serial = new_serial
+        return new_serial
+
+
+
 

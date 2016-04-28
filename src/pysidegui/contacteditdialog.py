@@ -18,11 +18,13 @@
 # along with CC-Notes.  If not, see <http://www.gnu.org/licenses/>.
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
-from PySide.QtGui import (QApplication, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QLabel, QLayout,
-                          QLineEdit, QSplitter, QTextEdit, QVBoxLayout, QWidget)
-from PySide.QtCore import Qt, QObject, QMetaObject, SIGNAL
+from collections import OrderedDict
+from PySide.QtGui import (QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
+                          QLineEdit, QPushButton, QSplitter, QTextEdit, QVBoxLayout, QWidget)
+from PySide.QtCore import Qt
 from modeling.contactmodel import ContactHtmlCreator
 from modeling.basetypes import Ref
+from modeling.repository import Fact
 
 
 class ContactEditDialog(QDialog):
@@ -49,10 +51,14 @@ class ContactEditDialog(QDialog):
         self._splitter             = self._create_splitter(self._main_vertical_layout)
         self._button_box           = self._create_button_box(self._main_vertical_layout)
         self._left_widget          = self._create_left_widget(self._splitter)
+
+
         self._grid_layout          = self._create_grid_layout(self._left_widget)
-        self._left_layout          = self._create_left_layout(self._grid_layout)
+        self._add_fact_button      = self._create_add_fact_button(self._left_widget)
+        self._left_layout          = self._create_left_layout(self._grid_layout, self._add_fact_button)
         self._preview              = self._create_preview(self._splitter)
 
+        self._fill_grid()
         self._left_widget.setLayout(self._left_layout)
 
         self._button_box.accepted.connect(self.accept)
@@ -86,34 +92,42 @@ class ContactEditDialog(QDialog):
     def _create_grid_layout(self, parent):
         grid_layout = QGridLayout()
         grid_layout.setObjectName('gridLayout')
-        row = 0
-        for attr in self._contact.iter_attributes():
-            for fact in self._contact.get_facts(attr.name):
-                self._add_row_to_grid(row, fact, attr, grid_layout, parent)
-                row += 1
         return grid_layout
 
-    def _create_left_layout(self, grid_layout):
+    def _create_add_fact_button(self, parent):
+        button = QPushButton('add', parent)
+        button.clicked.connect(self.on_add_fact_button_clicked)
+        return button
+
+    def _create_left_layout(self, grid_layout, add_fact_button):
         vbox = QVBoxLayout()
         vbox.addLayout(grid_layout)
+        vbox.addWidget(add_fact_button)
         vbox.addStretch()
         return vbox
 
-    def _add_row_to_grid(self, row, fact, attr, grid_layout, parent):
+    def _fill_grid(self):
+        for attr in self._contact.iter_attributes():
+            for fact in self._contact.get_facts(attr.name):
+                self._add_row_to_grid(attr, fact)
+
+    def _add_row_to_grid(self, attr, fact):
+        parent = self._left_widget
+        new_row = self._grid_layout.rowCount()
         attr_label = QLabel(parent)
-        attr_label.setObjectName('label{}'.format(row))
+        attr_label.setObjectName('label{}'.format(new_row))
         attr_label.setText(attr.name + ':')
-        grid_layout.addWidget(attr_label, row, 0, 1, 1)
+        self._grid_layout.addWidget(attr_label, new_row, 0, 1, 1)
 
         if isinstance(attr.value_type, Ref):
-            val_widget = self._create_val_combo(row, fact, attr, parent)
+            val_widget = self._create_val_combo(attr, fact, parent)
         else:
-            val_widget = self._create_val_edit(row, fact, attr, parent)
-        grid_layout.addWidget(val_widget, row, 1, 1, 1)
+            val_widget = self._create_val_edit(attr, fact, parent)
+        self._grid_layout.addWidget(val_widget, new_row, 1, 1, 1)
 
-    def _create_val_combo(self, row, fact, attr, parent):
+    def _create_val_combo(self, attr, fact, parent):
         combo = QComboBox(parent)
-        combo.setObjectName('val_combo{}'.format(row))
+        #combo.setObjectName('val_combo{}'.format(row))
 
         # completer = QCompleter(word_list, self)
         # completer.setCaseSensitivity(Qt.CaseInsensitive)
@@ -125,13 +139,14 @@ class ContactEditDialog(QDialog):
         current_data = 0
         for title in sorted(ref_map.keys()):
             contact = ref_map[title]
-            if contact.serial == int(fact.value):
+            if fact is not None and contact.serial == int(fact.value):
                 current_data = contact.serial
             combo.addItem(title, contact.serial)
         cur_index = combo.findData(current_data)
         combo.setCurrentIndex(cur_index)
         combo.currentIndexChanged.connect(self.on_combo_index_changed)
         combo.fact = fact
+        combo.attr = attr
         return combo
 
     def _create_ref_map(self, attr):
@@ -145,13 +160,14 @@ class ContactEditDialog(QDialog):
                     ref_map[obj_title] = obj
         return ref_map
 
-    def _create_val_edit(self, row, fact, attr, parent):
+    def _create_val_edit(self, attr, fact, parent):
         val_edit = QLineEdit(parent)
-        val_edit.setObjectName('val_edit{}'.format(row))
-        val = self._contacts_model.get_fact_value(fact, attr)
+        #val_edit.setObjectName('val_edit{}'.format(row))
+        val = '' if fact is None else self._contacts_model.get_fact_value(fact, attr)
         val_edit.setText(val)
         val_edit.textChanged.connect(self.on_text_changed)
         val_edit.fact = fact
+        val_edit.attr = attr
         return val_edit
 
     def _create_button_box(self, outer_layout):
@@ -169,8 +185,16 @@ class ContactEditDialog(QDialog):
 
     def on_text_changed(self):
         val_edit = self.sender()
-        fact = val_edit.fact
         text = val_edit.text()
+        fact = val_edit.fact
+        attr = val_edit.attr
+        if fact is None:
+            fact_serial = self._contacts_model.create_fact_serial()
+            fact = Fact(fact_serial,
+                        predicate_serial=attr.predicate_serial,
+                        subject_serial=self._contact.serial,
+                        value=None)
+            val_edit.fact = fact
         if text != fact.value:
             fact.value = text
             self._fact_changes[fact.serial] = fact
@@ -181,9 +205,18 @@ class ContactEditDialog(QDialog):
 
     def on_combo_index_changed(self):
         val_combo = self.sender()
-        fact = val_combo.fact
         cur_index = val_combo.currentIndex()
         cur_serial = val_combo.itemData(cur_index)
+
+        fact = val_combo.fact
+        attr = val_combo.attr
+        if fact is None:
+            fact_serial = self._contacts_model.create_fact_serial()
+            fact = Fact(fact_serial,
+                        predicate_serial=attr.predicate_serial,
+                        subject_serial=self._contact.serial,
+                        value=None)
+            val_combo.fact = fact
         if cur_serial != fact.value:
             fact.value = cur_serial
             self._fact_changes[fact.serial] = fact
@@ -191,6 +224,14 @@ class ContactEditDialog(QDialog):
         html_creator = ContactHtmlCreator(self._contact, self._contacts_model)
         html_text = html_creator.create_html_text()
         self._preview.setText(html_text)
+
+    def on_add_fact_button_clicked(self):
+        print('on_add_fact_button_clicked')
+        attr_map = OrderedDict((x.name, x) for x in self._contact.iter_attributes())
+        attr_name, ok = QInputDialog.getItem(self, 'add fact', 'select an attribute', list(attr_map.keys()), editable=False)
+        if ok:
+            attr = attr_map[attr_name]
+            self._add_row_to_grid(attr, fact=None)
 
     @property
     def fact_changes(self):
