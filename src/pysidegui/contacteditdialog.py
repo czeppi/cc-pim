@@ -18,8 +18,8 @@
 # along with CC-Notes.  If not, see <http://www.gnu.org/licenses/>.
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
-from PySide.QtGui import (QApplication, QDialog, QDialogButtonBox, QGridLayout, QLabel, QLayout, QLineEdit, QSplitter,
-                          QTextEdit, QVBoxLayout, QWidget)
+from PySide.QtGui import (QApplication, QComboBox, QCompleter, QDialog, QDialogButtonBox, QGridLayout, QLabel, QLayout,
+                          QLineEdit, QSplitter, QTextEdit, QVBoxLayout, QWidget)
 from PySide.QtCore import Qt, QObject, QMetaObject, SIGNAL
 from modeling.contactmodel import ContactHtmlCreator
 from modeling.basetypes import Ref
@@ -101,22 +101,66 @@ class ContactEditDialog(QDialog):
         return grid_layout
 
     def _add_row_to_grid(self, row, fact, attr, grid_layout, parent):
-        val = self._contacts_model.get_fact_value(fact, attr)
 
         attr_label = QLabel(parent)
         attr_label.setObjectName('label{}'.format(row))
         attr_label.setText(attr.name + ':')
         grid_layout.addWidget(attr_label, row, 0, 1, 1)
 
+        if isinstance(attr.value_type, Ref):
+            word_list = ["alpha", "omega", "omicron", "zeta"]
+            word_list = ['word{:04}'.format(i) for i in range(1000)]
+            ref_map = self._create_ref_map(attr)
+            val_combo = self._create_val_combo(row, fact, attr, parent)
+            grid_layout.addWidget(val_combo, row, 1, 1, 1)
+        else:
+            val_edit = self._create_val_edit(row, fact, attr, parent)
+            grid_layout.addWidget(val_edit, row, 1, 1, 1)
+            self._val_edit_list.append((fact, attr, val_edit))
+
+    def _create_val_combo(self, row, fact, attr, parent):
+        combo = QComboBox(parent)
+        combo.setObjectName('val_combo{}'.format(row))
+
+        # completer = QCompleter(word_list, self)
+        # completer.setCaseSensitivity(Qt.CaseInsensitive)
+        # combo.setCompleter(completer)
+        #combo.setEditable(True)
+
+        ref_map = self._create_ref_map(attr)
+        for title in sorted(ref_map.keys()):
+            contact = ref_map[title]
+            if contact.serial == int(fact.value):
+                current_data = contact.serial
+            combo.addItem(title, contact.serial)
+        cur_index = combo.findData(current_data)
+        combo.setCurrentIndex(cur_index)
+        combo.currentIndexChanged.connect(self.on_combo_index_changed)
+        combo.fact = fact
+        combo.attr = attr
+        return combo
+
+    def _create_ref_map(self, attr):
+        ref = attr.value_type
+        ref_type_id = ref.target_class.type_id
+        ref_map = {}  # title -> obj
+        for obj in self._contacts_model.iter_objects():
+            if obj.type_id == ref_type_id:
+                obj_title = obj.title
+                if obj_title:
+                    ref_map[obj_title] = obj
+        return ref_map
+        #return [ref_map[title] for title in sorted(ref_map.keys())]
+
+    def _create_val_edit(self, row, fact, attr, parent):
         val_edit = QLineEdit(parent)
         val_edit.setObjectName('val_edit{}'.format(row))
+        val = self._contacts_model.get_fact_value(fact, attr)
         val_edit.setText(val)
         val_edit.textChanged.connect(self.on_text_changed)
         val_edit.fact = fact
         val_edit.attr = attr
-
-        grid_layout.addWidget(val_edit, row, 1, 1, 1)
-        self._val_edit_list.append((fact, attr, val_edit))
+        return val_edit
 
     def _create_button_box(self, outer_layout):
         button_box = QDialogButtonBox(self)
@@ -132,22 +176,40 @@ class ContactEditDialog(QDialog):
         return preview
 
     def on_text_changed(self):
-        sender = self.sender()
-        fact = sender.fact
-        attr = sender.attr
+        val_edit = self.sender()
+        fact = val_edit.fact
+        #attr = val_edit.attr
+        text = val_edit.text()
+        if text != fact.value:
+            fact.value = text
+            self._fact_changes[fact.serial] = fact
 
         contact = self._contact.copy()
-        for fact, attr, val_edit in self._val_edit_list:
-            if not isinstance(attr.value_type, Ref):
-                text = val_edit.text()
-                fact = contact.get_fact(fact.serial)
-                if text != fact.value:
-                    fact.value = text
-                    self._fact_changes[fact.serial] = fact
+        # for fact, attr, val_edit in self._val_edit_list:
+        #     if not isinstance(attr.value_type, Ref):
+        #         text = val_edit.text()
+        #         fact = contact.get_fact(fact.serial)
+        #         if text != fact.value:
+        #             fact.value = text
+        #             self._fact_changes[fact.serial] = fact
 
         html_creator = ContactHtmlCreator(contact, self._contacts_model)
         html_text = html_creator.create_html_text()
+        self._preview.setText(html_text)
 
+    def on_combo_index_changed(self):
+        val_combo = self.sender()
+        fact = val_combo.fact
+        #attr = val_combo.attr
+        cur_index = val_combo.currentIndex()
+        cur_serial = val_combo.itemData(cur_index)
+        if cur_serial != fact.value:
+            fact.value = cur_serial
+            self._fact_changes[fact.serial] = fact
+
+        contact = self._contact.copy()
+        html_creator = ContactHtmlCreator(contact, self._contacts_model)
+        html_text = html_creator.create_html_text()
         self._preview.setText(html_text)
 
     @property
