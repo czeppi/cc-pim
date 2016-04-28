@@ -39,9 +39,9 @@ class ContactEditDialog(QDialog):
         self._date_changes = {}  # date_serial -> VagureDate
         self._fact_changes = {}  # fact_serial -> Fact
 
-        self.setObjectName('NoteEditDialog')
+        self.setObjectName('ContactEditDialog')
         self.setWindowModality(Qt.ApplicationModal)
-        self.resize(1200, 900)
+        self.resize(800, 600)
         self.setModal(True)
 
         self._init_title()
@@ -49,14 +49,20 @@ class ContactEditDialog(QDialog):
         self._splitter             = self._create_splitter(self._main_vertical_layout)
         self._button_box           = self._create_button_box(self._main_vertical_layout)
         self._left_widget          = self._create_left_widget(self._splitter)
-        self._grid_layout          = self._create_grid(self._left_widget)
+        self._grid_layout          = self._create_grid_layout(self._left_widget)
+        self._left_layout          = self._create_left_layout(self._grid_layout)
         self._preview              = self._create_preview(self._splitter)
+
+        self._left_widget.setLayout(self._left_layout)
 
         self._button_box.accepted.connect(self.accept)
         self._button_box.rejected.connect(self.reject)
 
     def _init_title(self):
-        title = 'New Contact' if self._contact_is_new else 'Edit Contact'
+        type_lower_name = self._contact.type_name
+        type_name = type_lower_name[0].upper() + type_lower_name[1:]
+        prefix = 'New' if self._contact_is_new else 'Edit'
+        title = prefix + ' ' + type_name
         self.setWindowTitle(title)
 
     def _create_main_vertical_layout(self):
@@ -77,8 +83,8 @@ class ContactEditDialog(QDialog):
         left_widget.setObjectName("left widget")
         return left_widget
 
-    def _create_grid(self, parent):
-        grid_layout = QGridLayout(parent)
+    def _create_grid_layout(self, parent):
+        grid_layout = QGridLayout()
         grid_layout.setObjectName('gridLayout')
         row = 0
         for attr in self._contact.iter_attributes():
@@ -87,8 +93,13 @@ class ContactEditDialog(QDialog):
                 row += 1
         return grid_layout
 
-    def _add_row_to_grid(self, row, fact, attr, grid_layout, parent):
+    def _create_left_layout(self, grid_layout):
+        vbox = QVBoxLayout()
+        vbox.addLayout(grid_layout)
+        vbox.addStretch()
+        return vbox
 
+    def _add_row_to_grid(self, row, fact, attr, grid_layout, parent):
         attr_label = QLabel(parent)
         attr_label.setObjectName('label{}'.format(row))
         attr_label.setText(attr.name + ':')
