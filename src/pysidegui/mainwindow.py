@@ -19,6 +19,7 @@
 # along with CC-Notes.  If not, see <http://www.gnu.org/licenses/>.
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
+from collections import OrderedDict
 from PySide.QtGui import QMainWindow
 from PySide.QtGui import QLabel
 from PySide.QtGui import QCompleter
@@ -65,17 +66,32 @@ class MainWindow(QMainWindow):
         self.ui.search_result_list.itemActivated.connect(self.on_list_item_activated)
         
     def on_new_contact(self):
-        new_note = self._notes_model.create_new_note()
-        dlg = ContactEditDialog(self, note=new_note, notes_model=self._notes_model)
-        if dlg.exec() == dlg.Accepted:
-            dlg_values = dlg.get_values()  # { attr-name -> new-value }
-            new_note_rev = new_note.create_new_revision(**dlg_values)
-            self._notes_model.add_note_revision(new_note_rev)
-            new_note2 = self._notes_model.get_note(new_note_rev.note_id)
-            new_item = self._create_new_list_item(new_note2)
-            
-            self.ui.search_result_list.insertItem(0, new_item)
-            self.ui.search_result_list.setCurrentItem(new_item)
+        type_map = OrderedDict((x.type_name, x) for x in self._contact_model.iter_object_classes())
+        type_name, ok = QInputDialog.getItem(self, 'new', 'select a type', list(type_map.keys()), editable=False)
+        if ok:
+            contact_cls = type_map[type_name]
+            new_contact = self._contact_model.create_contact(contact_cls.type_id)
+
+            dlg = ContactEditDialog(self, new_contact, self._contact_model)
+            if dlg.exec() == dlg.Accepted:
+                self._contact_model.add_changes(
+                    date_changes=dlg.date_changes,
+                    fact_changes=dlg.fact_changes
+                )
+            self._update_icons()
+
+
+        # new_note = self._notes_model.create_new_note()
+        # dlg = ContactEditDialog(self, note=new_note, notes_model=self._notes_model)
+        # if dlg.exec() == dlg.Accepted:
+        #     dlg_values = dlg.get_values()  # { attr-name -> new-value }
+        #     new_note_rev = new_note.create_new_revision(**dlg_values)
+        #     self._notes_model.add_note_revision(new_note_rev)
+        #     new_note2 = self._notes_model.get_note(new_note_rev.note_id)
+        #     new_item = self._create_new_list_item(new_note2)
+        #
+        #     self.ui.search_result_list.insertItem(0, new_item)
+        #     self.ui.search_result_list.setCurrentItem(new_item)
 
     def on_edit_contact(self):
         cur_item = self.ui.search_result_list.currentItem()

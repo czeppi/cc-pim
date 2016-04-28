@@ -169,7 +169,7 @@ class Person(ContactObject):
 class Company(ContactObject):
 
     type_id = ContactTypes.company.value
-    type_name = 'person'
+    type_name = 'company'
     attributes = OrderedDict()
     last_serial = 0
 
@@ -185,7 +185,7 @@ class Company(ContactObject):
 class Address(ContactObject):
 
     type_id = ContactTypes.address.value
-    type_name = 'person'
+    type_name = 'address'
     attributes = OrderedDict()
     last_serial = 0
 
@@ -248,7 +248,7 @@ class ContactModel:
         subject_class.attributes[name] = Attribute(name, object_type)
         
     @staticmethod
-    def iter_object_classes(self):
+    def iter_object_classes():
         yield Person
         yield Company
         yield Address
@@ -260,6 +260,7 @@ class ContactModel:
         self._uncommited_fact_changes = {}
         self._revision_number = None
         self._init_data()
+        self._init_last_serial_map()
 
     def _init_data(self):
         self._data = {}  # (type_id, serial) -> ContactObject
@@ -274,17 +275,20 @@ class ContactModel:
                 self._data[obj_id] = obj
             obj.add_fact(predicate.name, fact)
 
+    def _init_last_serial_map(self):
+        self._last_serial_map = {
+            cls.type_id: max((serial for type_id, serial in self._data.keys() if type_id == cls.type_id), default=0)
+            for cls in self.iter_object_classes()
+        }
+
     def iter_objects(self):
         yield from self._data.values()
 
     def update(self):
         pass
-        
-    def commit(self, comment, user=None):
-        pass
-        
-    def revert_changes(self):
-        pass
+
+    def contains(self, type_id, obj_serial):
+        return (type_id, obj_serial) in self._data
         
     def get(self, type_id, obj_serial):
         return self._data[(type_id, obj_serial)]
@@ -297,9 +301,11 @@ class ContactModel:
         if isinstance(attr.value_type, Ref):
             type_id = attr.value_type.target_class.type_id
             serial = int(fact.value)
-            #return '{}.{}'.format(type_id, serial)
-            obj = self.get(type_id, serial)
-            return obj.title
+            if serial == 0:
+                return ''
+            else:
+                obj = self.get(type_id, serial)
+                return obj.title
         else:
             return fact.value
 
@@ -320,69 +326,10 @@ class ContactModel:
         self._uncommited_date_changes.clear()
         self._uncommited_fact_changes.clear()
 
-    # def add(self, new_obj):
-    #     obj_map = self._data[new_obj.type_id]
-    #     new_serial = len(obj_map) + 1
-    #     assert new_serial not in obj_map
-    #     obj_map[new_serial] = new_obj
-    #
-    # def change(self, serial, obj):
-    #     obj_map = self._data[new_obj.type_id]
-    #     assert serial in obj_map
-    #     obj_map[serial] = person
-
-
-
-        
-  # class ContactMetaModel:
-
-    # def __init__(self):
-        # self._init_relation_types()
-        # self._init_object_types()
-    
-    # def _init_relation_types(self):
-        # self._relation_types = []
-        # for relation_type_serial, subject_class, subject_attr_name, object_class:  # subject_multiplicity, object_multiplicity
-            # new_realation_type = RelationType(relation_type_serial, subject_class, subject_attr_name, object_class, object_attr_name)
-            # if isinstance(object_class, Ref):
-                # ref = object_class
-                # new_relation_type = RelationType(relation_type_serial, subject_class, subject_attr_name, ref.obj_class, ref.attr_name=
-            # else:
-                # new_relation_type = RelationType(relation_type_serial, subject_class, subject_attr_name, object_class)
-            # self._relation_types.append(new_realation_type)
-            
-    # def _init_object_types(self):
-        # self._object_types  = OrderedDict()
-        # self._init_subject_types()
-        # self._init_object_attributes()
-        
-    # def _init_subject_types(self):
-        # for rel_type in self._relation_types:
-            # object_type_name = rel_type.subject_type_name
-            # if object_type_name not in self._object_types:
-                # self._object_types.append(
-                    # ObjectType(object_type_name))
-        
-    # def _init_object_attributes(self)
-        # for rel_type in self._relation_types:
-            # object_type = self._object_types[rel_type.subject_type_name]
-            # object_type.add_attribute(rel_type.subject_attr_name, rel_type.value_type)
-            
-            # if isinstance(rel_type.value_type, Link):
-                # link = rel_type.value_type
-                # if link.type_name not in self._object_types:
-                    # self._object_types.append(
-                        # ObjectType(link.type_name))
-                # object_type = self._object_types[link.type_name]
-                # object_type.add_backlink_attribute(link.type_name, link.attr_name)
-                
-
-
-# class ContactChanges:
-#
-#     def __init__(self, last_date_serial, last_fact_serial):
-#         self.last_date_serial = last_date_serial
-#         self.last_fact_serial = last_fact_serial
-#         self.date_changes = {}  # date_serial -> new_date
-#         self.fact_changes = {}  # fact_serial -> new_fact
+    def create_contact(self, type_id):
+        assert type_id in self._last_serial_map
+        new_serial = self._last_serial_map[type_id] + 1
+        self._last_serial_map[type_id] = new_serial
+        new_contact = _create_contact_object(type_id, new_serial)
+        return new_contact
 
