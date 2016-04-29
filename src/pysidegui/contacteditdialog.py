@@ -19,12 +19,11 @@
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
 from collections import OrderedDict
-from PySide.QtGui import (QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
+from PySide.QtGui import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
                           QLineEdit, QPushButton, QSplitter, QTextEdit, QVBoxLayout, QWidget)
 from PySide.QtCore import Qt
 from modeling.contactmodel import ContactHtmlCreator
-from modeling.basetypes import Ref
-from modeling.repository import Fact
+from modeling.basetypes import Ref, Fact
 
 
 class ContactEditDialog(QDialog):
@@ -41,9 +40,8 @@ class ContactEditDialog(QDialog):
         self._date_changes = {}  # date_serial -> VagureDate
         self._fact_changes = {}  # fact_serial -> Fact
 
-        self.setObjectName('ContactEditDialog')
         self.setWindowModality(Qt.ApplicationModal)
-        self.resize(800, 600)
+        self.resize(1000, 600)
         self.setModal(True)
 
         self._init_title()
@@ -74,24 +72,20 @@ class ContactEditDialog(QDialog):
     def _create_main_vertical_layout(self):
         layout = QVBoxLayout(self)
         layout.setSizeConstraint(QLayout.SetDefaultConstraint)
-        layout.setObjectName('main_vertical_layout')
         return layout
 
     def _create_splitter(self, outer_layout):
         splitter = QSplitter(self)
         splitter.setOrientation(Qt.Horizontal)
-        splitter.setObjectName('splitter')
         outer_layout.addWidget(splitter)
         return splitter
 
     def _create_left_widget(self, parent):
         left_widget = QWidget(parent)
-        left_widget.setObjectName("left widget")
         return left_widget
 
     def _create_grid_layout(self, parent):
         grid_layout = QGridLayout()
-        grid_layout.setObjectName('gridLayout')
         return grid_layout
 
     def _create_add_fact_button(self, parent):
@@ -115,7 +109,6 @@ class ContactEditDialog(QDialog):
         parent = self._left_widget
         new_row = self._grid_layout.rowCount()
         attr_label = QLabel(parent)
-        attr_label.setObjectName('label{}'.format(new_row))
         attr_label.setText(attr.name + ':')
         self._grid_layout.addWidget(attr_label, new_row, 0, 1, 1)
 
@@ -125,9 +118,17 @@ class ContactEditDialog(QDialog):
             val_widget = self._create_val_edit(attr, fact, parent)
         self._grid_layout.addWidget(val_widget, new_row, 1, 1, 1)
 
+        note_edit = self._create_note_edit(attr, fact, parent)
+        self._grid_layout.addWidget(note_edit, new_row, 2, 1, 1)
+
+        valid_checkbox = self._create_valid_checkbox(attr, fact, parent)
+        self._grid_layout.addWidget(valid_checkbox, new_row, 3, 1, 1)
+
+        remove_button = self._create_remove_button(attr, fact, parent)
+        self._grid_layout.addWidget(remove_button, new_row, 4, 1, 1)
+
     def _create_val_combo(self, attr, fact, parent):
         combo = QComboBox(parent)
-        #combo.setObjectName('val_combo{}'.format(row))
 
         # completer = QCompleter(word_list, self)
         # completer.setCaseSensitivity(Qt.CaseInsensitive)
@@ -162,7 +163,6 @@ class ContactEditDialog(QDialog):
 
     def _create_val_edit(self, attr, fact, parent):
         val_edit = QLineEdit(parent)
-        #val_edit.setObjectName('val_edit{}'.format(row))
         val = '' if fact is None else self._contacts_model.get_fact_value(fact, attr)
         val_edit.setText(val)
         val_edit.textChanged.connect(self.on_text_changed)
@@ -170,17 +170,39 @@ class ContactEditDialog(QDialog):
         val_edit.attr = attr
         return val_edit
 
+    def _create_note_edit(self, attr, fact, parent):
+        note_edit = QLineEdit(parent)
+        text = '' if fact is None else fact.note
+        note_edit.setText(text)
+        note_edit.textChanged.connect(self.on_note_changed)
+        note_edit.fact = fact
+        note_edit.attr = attr
+        return note_edit
+
+    def _create_valid_checkbox(self, attr, fact, parent):
+        valid_checkbox = QCheckBox(parent)
+        valid_checkbox.setChecked(True)
+        valid_checkbox.stateChanged.connect(self.on_valid_changed)
+        valid_checkbox.fact = fact
+        valid_checkbox.attr = attr
+        return valid_checkbox
+    
+    def _create_remove_button(self, attr, fact, parent):
+        remove_button = QPushButton('x', parent)
+        remove_button.clicked.connect(self.on_remove_button_changed)
+        remove_button.fact = fact
+        remove_button.attr = attr
+        return remove_button
+
     def _create_button_box(self, outer_layout):
         button_box = QDialogButtonBox(self)
         button_box.setOrientation(Qt.Horizontal)
         button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        button_box.setObjectName('button_box')
         outer_layout.addWidget(button_box)
         return button_box
 
     def _create_preview(self, parent):
         preview = QTextEdit(parent)
-        preview.setObjectName('preview')
         return preview
 
     def on_text_changed(self):
@@ -224,6 +246,32 @@ class ContactEditDialog(QDialog):
         html_creator = ContactHtmlCreator(self._contact, self._contacts_model)
         html_text = html_creator.create_html_text()
         self._preview.setText(html_text)
+
+    def on_note_changed(self):
+        note_edit = self.sender()
+        text = note_edit.text()
+        fact = note_edit.fact
+        attr = note_edit.attr
+        if fact is None:
+            fact_serial = self._contacts_model.create_fact_serial()
+            fact = Fact(fact_serial,
+                        predicate_serial=attr.predicate_serial,
+                        subject_serial=self._contact.serial,
+                        value=None)
+            note_edit.fact = fact
+        if text != fact.note:
+            fact.note = text
+            self._fact_changes[fact.serial] = fact
+
+        html_creator = ContactHtmlCreator(self._contact, self._contacts_model)
+        html_text = html_creator.create_html_text()
+        self._preview.setText(html_text)
+
+    def on_valid_changed(self):
+        valid_checkbox = self.sender()
+
+    def on_remove_button_changed(self):
+        remove_button = self.sender()
 
     def on_add_fact_button_clicked(self):
         print('on_add_fact_button_clicked')

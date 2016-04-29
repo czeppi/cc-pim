@@ -20,29 +20,35 @@
 
 import re
 
-#------------------------------------------------------------------------------
 
 class Name:
     pass
 
+
 class Date:
     pass
-    
+
+
 class EMail:
     pass
-    
+
+
 class PhoneNumber:
     pass
 
+
 class Url:
     pass
-    
+
+
 class Str:
     pass
-    
+
+
 class Text:
     pass
-    
+
+
 class Keywords:
     pass
 
@@ -53,7 +59,6 @@ class Ref:
         self.target_class = target_class
         self.target_attributename = target_attributename
         
-#------------------------------------------------------------------------------
 
 class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
     
@@ -115,25 +120,6 @@ class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
         s += '{:04}'.format(self.year)
         return s
     
-#------------------------------------------------------------------------------
-
-class Revision:
-    # serial, timestamp, comment
-    pass
-    
-#------------------------------------------------------------------------------
-
-class Event:
-    # serial, vague_date_serial, text
-    pass
-
-#------------------------------------------------------------------------------
-    
-# class Relation:
-    # # object, predicat, subject, t_begin, t_end, comment, revison_serial
-    # pass
-
-#------------------------------------------------------------------------------
 
 class SearchParameter:
 
@@ -142,3 +128,27 @@ class SearchParameter:
         self.upper_lower_sensitive = upper_lower_sensitive
         self.whole_word = whole_word
         self.regex = regex
+
+
+class Fact:
+
+    def __init__(self, serial, predicate_serial, subject_serial, value,
+                 note=None, date_begin_serial=None, date_end_serial=None):
+        self.serial = serial
+        self.predicate_serial = predicate_serial
+        self.subject_serial = subject_serial
+        self.value = value
+        self.date_begin_serial = date_begin_serial
+        self.date_end_serial = date_end_serial
+        self.note = note
+
+    def copy(self):
+        return Fact(
+            serial=self.serial,
+            predicate_serial=self.predicate_serial,
+            subject_serial=self.subject_serial,
+            value=self.value,
+            note=self.note,
+            date_begin_serial=self.date_begin_serial,
+            date_end_serial=self.date_end_serial
+        )

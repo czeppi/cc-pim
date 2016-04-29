@@ -61,7 +61,8 @@
 import sqlite3
 import time
 from pathlib import Path
-from modeling.basetypes import VagueDate
+
+from modeling.basetypes import VagueDate, Fact
 
 
 class Repository:
@@ -158,7 +159,6 @@ class Repository:
         self._conn.commit()
         return new_rev
 
-
     # def get_contacts(self, revision_number=None):
     #     revisions = self._revisions if (revision_number is None) else self._revisions[:revision_number+1]
     #     contacts = Contacts()
@@ -167,7 +167,7 @@ class Repository:
     #             self._update_contacts(contacts, attr_change)
     #     return contacts
             
-    #def _update_contacts(self, contacts, attr_change):
+    # def _update_contacts(self, contacts, attr_change):
 
     def _select_one(self, col_names, table_name, where=None):
         cursor = self._select(col_names, table_name, where)
@@ -242,163 +242,3 @@ class Revision: # alias Commit
     @property
     def fact_changes(self):
         return self._fact_changes
-
-        
-class Fact:
-
-    def __init__(self, serial, predicate_serial, subject_serial, value, note=None, date_begin_serial=None, date_end_serial=None):
-        self.serial = serial
-        self.predicate_serial = predicate_serial
-        self.subject_serial = subject_serial
-        self.value = value
-        self.date_begin_serial = date_begin_serial
-        self.date_end_serial = date_end_serial
-        self.note = note
-
-    def copy(self):
-        return Fact(
-            serial=self.serial,
-            predicate_serial=self.predicate_serial,
-            subject_serial=self.subject_serial,
-            value=self.value,
-            note=self.note,
-            date_begin_serial=self.date_begin_serial,
-            date_end_serial=self.date_end_serial
-        )
-
-
-# class FactData:
-#
-#     def __init__(self, predicate_serial, object_serial, value, note=None, date_begin=None, date_end=None):
-#         self.predicate_serial = predicate_serial
-#         self.object_serial = object_serial
-#         self.value = value
-#         self.date_begin = date_begin
-#         self.date_end = date_end
-#         self.note = note
-
-
-# class FactChange:
-#
-#     def __init__(self, serial, fact, revision_serial):
-#         self.serial = serial
-#         self.fact = fact
-#         self.revision_serial = revision_serial
-    
-    
-    
-    
-    
-    
-    
-    
-    
-#------------------------------------------------------------------------------
-
-# class Relation:
-
-    # def __init__(self, serial, subject, predicate, object):
-        # self._serial = serial
-        # self._subject = subject
-        # self._predicate = predicate
-        # self._object = object
-
-#------------------------------------------------------------------------------
-
-# class Database:
-
-    # def __init__(self, path):
-        # self._path = path
-        # self._conn = ...
-        # self._commits = []
-        # self._logging_enabled = False
-        
-    # def update(self, model):
-        # local_serial  = model.commit_serial
-        # remote_serial = self.read_last_commit_serial()
-    
-        # for serial in range(local_serial + 1, remote_serial + 1):
-            # for relation in ....:
-                # self._select('... in relation where commit="serial")
-        
-
-    # def commit(self):
-    
-    # def read_last_commit_serial(self):
-        # pass
-        
-    # def _select_one(self, col_names, table_name, where=None):
-        # cursor = self._select(col_names, table_name, where)
-        # return cursor.fetchone()
-    
-    # def _select_all(self, col_names, table_name, where=None):
-        # cursor = self._select(col_names, table_name, where)
-        # return cursor.fetchall()
-        
-    # def _select(self, col_names, table_name, where=None):
-        # columns_str = ', '.join(col_names)
-        # sql_cmd = "select {} from {}".format(columns_str, table_name)
-        # if where:
-            # sql_cmd += " where " + where
-        # cursor = self._sql_execute(sql_cmd)
-        # return cursor
-
-    # def _sql_execute(self, sql_cmd):
-        # if self._logging_enabled:
-            # print(sql_cmd)
-            
-        # cursor = self._conn.cursor() 
-        # cursor.execute(sql_cmd)
-        # return cursor
-        
-#------------------------------------------------------------------------------
-        
-#------------------------------------------------------------------------------
-  
-
-
-
-
-
-
-
-# # ------------------------------------------------------------------------------
-  
-# class AttributeChange:
-
-    # def __init__(self, attr, value):
-        # self._attr = attr
-        # self._value = value
-
-    # @property
-    # def attr(self):
-        # return self._attr
-        
-    # @property
-    # def obj_type(self):
-        # return self._attr.obj_type
-
-    # @property
-    # def attr_name(self):
-        # return self._attr.name
-        
-    # @property
-    # def value(self):
-        # return self._value
-        
-# # ------------------------------------------------------------------------------
-
-# class Attribute:
-
-    # def __init__(self, obj_type, name):
-        # self._obj_type = obj_type
-        # self._name = name
-        
-    # @property
-    # def obj_type(self):
-        # return self._obj_type
-
-    # @property
-    # def name(self):
-        # return self._name
-

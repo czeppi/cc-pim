@@ -24,7 +24,8 @@ import sys
 sys.path += [
     os.path.join(os.path.dirname(__file__), '..'),
 ]
-from modeling.repository import Repository, Revision, Fact
+from modeling.repository import Repository, Revision
+from modeling.basetypes import Fact
 
 
 class TestRepo(unittest.TestCase):
