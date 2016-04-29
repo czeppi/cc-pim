@@ -49,7 +49,10 @@ class ContactEditDialog(QDialog):
         self._add_fact_button      = self._create_add_fact_button(self)
         self._button_box           = self._create_button_box()
 
-        self._fill_grid()
+        if self._contact_is_new:
+            self._fill_grid_new()
+        else:
+            self._fill_grid_edit()
         #self._left_widget.setLayout(self._left_layout)
         self._fill_main_layout()
 
@@ -83,10 +86,14 @@ class ContactEditDialog(QDialog):
         self._main_vertical_layout.addStretch()
         self._main_vertical_layout.addWidget(self._button_box)
 
-    def _fill_grid(self):
+    def _fill_grid_edit(self):
         for attr in self._contact.iter_attributes():
             for fact in self._contact.get_facts(attr.name):
                 self._add_row_to_grid(attr, fact)
+
+    def _fill_grid_new(self):
+        for attr in self._contact.iter_attributes():
+            self._add_row_to_grid(attr, fact=None)
 
     def _add_row_to_grid(self, attr, fact):
         parent = self
