@@ -112,9 +112,21 @@ class ContactEditDialog(QDialog):
         row_widgets.valid_checkbox = valid_checkbox
         self._grid_layout.addWidget(valid_checkbox, new_row, 3, 1, 1)
 
+        from_combo = self._create_from_combo(row_widgets)
+        row_widgets.from_combo = from_combo
+        self._grid_layout.addWidget(from_combo, new_row, 4, 1, 1)
+
+        minus_label = QLabel(parent)
+        minus_label.setText('-')
+        self._grid_layout.addWidget(minus_label, new_row, 5, 1, 1)
+
+        until_combo = self._create_until_combo(row_widgets)
+        row_widgets.until_combo = until_combo
+        self._grid_layout.addWidget(until_combo, new_row, 6, 1, 1)
+
         remove_button = self._create_remove_button(row_widgets)
         row_widgets.remove_button = remove_button
-        self._grid_layout.addWidget(remove_button, new_row, 4, 1, 1)
+        self._grid_layout.addWidget(remove_button, new_row, 7, 1, 1)
 
     def _create_val_combo(self, row):
         combo = QComboBox(row.parent)
@@ -134,7 +146,7 @@ class ContactEditDialog(QDialog):
             combo.addItem(title, contact.serial)
         cur_index = combo.findData(current_data)
         combo.setCurrentIndex(cur_index)
-        combo.currentIndexChanged.connect(self.on_combo_index_changed)
+        combo.currentIndexChanged.connect(self.on_val_combo_index_changed)
         combo.row = row
         return combo
 
@@ -172,9 +184,36 @@ class ContactEditDialog(QDialog):
         valid_checkbox.stateChanged.connect(self.on_valid_changed)
         valid_checkbox.row = row
         return valid_checkbox
-    
+
+    def _create_from_combo(self, row):
+        from_combo = QComboBox(row.parent)
+        from_combo.setEditable(True)
+        from_combo.addItem('', 0)
+        from_combo.addItem('#1234: ~2016', 1)
+        from_combo.addItem('#1235: 17.02.1970', 2)
+        current_data = 0
+        cur_index = from_combo.findData(current_data)
+        from_combo.setCurrentIndex(cur_index)
+        from_combo.currentIndexChanged.connect(self.on_from_combo_index_changed)
+        from_combo.row = row
+        return from_combo
+
+    def _create_until_combo(self, row):
+        until_combo = QComboBox(row.parent)
+        until_combo.setEditable(True)
+        until_combo.addItem('', 0)
+        until_combo.addItem('#1234: ~2016', 1)
+        until_combo.addItem('#1235: 17.02.1970', 2)
+        current_data = 0
+        cur_index = until_combo.findData(current_data)
+        until_combo.setCurrentIndex(cur_index)
+        until_combo.currentIndexChanged.connect(self.on_until_combo_index_changed)
+        until_combo.row = row
+        return until_combo
+
     def _create_remove_button(self, row):
         remove_button = QPushButton('x', row.parent)
+        remove_button.setFixedWidth(20)
         remove_button.clicked.connect(self.on_remove_button_changed)
         remove_button.row = row
         return remove_button
@@ -203,7 +242,7 @@ class ContactEditDialog(QDialog):
                             value=None)
         return row.fact
 
-    def on_combo_index_changed(self):
+    def on_val_combo_index_changed(self):
         val_combo = self.sender()
         cur_index = val_combo.currentIndex()
         cur_serial = val_combo.itemData(cur_index)
@@ -226,6 +265,24 @@ class ContactEditDialog(QDialog):
         fact = self._get_or_create_fact(valid_checkbox)
         if is_checked != fact.is_valid:
             fact.is_valid = is_checked
+            self._fact_changes[fact.serial] = fact
+
+    def on_from_combo_index_changed(self):
+        from_combo = self.sender()
+        cur_index = from_combo.currentIndex()
+        cur_serial = from_combo.itemData(cur_index)
+        fact = self._get_or_create_fact(from_combo)
+        if cur_serial != fact.date_begin_serial:
+            fact.date_begin_serial = cur_serial
+            self._fact_changes[fact.serial] = fact
+
+    def on_until_combo_index_changed(self):
+        until_combo = self.sender()
+        cur_index = until_combo.currentIndex()
+        cur_serial = until_combo.itemData(cur_index)
+        fact = self._get_or_create_fact(until_combo)
+        if cur_serial != fact.date_end_serial:
+            fact.date_end_serial = cur_serial
             self._fact_changes[fact.serial] = fact
 
     def on_remove_button_changed(self):
@@ -256,6 +313,8 @@ class RowWidgets:
         self.val_widget = None
         self.note_edit = None
         self.valid_checkbox = None
+        self.from_combo = None
+        self.until_combo = None
         self.remove_button = None
 
     # def distribute_fact(self, fact):
