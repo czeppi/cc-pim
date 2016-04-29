@@ -50,7 +50,6 @@ class ContactEditDialog(QDialog):
         self._button_box           = self._create_button_box(self._main_vertical_layout)
         self._left_widget          = self._create_left_widget(self._splitter)
 
-
         self._grid_layout          = self._create_grid_layout(self._left_widget)
         self._add_fact_button      = self._create_add_fact_button(self._left_widget)
         self._left_layout          = self._create_left_layout(self._grid_layout, self._add_fact_button)
@@ -112,42 +111,47 @@ class ContactEditDialog(QDialog):
         attr_label.setText(attr.name + ':')
         self._grid_layout.addWidget(attr_label, new_row, 0, 1, 1)
 
+        row_widgets = RowWidgets(attr, fact, parent)
+
         if isinstance(attr.value_type, Ref):
-            val_widget = self._create_val_combo(attr, fact, parent)
+            val_widget = self._create_val_combo(row_widgets)
         else:
-            val_widget = self._create_val_edit(attr, fact, parent)
+            val_widget = self._create_val_edit(row_widgets)
+        row_widgets.val_widget = val_widget
         self._grid_layout.addWidget(val_widget, new_row, 1, 1, 1)
 
-        note_edit = self._create_note_edit(attr, fact, parent)
+        note_edit = self._create_note_edit(row_widgets)
+        row_widgets.note_edit = note_edit
         self._grid_layout.addWidget(note_edit, new_row, 2, 1, 1)
 
-        valid_checkbox = self._create_valid_checkbox(attr, fact, parent)
+        valid_checkbox = self._create_valid_checkbox(row_widgets)
+        row_widgets.valid_checkbox = valid_checkbox
         self._grid_layout.addWidget(valid_checkbox, new_row, 3, 1, 1)
 
-        remove_button = self._create_remove_button(attr, fact, parent)
+        remove_button = self._create_remove_button(row_widgets)
+        row_widgets.remove_button = remove_button
         self._grid_layout.addWidget(remove_button, new_row, 4, 1, 1)
 
-    def _create_val_combo(self, attr, fact, parent):
-        combo = QComboBox(parent)
+    def _create_val_combo(self, row):
+        combo = QComboBox(row.parent)
 
         # completer = QCompleter(word_list, self)
         # completer.setCaseSensitivity(Qt.CaseInsensitive)
         # combo.setCompleter(completer)
         # combo.setEditable(True)
 
-        ref_map = self._create_ref_map(attr)
+        ref_map = self._create_ref_map(row.attr)
         combo.addItem('', 0)
         current_data = 0
         for title in sorted(ref_map.keys()):
             contact = ref_map[title]
-            if fact is not None and contact.serial == int(fact.value):
+            if row.fact is not None and contact.serial == int(row.fact.value):
                 current_data = contact.serial
             combo.addItem(title, contact.serial)
         cur_index = combo.findData(current_data)
         combo.setCurrentIndex(cur_index)
         combo.currentIndexChanged.connect(self.on_combo_index_changed)
-        combo.fact = fact
-        combo.attr = attr
+        combo.row = row
         return combo
 
     def _create_ref_map(self, attr):
@@ -161,37 +165,34 @@ class ContactEditDialog(QDialog):
                     ref_map[obj_title] = obj
         return ref_map
 
-    def _create_val_edit(self, attr, fact, parent):
-        val_edit = QLineEdit(parent)
-        val = '' if fact is None else self._contacts_model.get_fact_value(fact, attr)
+    def _create_val_edit(self, row):
+        val_edit = QLineEdit(row.parent)
+        val = '' if row.fact is None else self._contacts_model.get_fact_value(row.fact, row.attr)
         val_edit.setText(val)
         val_edit.textChanged.connect(self.on_text_changed)
-        val_edit.fact = fact
-        val_edit.attr = attr
+        val_edit.row = row
         return val_edit
 
-    def _create_note_edit(self, attr, fact, parent):
-        note_edit = QLineEdit(parent)
-        text = '' if fact is None else fact.note
+    def _create_note_edit(self, row):
+        note_edit = QLineEdit(row.parent)
+        text = '' if row.fact is None else row.fact.note
         note_edit.setText(text)
         note_edit.textChanged.connect(self.on_note_changed)
-        note_edit.fact = fact
-        note_edit.attr = attr
+        note_edit.row = row
         return note_edit
 
-    def _create_valid_checkbox(self, attr, fact, parent):
-        valid_checkbox = QCheckBox(parent)
-        valid_checkbox.setChecked(True)
+    def _create_valid_checkbox(self, row):
+        valid_checkbox = QCheckBox(row.parent)
+        is_checked = True if row.fact is None else row.fact.is_valid
+        valid_checkbox.setChecked(is_checked)
         valid_checkbox.stateChanged.connect(self.on_valid_changed)
-        valid_checkbox.fact = fact
-        valid_checkbox.attr = attr
+        valid_checkbox.row = row
         return valid_checkbox
     
-    def _create_remove_button(self, attr, fact, parent):
-        remove_button = QPushButton('x', parent)
+    def _create_remove_button(self, row):
+        remove_button = QPushButton('x', row.parent)
         remove_button.clicked.connect(self.on_remove_button_changed)
-        remove_button.fact = fact
-        remove_button.attr = attr
+        remove_button.row = row
         return remove_button
 
     def _create_button_box(self, outer_layout):
@@ -208,15 +209,7 @@ class ContactEditDialog(QDialog):
     def on_text_changed(self):
         val_edit = self.sender()
         text = val_edit.text()
-        fact = val_edit.fact
-        attr = val_edit.attr
-        if fact is None:
-            fact_serial = self._contacts_model.create_fact_serial()
-            fact = Fact(fact_serial,
-                        predicate_serial=attr.predicate_serial,
-                        subject_serial=self._contact.serial,
-                        value=None)
-            val_edit.fact = fact
+        fact = self._get_or_create_fact(val_edit)
         if text != fact.value:
             fact.value = text
             self._fact_changes[fact.serial] = fact
@@ -225,20 +218,21 @@ class ContactEditDialog(QDialog):
         html_text = html_creator.create_html_text()
         self._preview.setText(html_text)
 
+    def _get_or_create_fact(self, widget):
+        row = widget.row
+        if row.fact is None:
+            fact_serial = self._contacts_model.create_fact_serial()
+            row.fact = Fact(fact_serial,
+                            predicate_serial=row.attr.predicate_serial,
+                            subject_serial=self._contact.serial,
+                            value=None)
+        return row.fact
+
     def on_combo_index_changed(self):
         val_combo = self.sender()
         cur_index = val_combo.currentIndex()
         cur_serial = val_combo.itemData(cur_index)
-
-        fact = val_combo.fact
-        attr = val_combo.attr
-        if fact is None:
-            fact_serial = self._contacts_model.create_fact_serial()
-            fact = Fact(fact_serial,
-                        predicate_serial=attr.predicate_serial,
-                        subject_serial=self._contact.serial,
-                        value=None)
-            val_combo.fact = fact
+        fact = self._get_or_create_fact(val_combo)
         if cur_serial != fact.value:
             fact.value = cur_serial
             self._fact_changes[fact.serial] = fact
@@ -250,25 +244,18 @@ class ContactEditDialog(QDialog):
     def on_note_changed(self):
         note_edit = self.sender()
         text = note_edit.text()
-        fact = note_edit.fact
-        attr = note_edit.attr
-        if fact is None:
-            fact_serial = self._contacts_model.create_fact_serial()
-            fact = Fact(fact_serial,
-                        predicate_serial=attr.predicate_serial,
-                        subject_serial=self._contact.serial,
-                        value=None)
-            note_edit.fact = fact
+        fact = self._get_or_create_fact(note_edit)
         if text != fact.note:
             fact.note = text
             self._fact_changes[fact.serial] = fact
 
-        html_creator = ContactHtmlCreator(self._contact, self._contacts_model)
-        html_text = html_creator.create_html_text()
-        self._preview.setText(html_text)
-
     def on_valid_changed(self):
         valid_checkbox = self.sender()
+        is_checked = valid_checkbox.isChecked()
+        fact = self._get_or_create_fact(valid_checkbox)
+        if is_checked != fact.is_valid:
+            fact.is_valid = is_checked
+            self._fact_changes[fact.serial] = fact
 
     def on_remove_button_changed(self):
         remove_button = self.sender()
@@ -288,3 +275,24 @@ class ContactEditDialog(QDialog):
     @property
     def date_changes(self):
         return self._date_changes
+
+
+class RowWidgets:
+
+    def __init__(self, attr, fact, parent):
+        self.attr = attr
+        self.fact = fact
+        self.parent = parent
+        self.val_widget = None
+        self.note_edit = None
+        self.valid_checkbox = None
+        self.remove_button = None
+
+    # def distribute_fact(self, fact):
+    #     self.fact = fact
+    #     if self.val_widget is not None:
+    #         self.val_widget.fact = fact
+    #     if self.note_edit is not None:
+    #         self.note_edit.fact = fact
+    #     if self.valid_checkbox is not None:
+    #         self.valid_checkbox.fact = fact

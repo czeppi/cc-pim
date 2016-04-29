@@ -99,7 +99,8 @@ class Repository:
     def _create_db(self):
         self._execute_sql("create table revisions (serial integer primary key, timestamp int, comment text)")
         self._execute_sql("create table dates (serial integer, revision int, date text)")
-        self._execute_sql("create table facts (serial integer, revision int, predicate int, subject int, value text, note text, date_begin int, date_end int)")
+        self._execute_sql("create table facts (serial integer, revision int, predicate int, subject int, value text, " +
+                          "note text, date_begin int, date_end int, is_valid int)")
         self._conn.commit()
 
     def count_revisions(self):
@@ -133,9 +134,13 @@ class Repository:
             self._revisions[rev_no].dates[serial] = VagueDate(date_str)
 
     def _load_facts(self):
-        for serial, rev_no, predicate_serial, subject_serial, value, note, date_begin_serial, date_end_serial \
-        in self._execute_sql("select serial, revision, predicate, subject, value, note, date_begin, date_end from facts"):
-            self._revisions[rev_no].fact_changes[serial] = Fact(serial, predicate_serial, subject_serial, value, note, date_begin_serial, date_end_serial)
+        for serial, rev_no, predicate_serial, subject_serial, value, \
+            note, date_begin_serial, date_end_serial, is_valid \
+        in self._execute_sql("select serial, revision, predicate, subject, value, note, " +
+                             "date_begin, date_end, is_valid from facts"):
+            self._revisions[rev_no].fact_changes[serial] = \
+                Fact(serial, predicate_serial, subject_serial, value,
+                     note, date_begin_serial, date_end_serial, is_valid)
 
     def update(self):
         pass
@@ -144,15 +149,19 @@ class Repository:
         rev_no = len(self._revisions) + 1
         now = time.time()
         new_rev = Revision(rev_no, now, comment, date_changes, fact_changes)
-        self._execute_sql("insert into revisions (serial, timestamp, comment) values (?, ?, ?)", (rev_no, now, comment))
+        self._execute_sql("insert into revisions (serial, timestamp, comment) values (?, ?, ?)",
+                          (rev_no, now, comment))
         for date_serial, date in new_rev.date_changes.items():
-            self._execute_sql("insert into dates (serial, revision, date) values (?, ?, ?)", (date_serial, rev_no, str(date)))
+            self._execute_sql("insert into dates (serial, revision, date) values (?, ?, ?)",
+                              (date_serial, rev_no, str(date)))
             if date_serial in self._uncommited_date_serial_set:
                 self._uncommited_date_serial_set.remove(date_serial)
                 self._commited_date_serial_set.add(date_serial)
         for fact_serial, fact in new_rev.fact_changes.items():
-            self._execute_sql("insert into facts (serial, revision, predicate, subject, value, note, date_begin, date_end) values (?, ?, ?, ?, ?, ?, ?, ?)",
-                              (fact_serial, rev_no, fact.predicate_serial, fact.subject_serial, fact.value, fact.note, fact.date_begin_serial, fact.date_end_serial))
+            self._execute_sql("insert into facts (serial, revision, predicate, subject, value, " +
+                              "note, date_begin, date_end, is_valid) values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                              (fact_serial, rev_no, fact.predicate_serial, fact.subject_serial, fact.value,
+                               fact.note, fact.date_begin_serial, fact.date_end_serial, fact.is_valid))
             if fact_serial in self._uncommited_fact_serial_set:
                 self._uncommited_fact_serial_set.remove(fact_serial)
                 self._commited_fact_serial_set.add(fact_serial)

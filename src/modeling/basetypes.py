@@ -133,14 +133,15 @@ class SearchParameter:
 class Fact:
 
     def __init__(self, serial, predicate_serial, subject_serial, value,
-                 note=None, date_begin_serial=None, date_end_serial=None):
+                 note=None, date_begin_serial=None, date_end_serial=None, is_valid=True):
         self.serial = serial
         self.predicate_serial = predicate_serial
         self.subject_serial = subject_serial
         self.value = value
+        self.note = note
         self.date_begin_serial = date_begin_serial
         self.date_end_serial = date_end_serial
-        self.note = note
+        self.is_valid = is_valid
 
     def copy(self):
         return Fact(
@@ -150,5 +151,6 @@ class Fact:
             value=self.value,
             note=self.note,
             date_begin_serial=self.date_begin_serial,
-            date_end_serial=self.date_end_serial
+            date_end_serial=self.date_end_serial,
+            is_valid=self.is_valid
         )
