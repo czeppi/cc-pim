@@ -133,7 +133,7 @@ class ContactHtmlCreator:
                 #val = self._get_fact_value(fact, attr)
                 val = self._contact_model.get_fact_value(fact, attr)
                 self._add('  <tr>')
-                self._add('    <td>{}</td>'.format(attr.name))
+                self._add('    <td>{}:</td>'.format(attr.name))
                 self._add('    <td>{}</td>'.format(val))
                 self._add('  </tr>')
         self._add('</table)>')

@@ -78,7 +78,10 @@ class MainWindow(QMainWindow):
                     date_changes=dlg.date_changes,
                     fact_changes=dlg.fact_changes
                 )
+            self._update_list()
             self._update_icons()
+            print('new_contact.id = {}'.format(new_contact.id))
+            self._select_contact(new_contact.id)
 
 
         # new_note = self._notes_model.create_new_note()
@@ -123,7 +126,8 @@ class MainWindow(QMainWindow):
         self._edit_item(item)
         
     def _edit_item(self, item):
-        type_id, obj_serial = item.data(Qt.UserRole)
+        contact_id = item.data(Qt.UserRole)
+        type_id, obj_serial = contact_id
         contact = self._contact_model.get(type_id, obj_serial)
 
         dlg = ContactEditDialog(self, contact, self._contact_model)
@@ -139,7 +143,18 @@ class MainWindow(QMainWindow):
             #     html_text = note.last_revision.get_html_text()
             #     self.ui.html_edit.setText(html_text)
 
+        self._update_list()
         self._update_icons()
+        self._select_contact(contact_id)
+
+    def _select_contact(self, contact_id):
+        list_ctrl = self.ui.search_result_list
+        for i in range(list_ctrl.count()):
+            item = list_ctrl.item(i)
+            type_id, contact_serial = item.data(Qt.UserRole) # !! data() returns list - why ever !!
+            if (type_id, contact_serial) == contact_id:
+                list_ctrl.setCurrentItem(item)
+                break
 
     def _update_icons(self):
         exists_uncommited_changes = self._contact_model.exists_uncommited_changes()
@@ -167,15 +182,6 @@ class MainWindow(QMainWindow):
         self.ui.search_result_list.clear()
         for contact in sorted_contacts:
             self._add_contact_item(contact)
-            
-        # self._add_test_item('aaa', foreign_key=1)
-        # self._add_test_item('bbb', foreign_key=2)
-        # self._add_test_item('ccc', foreign_key=3)
-
-    def _add_test_item(self, header, foreign_key):
-        new_item = QListWidgetItem(header)
-        new_item.setData(Qt.UserRole, foreign_key)
-        self.ui.search_result_list.addItem(new_item)
             
     def _iter_filtered_contacts(self, keywords):
         for contact in self._contact_model.iter_objects():
