@@ -116,17 +116,25 @@ class ContactEditDialog(QDialog):
         row_widgets.from_combo = from_combo
         self._grid_layout.addWidget(from_combo, new_row, 4, 1, 1)
 
+        from_button = self._create_from_button(row_widgets)
+        row_widgets.from_button = from_button
+        self._grid_layout.addWidget(from_button, new_row, 5, 1, 1)
+
         minus_label = QLabel(parent)
         minus_label.setText('-')
-        self._grid_layout.addWidget(minus_label, new_row, 5, 1, 1)
+        self._grid_layout.addWidget(minus_label, new_row, 6, 1, 1)
 
         until_combo = self._create_until_combo(row_widgets)
         row_widgets.until_combo = until_combo
-        self._grid_layout.addWidget(until_combo, new_row, 6, 1, 1)
+        self._grid_layout.addWidget(until_combo, new_row, 7, 1, 1)
+
+        until_button = self._create_until_button(row_widgets)
+        row_widgets.from_button = until_button
+        self._grid_layout.addWidget(until_button, new_row, 8, 1, 1)
 
         remove_button = self._create_remove_button(row_widgets)
         row_widgets.remove_button = remove_button
-        self._grid_layout.addWidget(remove_button, new_row, 7, 1, 1)
+        self._grid_layout.addWidget(remove_button, new_row, 9, 1, 1)
 
     def _create_val_combo(self, row):
         combo = QComboBox(row.parent)
@@ -187,7 +195,6 @@ class ContactEditDialog(QDialog):
 
     def _create_from_combo(self, row):
         from_combo = QComboBox(row.parent)
-        from_combo.setEditable(True)
         from_combo.addItem('', 0)
         from_combo.addItem('#1234: ~2016', 1)
         from_combo.addItem('#1235: 17.02.1970', 2)
@@ -198,9 +205,15 @@ class ContactEditDialog(QDialog):
         from_combo.row = row
         return from_combo
 
+    def _create_from_button(self, row):
+        from_button = QPushButton('+', row.parent)
+        from_button.setFixedWidth(20)
+        from_button.clicked.connect(self.on_from_button_clicked)
+        from_button.row = row
+        return from_button
+
     def _create_until_combo(self, row):
         until_combo = QComboBox(row.parent)
-        until_combo.setEditable(True)
         until_combo.addItem('', 0)
         until_combo.addItem('#1234: ~2016', 1)
         until_combo.addItem('#1235: 17.02.1970', 2)
@@ -211,10 +224,17 @@ class ContactEditDialog(QDialog):
         until_combo.row = row
         return until_combo
 
+    def _create_until_button(self, row):
+        until_button = QPushButton('+', row.parent)
+        until_button.setFixedWidth(20)
+        until_button.clicked.connect(self.on_until_button_clicked)
+        until_button.row = row
+        return until_button
+
     def _create_remove_button(self, row):
         remove_button = QPushButton('x', row.parent)
-        remove_button.setFixedWidth(20)
-        remove_button.clicked.connect(self.on_remove_button_changed)
+        remove_button.setFixedWidth(40)
+        remove_button.clicked.connect(self.on_remove_button_clicked)
         remove_button.row = row
         return remove_button
 
@@ -276,6 +296,9 @@ class ContactEditDialog(QDialog):
             fact.date_begin_serial = cur_serial
             self._fact_changes[fact.serial] = fact
 
+    def on_from_button_clicked(self):
+        from_button = self.sender()
+
     def on_until_combo_index_changed(self):
         until_combo = self.sender()
         cur_index = until_combo.currentIndex()
@@ -285,7 +308,10 @@ class ContactEditDialog(QDialog):
             fact.date_end_serial = cur_serial
             self._fact_changes[fact.serial] = fact
 
-    def on_remove_button_changed(self):
+    def on_until_button_clicked(self):
+        until_button = self.sender()
+
+    def on_remove_button_clicked(self):
         remove_button = self.sender()
 
     def on_add_fact_button_clicked(self):
@@ -314,7 +340,9 @@ class RowWidgets:
         self.note_edit = None
         self.valid_checkbox = None
         self.from_combo = None
+        self.from_button = None
         self.until_combo = None
+        self.until_button = None
         self.remove_button = None
 
     # def distribute_fact(self, fact):
