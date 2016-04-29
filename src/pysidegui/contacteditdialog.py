@@ -20,9 +20,10 @@
 
 from collections import OrderedDict
 from PySide.QtGui import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
-                          QLineEdit, QPushButton, QSplitter, QTextEdit, QVBoxLayout, QWidget)
+                          QLineEdit, QPushButton, QVBoxLayout)
 from PySide.QtCore import Qt
 from modeling.basetypes import Ref, Fact
+from pysidegui.vaguedatedialog import VagueDateDialog
 
 
 class ContactEditDialog(QDialog):
@@ -305,6 +306,10 @@ class ContactEditDialog(QDialog):
 
     def on_from_button_clicked(self):
         from_button = self.sender()
+
+        dlg = VagueDateDialog(self)
+        if dlg.exec() == dlg.Accepted:
+            print('ok: {}'.format(dlg.text))
 
     def on_until_combo_index_changed(self):
         until_combo = self.sender()

@@ -61,8 +61,11 @@ class Ref:
         
 
 class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
-    
-    rex = re.compile(r"(((?P<tilde_day>~)?(?P<day>[0-9]{2})\.)?(?P<tilde_month>~)?(?P<month>[0-9]{2})\.)?(?P<tilde_year>~)?(?P<year>[0-9]{4})$")
+
+    dialog_rex = r"(((~)?(01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31)\.)?" \
+                 r"(~)?(01|02|03|04|05|06|07|08|09|10|11|12)\.)?(~)?((19|20)[0-9]{2})"
+    rex_text = r"(((?P<tilde_day>~)?(?P<day>[0-9]{2})\.)?(?P<tilde_month>~)?(?P<month>[0-9]{2})\.)?(?P<tilde_year>~)?(?P<year>[0-9]{4})"
+    rex = re.compile(rex_text + "$")
     
     def __init__(self, date_as_string, serial=0):
         self.serial = serial
