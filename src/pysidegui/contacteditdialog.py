@@ -22,7 +22,6 @@ from collections import OrderedDict
 from PySide.QtGui import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
                           QLineEdit, QPushButton, QSplitter, QTextEdit, QVBoxLayout, QWidget)
 from PySide.QtCore import Qt
-from modeling.contactmodel import ContactHtmlCreator
 from modeling.basetypes import Ref, Fact
 
 
@@ -43,20 +42,16 @@ class ContactEditDialog(QDialog):
         self.setWindowModality(Qt.ApplicationModal)
         self.resize(1000, 600)
         self.setModal(True)
-
         self._init_title()
-        self._main_vertical_layout = self._create_main_vertical_layout()
-        self._splitter             = self._create_splitter(self._main_vertical_layout)
-        self._button_box           = self._create_button_box(self._main_vertical_layout)
-        self._left_widget          = self._create_left_widget(self._splitter)
 
-        self._grid_layout          = self._create_grid_layout(self._left_widget)
-        self._add_fact_button      = self._create_add_fact_button(self._left_widget)
-        self._left_layout          = self._create_left_layout(self._grid_layout, self._add_fact_button)
-        self._preview              = self._create_preview(self._splitter)
+        self._main_vertical_layout = self._create_main_vertical_layout()
+        self._grid_layout          = self._create_grid_layout(self)
+        self._add_fact_button      = self._create_add_fact_button(self)
+        self._button_box           = self._create_button_box()
 
         self._fill_grid()
-        self._left_widget.setLayout(self._left_layout)
+        #self._left_widget.setLayout(self._left_layout)
+        self._fill_main_layout()
 
         self._button_box.accepted.connect(self.accept)
         self._button_box.rejected.connect(self.reject)
@@ -73,16 +68,6 @@ class ContactEditDialog(QDialog):
         layout.setSizeConstraint(QLayout.SetDefaultConstraint)
         return layout
 
-    def _create_splitter(self, outer_layout):
-        splitter = QSplitter(self)
-        splitter.setOrientation(Qt.Horizontal)
-        outer_layout.addWidget(splitter)
-        return splitter
-
-    def _create_left_widget(self, parent):
-        left_widget = QWidget(parent)
-        return left_widget
-
     def _create_grid_layout(self, parent):
         grid_layout = QGridLayout()
         return grid_layout
@@ -92,12 +77,11 @@ class ContactEditDialog(QDialog):
         button.clicked.connect(self.on_add_fact_button_clicked)
         return button
 
-    def _create_left_layout(self, grid_layout, add_fact_button):
-        vbox = QVBoxLayout()
-        vbox.addLayout(grid_layout)
-        vbox.addWidget(add_fact_button)
-        vbox.addStretch()
-        return vbox
+    def _fill_main_layout(self):
+        self._main_vertical_layout.addLayout(self._grid_layout)
+        self._main_vertical_layout.addWidget(self._add_fact_button)
+        self._main_vertical_layout.addStretch()
+        self._main_vertical_layout.addWidget(self._button_box)
 
     def _fill_grid(self):
         for attr in self._contact.iter_attributes():
@@ -105,7 +89,7 @@ class ContactEditDialog(QDialog):
                 self._add_row_to_grid(attr, fact)
 
     def _add_row_to_grid(self, attr, fact):
-        parent = self._left_widget
+        parent = self
         new_row = self._grid_layout.rowCount()
         attr_label = QLabel(parent)
         attr_label.setText(attr.name + ':')
@@ -195,16 +179,11 @@ class ContactEditDialog(QDialog):
         remove_button.row = row
         return remove_button
 
-    def _create_button_box(self, outer_layout):
+    def _create_button_box(self):
         button_box = QDialogButtonBox(self)
         button_box.setOrientation(Qt.Horizontal)
         button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        outer_layout.addWidget(button_box)
         return button_box
-
-    def _create_preview(self, parent):
-        preview = QTextEdit(parent)
-        return preview
 
     def on_text_changed(self):
         val_edit = self.sender()
@@ -213,10 +192,6 @@ class ContactEditDialog(QDialog):
         if text != fact.value:
             fact.value = text
             self._fact_changes[fact.serial] = fact
-
-        html_creator = ContactHtmlCreator(self._contact, self._contacts_model)
-        html_text = html_creator.create_html_text()
-        self._preview.setText(html_text)
 
     def _get_or_create_fact(self, widget):
         row = widget.row
@@ -236,10 +211,6 @@ class ContactEditDialog(QDialog):
         if cur_serial != fact.value:
             fact.value = cur_serial
             self._fact_changes[fact.serial] = fact
-
-        html_creator = ContactHtmlCreator(self._contact, self._contacts_model)
-        html_text = html_creator.create_html_text()
-        self._preview.setText(html_text)
 
     def on_note_changed(self):
         note_edit = self.sender()
@@ -261,7 +232,6 @@ class ContactEditDialog(QDialog):
         remove_button = self.sender()
 
     def on_add_fact_button_clicked(self):
-        print('on_add_fact_button_clicked')
         attr_map = OrderedDict((x.name, x) for x in self._contact.iter_attributes())
         attr_name, ok = QInputDialog.getItem(self, 'add fact', 'select an attribute', list(attr_map.keys()), editable=False)
         if ok:
