@@ -163,7 +163,7 @@ class Person(Contact):
         if last_names:
             names_parts.append(last_names[-1])
         if len(names_parts) == 0:
-            return '???'
+            return '#' + str(self.serial)
         return ' '.join(names_parts)
 
 
@@ -180,7 +180,7 @@ class Company(Contact):
         if names:
             return names[-1]
         else:
-            return '???'
+            return '#' + str(self.serial)
 
 
 class Address(Contact):
@@ -195,8 +195,13 @@ class Address(Contact):
         streets = [x.value for x in self._facts_map['street']]
         if streets:
             return streets[-1]
-        else:
-            return '???'
+        phones = [x.value for x in self._facts_map['phone']]
+        if phones:
+            return phones[-1]
+        cities = [x.value for x in self._facts_map['city']]
+        if cities:
+            return cities[-1]
+        return '#' + str(self.serial)
 
 
 def _create_contact(type_id, obj_serial):
