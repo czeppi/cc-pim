@@ -223,7 +223,7 @@ class ContactEditDialog(QDialog):
             date = self._contacts_model.get_date(date_serial)
             item_text = self._vague_date_combo_text(date)
             combo.addItem(item_text, date.serial)
-            
+
         cur_index = combo.findData(cur_serial)
         combo.setCurrentIndex(cur_index)
         combo.currentIndexChanged.connect(on_func)

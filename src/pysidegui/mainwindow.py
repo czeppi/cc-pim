@@ -80,21 +80,7 @@ class MainWindow(QMainWindow):
                 )
             self._update_list()
             self._update_icons()
-            print('new_contact.id = {}'.format(new_contact.id))
             self._select_contact(new_contact.id)
-
-
-        # new_note = self._notes_model.create_new_note()
-        # dlg = ContactEditDialog(self, note=new_note, notes_model=self._notes_model)
-        # if dlg.exec() == dlg.Accepted:
-        #     dlg_values = dlg.get_values()  # { attr-name -> new-value }
-        #     new_note_rev = new_note.create_new_revision(**dlg_values)
-        #     self._notes_model.add_note_revision(new_note_rev)
-        #     new_note2 = self._notes_model.get_note(new_note_rev.note_id)
-        #     new_item = self._create_new_list_item(new_note2)
-        #
-        #     self.ui.search_result_list.insertItem(0, new_item)
-        #     self.ui.search_result_list.setCurrentItem(new_item)
 
     def on_edit_contact(self):
         cur_item = self.ui.search_result_list.currentItem()
@@ -148,11 +134,13 @@ class MainWindow(QMainWindow):
         self._select_contact(contact_id)
 
     def _select_contact(self, contact_id):
+        target_type_id, target_serial = contact_id
         list_ctrl = self.ui.search_result_list
         for i in range(list_ctrl.count()):
             item = list_ctrl.item(i)
+            cur_data = item.data(Qt.UserRole)
             type_id, contact_serial = item.data(Qt.UserRole) # !! data() returns list - why ever !!
-            if (type_id, contact_serial) == contact_id:
+            if (type_id, contact_serial) == (target_type_id, target_serial):
                 list_ctrl.setCurrentItem(item)
                 break
 
@@ -197,6 +185,6 @@ class MainWindow(QMainWindow):
         
     def _create_new_list_item(self, contact):
         new_item = QListWidgetItem(contact.title)
-        new_item.setData(Qt.UserRole, contact.id)
+        new_item.setData(Qt.UserRole, contact.id) # !! make [type_id, serial] from (type_id, serial)
         return new_item
 

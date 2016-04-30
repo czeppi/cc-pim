@@ -67,7 +67,7 @@ class Contact:
 
     @property
     def id(self):
-        return self.type_id, self.serial
+        return (self.type_id, self.serial)
 
     def add_fact(self, attr_name, fact):
         self._facts_map[attr_name].append(fact)
