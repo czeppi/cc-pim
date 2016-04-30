@@ -19,6 +19,7 @@
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
 import re
+import datetime
 
 
 class Name:
@@ -66,23 +67,38 @@ class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
                  r"(~)?(01|02|03|04|05|06|07|08|09|10|11|12)\.)?(~)?((19|20)[0-9]{2})"
     rex_text = r"(((?P<tilde_day>~)?(?P<day>[0-9]{2})\.)?(?P<tilde_month>~)?(?P<month>[0-9]{2})\.)?(?P<tilde_year>~)?(?P<year>[0-9]{4})"
     rex = re.compile(rex_text + "$")
-    
+
     def __init__(self, date_as_string, serial=0):
         self.serial = serial
         
         m = self.rex.match(date_as_string)
-        assert m
+        if not m:
+            if re.compile(self.dialog_rex):
+                raise ValueError('too short')
+            else:
+                raise ValueError("dont't match regular expression")
 
         self.day,   self.is_day_exact   = self._get_value_and_is_exact(m, 'day')
         self.month, self.is_month_exact = self._get_value_and_is_exact(m, 'month')
         self.year,  self.is_year_exact  = self._get_value_and_is_exact(m, 'year')
-            
+
+        self._check_date()
+
     def _get_value_and_is_exact(self, m, part_name):
         val_str = m.group(part_name)
         if val_str:
             return int(val_str), (m.group('tilde_' + part_name) != '~')
         else:
             return None, None
+
+    def _check_date(self):
+        day = self.day
+        if day is None:
+            day = 1
+        month = self.month
+        if month is None:
+            month = 1
+        datetime.date(self.year, month, day)  # raise a ValueError, if invalid
 
     def _check_invariant(self):
         d, m, y = self.day, self.month, self.year

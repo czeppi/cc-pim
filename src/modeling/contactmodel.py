@@ -263,6 +263,7 @@ class ContactModel:
         self._init_data()
         self._init_last_serial_map()
         self._init_last_fact_serial()
+        self._init_last_date_serial()
 
     def _init_data(self):
         self._data = {}  # (type_id, serial) -> ContactObject
@@ -284,13 +285,22 @@ class ContactModel:
         }
 
     def _init_last_fact_serial(self):
-        self._last_fact_serial = max(fact.serial for fact in self._fact_changes.values())
+        self._last_fact_serial = max((fact.serial for fact in self._fact_changes.values()), default=0)
+
+    def _init_last_date_serial(self):
+        self._last_date_serial = max((date.serial for date in self._date_changes.values()), default=0)
 
     def iter_objects(self):
         yield from self._data.values()
 
     def update(self):
         pass
+
+    def iter_dates(self):
+        yield from self._date_changes.values()
+
+    def get_date(self, date_serial):
+        return self._date_changes[date_serial]
 
     def contains(self, type_id, obj_serial):
         return (type_id, obj_serial) in self._data
@@ -342,6 +352,12 @@ class ContactModel:
         new_serial = self._last_fact_serial + 1
         self._last_fact_serial = new_serial
         return new_serial
+
+    def create_date_serial(self):
+        new_serial = self._last_date_serial + 1
+        self._last_date_serial = new_serial
+        return new_serial
+
 
 
 

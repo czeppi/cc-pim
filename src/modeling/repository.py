@@ -131,7 +131,7 @@ class Repository:
 
     def _load_dates(self):
         for serial, rev_no, date_str in self._execute_sql("select serial, revision, date from dates"):
-            self._revisions[rev_no].dates[serial] = VagueDate(date_str)
+            self._revisions[rev_no].date_changes[serial] = VagueDate(date_str, serial=serial)
 
     def _load_facts(self):
         for serial, rev_no, predicate_serial, subject_serial, value, \
