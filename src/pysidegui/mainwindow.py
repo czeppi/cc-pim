@@ -163,7 +163,7 @@ class MainWindow(QMainWindow):
 
     def _update_list(self):
         keywords_str = self.ui.search_edit.text()
-        keywords = [x.strip() for x in keywords_str.split(',') if x.strip() != '']
+        keywords = [x.strip() for x in keywords_str.split() if x.strip() != '']
         filtered_contacts = self._iter_filtered_contacts(keywords)
         sorted_contacts = self._sort_contacts(filtered_contacts)
         

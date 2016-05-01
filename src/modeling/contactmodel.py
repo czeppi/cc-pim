@@ -192,16 +192,11 @@ class Address(Contact):
 
     @property
     def title(self):
-        streets = [x.value for x in self._facts_map['street']]
-        if streets:
-            return streets[-1]
-        phones = [x.value for x in self._facts_map['phone']]
-        if phones:
-            return phones[-1]
-        cities = [x.value for x in self._facts_map['city']]
-        if cities:
-            return cities[-1]
-        return '#' + str(self.serial)
+        parts = []
+        parts += [x.value for x in self._facts_map['street']]
+        parts += [x.value for x in self._facts_map['city']]
+        parts += [x.value for x in self._facts_map['phone']]
+        return ', '.join(parts)
 
 
 def _create_contact(type_id, obj_serial):
