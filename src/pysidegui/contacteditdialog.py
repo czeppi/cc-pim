@@ -45,6 +45,7 @@ class ContactEditDialog(QDialog):
         self.setModal(True)
         self._init_title()
 
+        self._date_combos = []
         self._main_vertical_layout = self._create_main_vertical_layout()
         self._grid_layout          = self._create_grid_layout(self)
         self._add_fact_button      = self._create_add_fact_button(self)
@@ -122,6 +123,7 @@ class ContactEditDialog(QDialog):
 
         from_combo = self._create_from_combo(row_widgets)
         row_widgets.from_combo = from_combo
+        self._date_combos.append(from_combo)
         self._grid_layout.addWidget(from_combo, new_row, 4, 1, 1)
 
         from_button = self._create_from_button(row_widgets)
@@ -134,6 +136,7 @@ class ContactEditDialog(QDialog):
 
         until_combo = self._create_until_combo(row_widgets)
         row_widgets.until_combo = until_combo
+        self._date_combos.append(until_combo)
         self._grid_layout.addWidget(until_combo, new_row, 7, 1, 1)
 
         until_button = self._create_until_button(row_widgets)
@@ -318,11 +321,12 @@ class ContactEditDialog(QDialog):
             return
         self._date_changes[vague_date.serial] = vague_date
 
-        item_text = self._create_vague_date_combo_text(vague_date)
-        row.from_combo.addItem(item_text, userData=vague_date.serial)
+        if date_serial is None or date_serial == 0:
+            self._add_date_to_all_date_combos(vague_date)
+        else:
+            self._update_all_date_combos(vague_date)
         cur_index = row.from_combo.findData(vague_date.serial)
         row.from_combo.setCurrentIndex(cur_index)
-        row.until_combo.addItem(item_text, userData=vague_date.serial)
 
         fact = self._get_or_create_fact(from_button)
         if vague_date.serial != fact.date_begin_serial:
@@ -347,6 +351,17 @@ class ContactEditDialog(QDialog):
                 msgBox.setText(str(err))
                 msgBox.exec_()
 
+    def _add_date_to_all_date_combos(self, new_date):
+        item_text = self._create_vague_date_combo_text(new_date)
+        for date_combo in self._date_combos:
+            date_combo.addItem(item_text, userData=new_date.serial)
+
+    def _update_all_date_combos(self, changed_date):
+        item_text = self._create_vague_date_combo_text(changed_date)
+        for date_combo in self._date_combos:
+            cur_index = date_combo.findData(changed_date.serial)
+            date_combo.setItemText(cur_index, item_text)
+
     def _create_vague_date_combo_text(self, vague_date):
         return '#{}: {}'.format(vague_date.serial, vague_date)
 
@@ -369,9 +384,10 @@ class ContactEditDialog(QDialog):
             return
         self._date_changes[vague_date.serial] = vague_date
 
-        item_text = self._create_vague_date_combo_text(vague_date)
-        row.from_combo.addItem(item_text, userData=vague_date.serial)
-        row.until_combo.addItem(item_text, userData=vague_date.serial)
+        if date_serial is None or date_serial == 0:
+            self._add_date_to_all_date_combos(vague_date)
+        else:
+            self._update_all_date_combos(vague_date)
         cur_index = row.from_combo.findData(vague_date.serial)
         row.until_combo.setCurrentIndex(cur_index)
 
