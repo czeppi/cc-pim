@@ -130,12 +130,13 @@ class ContactHtmlCreator:
         self._add('<table align="center" cellspacing="10" cellpadding="1">')
         for attr in self._contact.iter_attributes():
             for fact in self._contact.get_facts(attr.name):
-                #val = self._get_fact_value(fact, attr)
-                val = self._contact_model.get_fact_value(fact, attr)
-                self._add('  <tr>')
-                self._add('    <td>{}:</td>'.format(attr.name))
-                self._add('    <td>{}</td>'.format(val))
-                self._add('  </tr>')
+                if fact.is_valid:
+                    #val = self._get_fact_value(fact, attr)
+                    val = self._contact_model.get_fact_value(fact, attr)
+                    self._add('  <tr>')
+                    self._add('    <td>{}:</td>'.format(attr.name))
+                    self._add('    <td>{}</td>'.format(val))
+                    self._add('  </tr>')
         self._add('</table)>')
 
     def _add_footer(self):

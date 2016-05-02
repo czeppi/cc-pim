@@ -26,18 +26,24 @@ from modeling.basetypes import VagueDate
 
 
 class VagueDateDialog(QDialog):
-    def __init__(self, parent):
+    def __init__(self, parent, vague_date):
         super().__init__(parent)
         self.ui = Ui_VagueDateDialog()
         self.ui.setupUi(self)
+        self._vague_date = vague_date
         
         self._init_title()
         self._init_date_edit()
         
     def _init_title(self):
-        self.setWindowTitle("New Vague Date")
+        if self._vague_date is None:
+            self.setWindowTitle('New Vague Date')
+        else:
+            self.setWindowTitle('Edit Vague Date #{}'.format(self._vague_date.serial))
                 
     def _init_date_edit(self):
+        if self._vague_date is not None:
+            self.ui.lineEdit.setText(str(self._vague_date))
         rex = QRegExp(VagueDate.dialog_rex)
         validator = QRegExpValidator(rex) #, 0)
         self.ui.lineEdit.setValidator(validator)

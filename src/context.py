@@ -19,6 +19,8 @@
 # along with CC-Notes.  If not, see <http://www.gnu.org/licenses/>.
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
+from pathlib import Path
+
 
 class Context:
 
@@ -46,7 +48,7 @@ class Context:
     
     @property
     def data_dir(self):
-        return self._root_dir / 'data'
+        return Path('d:/cc/Daten/Anwendungsdaten/cc-pim')
 
     @property
     def contacts_db_path(self):

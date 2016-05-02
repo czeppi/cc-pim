@@ -70,7 +70,7 @@ class Repository:
     def __init__(self, db_source=':memory:'):
         self._db_source = db_source
         self._revisions = {}
-        self._logging_enabled = False
+        self._logging_enabled = True
         self._create_conn()
         self._commited_date_serial_set = set()
         self._commited_fact_serial_set = set()

@@ -63,9 +63,11 @@ class Ref:
 
 class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
 
-    dialog_rex = r"(((~)?(01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31)\.)?" \
-                 r"(~)?(01|02|03|04|05|06|07|08|09|10|11|12)\.)?(~)?((19|20)[0-9]{2})"
-    rex_text = r"(((?P<tilde_day>~)?(?P<day>[0-9]{2})\.)?(?P<tilde_month>~)?(?P<month>[0-9]{2})\.)?(?P<tilde_year>~)?(?P<year>[0-9]{4})"
+    dialog_rex = r"(((~)?(01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31)(\?)?\.)?" \
+                 r"(~)?(01|02|03|04|05|06|07|08|09|10|11|12)(\?)?\.)?(~)?((19|20)[0-9]{2})(\?)?"
+    rex_text = r"(((?P<tilde_day>~)?(?P<day>[0-9]{2})(?P<day_unsure>\?)?\.)?" \
+               r"(?P<tilde_month>~)?(?P<month>[0-9]{2})(?P<month_unsure>\?)?\.)?" \
+               r"(?P<tilde_year>~)?(?P<year>[0-9]{4})(?P<year_unsure>\?)?"
     rex = re.compile(rex_text + "$")
 
     def __init__(self, date_as_string, serial=0):
@@ -78,18 +80,18 @@ class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
             else:
                 raise ValueError("dont't match regular expression")
 
-        self.day,   self.is_day_exact   = self._get_value_and_is_exact(m, 'day')
-        self.month, self.is_month_exact = self._get_value_and_is_exact(m, 'month')
-        self.year,  self.is_year_exact  = self._get_value_and_is_exact(m, 'year')
+        self.day,   self.is_day_exact,   self.is_day_sure   = self._get_value_exact_and_sure(m, 'day')
+        self.month, self.is_month_exact, self.is_month_sure = self._get_value_exact_and_sure(m, 'month')
+        self.year,  self.is_year_exact,  self.is_year_sure  = self._get_value_exact_and_sure(m, 'year')
 
         self._check_date()
 
-    def _get_value_and_is_exact(self, m, part_name):
+    def _get_value_exact_and_sure(self, m, part_name):
         val_str = m.group(part_name)
         if val_str:
-            return int(val_str), (m.group('tilde_' + part_name) != '~')
+            return int(val_str), (m.group('tilde_' + part_name) != '~'), (m.group(part_name + '_unsure') != '?')
         else:
-            return None, None
+            return None, None, None
 
     def _check_date(self):
         day = self.day
@@ -130,13 +132,19 @@ class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
             if not self.is_day_exact:
                 s += '~'
             s += '{:02}.'.format(self.day)
+            if not self.is_day_sure:
+                s += '?'
         if self.month:
             if not self.is_month_exact:
                 s += '~'
             s += '{:02}.'.format(self.month)
+            if not self.is_month_sure:
+                s += '?'
         if not self.is_year_exact:
             s += '~'
         s += '{:04}'.format(self.year)
+        if not self.is_year_sure:
+            s += '?'
         return s
     
 

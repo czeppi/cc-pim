@@ -41,7 +41,7 @@ class ContactEditDialog(QDialog):
         self._fact_changes = {}  # fact_serial -> Fact
 
         self.setWindowModality(Qt.ApplicationModal)
-        self.resize(1000, 600)
+        self.resize(1200, 600)
         self.setModal(True)
         self._init_title()
 
@@ -215,13 +215,13 @@ class ContactEditDialog(QDialog):
 
     def _create_from_until_combo(self, row, cur_serial, on_func):
         combo = QComboBox(row.parent)
-        combo.setMinimumWidth(50)
+        combo.setMinimumWidth(100)
 
         combo.addItem('', 0)
         sorted_date_serials = sorted(x.serial for x in self._contacts_model.iter_dates())
         for date_serial in sorted_date_serials:
             date = self._contacts_model.get_date(date_serial)
-            item_text = self._vague_date_combo_text(date)
+            item_text = self._create_vague_date_combo_text(date)
             combo.addItem(item_text, date.serial)
 
         cur_index = combo.findData(cur_serial)
@@ -237,7 +237,7 @@ class ContactEditDialog(QDialog):
         return self._create_from_until_button(row, self.on_until_button_clicked)
 
     def _create_from_until_button(self, row, on_func):
-        button = QPushButton('+', row.parent)
+        button = QPushButton('*', row.parent)
         button.setFixedWidth(20)
         button.clicked.connect(on_func)
         button.row = row
@@ -302,21 +302,23 @@ class ContactEditDialog(QDialog):
     def on_from_combo_index_changed(self):
         from_combo = self.sender()
         cur_index = from_combo.currentIndex()
-        cur_serial = from_combo.itemData(cur_index)
+        date_serial = from_combo.itemData(cur_index)
         fact = self._get_or_create_fact(from_combo)
-        if cur_serial != fact.date_begin_serial:
-            fact.date_begin_serial = cur_serial
+        if date_serial != fact.date_begin_serial:
+            fact.date_begin_serial = date_serial
             self._fact_changes[fact.serial] = fact
 
     def on_from_button_clicked(self):
         from_button = self.sender()
         row = from_button.row
-        vague_date = self._get_vague_date()
+        cur_index = row.from_combo.currentIndex()
+        date_serial = row.from_combo.itemData(cur_index)
+        vague_date = self._input_vague_date(date_serial)
         if vague_date is None:
             return
         self._date_changes[vague_date.serial] = vague_date
 
-        item_text = self._vague_date_combo_text(vague_date)
+        item_text = self._create_vague_date_combo_text(vague_date)
         row.from_combo.addItem(item_text, userData=vague_date.serial)
         cur_index = row.from_combo.findData(vague_date.serial)
         row.from_combo.setCurrentIndex(cur_index)
@@ -327,38 +329,47 @@ class ContactEditDialog(QDialog):
             fact.date_begin_serial = vague_date.serial
             self._fact_changes[fact.serial] = fact
 
-    def _get_vague_date(self):
-        dlg = VagueDateDialog(self)
+    def _input_vague_date(self, date_serial):
+        if date_serial is None or date_serial == 0:
+            date = None
+        elif date_serial in self._date_changes:
+            date = self._date_changes[date_serial]
+        else:
+            date = self._contacts_model.get_date(date_serial)
+        dlg = VagueDateDialog(self, date)
         if dlg.exec() == dlg.Accepted:
             try:
-                date_serial = self._contacts_model.create_date_serial()
+                if date_serial is None or date_serial == 0:
+                    date_serial = self._contacts_model.create_date_serial()
                 return VagueDate(dlg.text, serial=date_serial)
             except ValueError as err:
                 msgBox = QMessageBox()
                 msgBox.setText(str(err))
                 msgBox.exec_()
 
-    def _vague_date_combo_text(self, vague_date):
+    def _create_vague_date_combo_text(self, vague_date):
         return '#{}: {}'.format(vague_date.serial, vague_date)
 
     def on_until_combo_index_changed(self):
         until_combo = self.sender()
         cur_index = until_combo.currentIndex()
-        cur_serial = until_combo.itemData(cur_index)
+        date_serial = until_combo.itemData(cur_index)
         fact = self._get_or_create_fact(until_combo)
-        if cur_serial != fact.date_end_serial:
-            fact.date_end_serial = cur_serial
+        if date_serial != fact.date_end_serial:
+            fact.date_end_serial = date_serial
             self._fact_changes[fact.serial] = fact
 
     def on_until_button_clicked(self):
         until_button = self.sender()
         row = until_button.row
-        vague_date = self._get_vague_date()
+        cur_index = row.until_combo.currentIndex()
+        date_serial = row.until_combo.itemData(cur_index)
+        vague_date = self._input_vague_date(date_serial)
         if vague_date is None:
             return
         self._date_changes[vague_date.serial] = vague_date
 
-        item_text = self._vague_date_combo_text(vague_date)
+        item_text = self._create_vague_date_combo_text(vague_date)
         row.from_combo.addItem(item_text, userData=vague_date.serial)
         row.until_combo.addItem(item_text, userData=vague_date.serial)
         cur_index = row.from_combo.findData(vague_date.serial)
