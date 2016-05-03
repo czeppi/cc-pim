@@ -29,7 +29,7 @@ from pysidegui._ui_.ui_mainwindow import Ui_MainWindow
 from pysidegui.contacteditdialog import ContactEditDialog
 from context import Context
 from modeling.repository import Repository
-from modeling.contactmodel import ContactModel
+from modeling.contactmodel import ContactModel, ContactID
 
 
 class MainWindow(QMainWindow):
@@ -64,7 +64,9 @@ class MainWindow(QMainWindow):
         self.ui.search_edit.textChanged.connect(self.on_search_text_changed)
         self.ui.search_result_list.currentItemChanged.connect(self.on_cur_list_item_changed)
         self.ui.search_result_list.itemActivated.connect(self.on_list_item_activated)
-        
+        #self.ui.output_edit.cursorPositionChanged.connect(self.on_html_cursor_pos_changed)
+        self.ui.output_edit.click_link_observers.append(self.on_html_click_link)
+
     def on_new_contact(self):
         type_map = OrderedDict((x.type_name, x) for x in self._contact_model.iter_object_classes())
         type_name, ok = QInputDialog.getItem(self, 'new', 'select a type', list(type_map.keys()), editable=False)
@@ -108,9 +110,15 @@ class MainWindow(QMainWindow):
         #self.ui.html_edit.setText(html_text)
         self.ui.output_edit.setText(html_text)
         
+    def on_html_click_link(self, href_str):
+        contact_id = ContactID.create_from_string(href_str)
+        contact = self._contact_model.get(contact_id.type_id, contact_id.serial)
+        html_text = contact.get_html_text(self._contact_model)
+        self.ui.output_edit.setText(html_text)
+
     def on_list_item_activated(self, item):
         self._edit_item(item)
-        
+
     def _edit_item(self, item):
         contact_id = item.data(Qt.UserRole)
         type_id, obj_serial = contact_id
@@ -160,6 +168,21 @@ class MainWindow(QMainWindow):
         self._contact_model = ContactModel(date_changes, fact_changes)
         self._update_list()
         self._update_icons()
+
+    def on_html_cursor_pos_changed(self):
+        pos1 = self.ui.output_edit.cursor().pos()
+        pos2 = self.ui.output_edit.mapFromParent(pos1)
+
+        pos3 = pos1
+        x = self.ui.output_edit
+        pos_list = []
+        while x:
+            pos_list.append(x.pos())
+            pos3 -= x.pos()
+            x = x.parent()
+
+        anchor = self.ui.output_edit.anchorAt(pos3)
+        print('on_html_cursor_pos_changed. pos1: {}, pos2: {}, pos3: {}, anchor: {}'.format(pos1, pos2, pos3, anchor))
 
     def _update_list(self):
         keywords_str = self.ui.search_edit.text()

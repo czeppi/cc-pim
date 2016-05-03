@@ -36,7 +36,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QTextEdit" name="output_edit"/>
+      <widget class="HtmlOutput" name="output_edit"/>
      </widget>
     </item>
    </layout>
@@ -132,6 +132,11 @@
    <class>SearchEdit</class>
    <extends>QLineEdit</extends>
    <header>pysidegui.searchedit</header>
+  </customwidget>
+  <customwidget>
+   <class>HtmlOutput</class>
+   <extends>QTextEdit</extends>
+   <header>pysidegui.htmloutput</header>
   </customwidget>
  </customwidgets>
  <resources/>

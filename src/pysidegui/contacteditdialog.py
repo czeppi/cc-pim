@@ -182,7 +182,7 @@ class ContactEditDialog(QDialog):
 
     def _create_val_edit(self, row):
         val_edit = QLineEdit(row.parent)
-        val = '' if row.fact is None else self._contacts_model.get_fact_value(row.fact, row.attr)
+        val = '' if row.fact is None else self._contacts_model.get_fact_value(row.fact)
         val_edit.setText(val)
         val_edit.textChanged.connect(self.on_text_changed)
         val_edit.row = row

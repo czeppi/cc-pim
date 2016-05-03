@@ -142,16 +142,16 @@ class ContactHtmlCreator:
         for attr in self._contact.iter_attributes():
             for fact in self._contact.get_facts(attr.name):
                 if fact.is_valid:
-                    #val = self._get_fact_value(fact, attr)
-                    val = self._contact_model.get_fact_value(fact, attr)
-                    self._add_row(attr.name, val)
+                    val = self._contact_model.get_fact_value(fact)
+                    href_obj = self._contact_model.get_fact_object(fact)
+                    self._add_row(attr.name, val, fact, href_obj)
         back_facts = self._create_back_facts()
         for attr in self._contact.iter_back_attributes():
             for fact in back_facts.get(attr.name, []):
                 if fact.is_valid:
-                    subject = self._contact_model.get_subject(fact)
+                    subject = self._contact_model.get_fact_subject(fact)
                     val = subject.title
-                    self._add_row(attr.name, val)
+                    self._add_row(attr.name, val, fact, subject)
         self._add('</table)>')
 
     def _create_back_facts(self):
@@ -162,10 +162,14 @@ class ContactHtmlCreator:
             back_facts[ref.target_attributename].append(fact)
         return back_facts
 
-    def _add_row(self, attr_name, val):
+    def _add_row(self, attr_name, val, fact, href_obj):
         self._add('  <tr>')
         self._add('    <td>{}:</td>'.format(attr_name))
-        self._add('    <td>{}</td>'.format(val))
+        if href_obj:
+            href_id = ContactID(href_obj.type_id, href_obj.serial)
+            self._add('    <td><a href="{}">{}</a></td>'.format(str(href_id), val))
+        else:
+            self._add('    <td><b>{}</b></td>'.format(val))
         self._add('  </tr>')
 
     def _add_footer(self):
@@ -239,6 +243,45 @@ def _create_contact(type_id, obj_serial):
         Address.type_id: Address,
     }
     return cls_map[type_id](obj_serial)
+
+
+class ContactID: # noch unbenutzt
+
+    type_id_map = {
+        Person.type_id:  Person,
+        Company.type_id: Company,
+        Address.type_id: Address,
+    }
+
+    type_name_map = {
+        Person.type_name:  Person,
+        Company.type_name: Company,
+        Address.type_name: Address,
+    }
+
+    @staticmethod
+    def type_id2name(type_id):
+        return ContactID.type_id_map[type_id].type_name
+
+    @staticmethod
+    def type_name2id(type_name):
+        return ContactID.type_name_map[type_name].type_id
+
+    @staticmethod
+    def create_from_string(id_str):
+        for type_name, cls in ContactID.type_name_map.items():
+            n = len(type_name)
+            if id_str[:n] == type_name:
+                return ContactID(cls.type_id, int(id_str[n:]))
+        raise ValueError(id_str)
+
+    def __init__(self, type_id, serial):
+        self.type_id = type_id
+        self.serial = serial
+
+    def __str__(self):
+        type_name = ContactID.type_id2name(self.type_id)
+        return type_name + str(self.serial)
 
 
 def _iter_predicates_data():
@@ -359,9 +402,10 @@ class ContactModel:
     def find(self, search_parameters):
         pass
 
-    def get_fact_value(self, fact, attr):
-        if isinstance(attr.value_type, Ref):
-            ref = attr.value_type
+    def get_fact_value(self, fact):
+        predicate = self.predicates[fact.predicate_serial]
+        if isinstance(predicate.value_type, Ref):
+            ref = predicate.value_type
             type_id = ref.target_class.type_id
             serial = int(fact.value)
             if serial == 0:
@@ -372,11 +416,20 @@ class ContactModel:
         else:
             return fact.value
 
-    def get_subject(self, fact):
+    def get_fact_subject(self, fact):
         predicate = self.predicates[fact.predicate_serial]
         type_id = predicate.subject_class.type_id
         subject_id = (type_id, fact.subject_serial)
         return self._data.get(subject_id, None)
+
+    def get_fact_object(self, fact):
+        predicate = self.predicates[fact.predicate_serial]
+        if isinstance(predicate.value_type, Ref):
+            ref = predicate.value_type
+            type_id = ref.target_class.type_id
+            serial = int(fact.value)
+            if serial != 0:
+                return self.get(type_id, serial)
 
     def add_changes(self, date_changes, fact_changes):
         self._date_changes.update(date_changes)
