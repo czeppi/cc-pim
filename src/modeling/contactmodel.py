@@ -52,18 +52,29 @@ class Contact:
     def __init__(self, serial):
         self.serial = serial
         self._facts_map = defaultdict(list)  # attr-name -> list of facts
+        self._back_facts_map = defaultdict(list)
         
     @classmethod
     def iter_attributes(cls):
         yield from cls.attributes.values()
         
     @classmethod
+    def iter_back_attributes(cls):
+        yield from cls.back_attributes.values()
+
+    @classmethod
     def get_attribute(cls, attr_name):
-        return cls.attributes[attr_name]
+        if attr_name in cls.attributes:
+            return cls.attributes[attr_name]
+        else:
+            return cls.back_attributes[attr_name]
     
     @classmethod
     def find_attribute(cls, attr_name):
-        return cls.get(attr_name, None)
+        attr = cls.attributes.get(attr_name, None)
+        if attr is None:
+            attr = cls.back_attributes.get(attr_name, None)
+        return attr
 
     @property
     def id(self):
@@ -133,11 +144,29 @@ class ContactHtmlCreator:
                 if fact.is_valid:
                     #val = self._get_fact_value(fact, attr)
                     val = self._contact_model.get_fact_value(fact, attr)
-                    self._add('  <tr>')
-                    self._add('    <td>{}:</td>'.format(attr.name))
-                    self._add('    <td>{}</td>'.format(val))
-                    self._add('  </tr>')
+                    self._add_row(attr.name, val)
+        back_facts = self._create_back_facts()
+        for attr in self._contact.iter_back_attributes():
+            for fact in back_facts.get(attr.name, []):
+                if fact.is_valid:
+                    subject = self._contact_model.get_subject(fact)
+                    val = subject.title
+                    self._add_row(attr.name, val)
         self._add('</table)>')
+
+    def _create_back_facts(self):
+        back_facts = defaultdict(list)  # attr_name -> [fact]
+        for fact in self._contact_model.iter_back_facts(self._contact):
+            predicate = self._contact_model.predicates[fact.predicate_serial]
+            ref = predicate.value_type
+            back_facts[ref.target_attributename].append(fact)
+        return back_facts
+
+    def _add_row(self, attr_name, val):
+        self._add('  <tr>')
+        self._add('    <td>{}:</td>'.format(attr_name))
+        self._add('    <td>{}</td>'.format(val))
+        self._add('  </tr>')
 
     def _add_footer(self):
         self._add('</body>')
@@ -152,6 +181,7 @@ class Person(Contact):
     type_id = ContactTypes.person.value
     type_name = 'person'
     attributes = OrderedDict()
+    back_attributes = OrderedDict()
     last_serial = 0
 
     @property
@@ -173,6 +203,7 @@ class Company(Contact):
     type_id = ContactTypes.company.value
     type_name = 'company'
     attributes = OrderedDict()
+    back_attributes = OrderedDict()
     last_serial = 0
 
     @property
@@ -189,6 +220,7 @@ class Address(Contact):
     type_id = ContactTypes.address.value
     type_name = 'address'
     attributes = OrderedDict()
+    back_attributes = OrderedDict()
     last_serial = 0
 
     @property
@@ -215,21 +247,21 @@ def _iter_predicates_data():
     yield  3, Person,  'nickname',         Str
     yield  4, Person,  'day_of_birth',     Date
     yield  5, Person,  'day_of_death',     Date
-    yield  6, Person,  'private_address',  Ref(Address, 'residents')
+    yield  6, Person,  'private_address',  Ref(Address, 'resident')
     yield  7, Person,  'private_email',    EMail
     yield  8, Person,  'private_mobile',   PhoneNumber
     yield  9, Person,  'private_url',      Url
-    yield 10, Person,  'company',          Ref(Company, 'employees')
+    yield 10, Person,  'company',          Ref(Company, 'employee')
     yield 11, Person,  'business_address', Ref(Address, 'people')
     yield 12, Person,  'business_email',   EMail
     yield 13, Person,  'business_phone',   PhoneNumber
     yield 14, Person,  'keywords',         Str
     yield 15, Person,  'remark',           Text
-    yield 16, Person,  'child',            Ref(Person, 'parents')
+    yield 16, Person,  'child',            Ref(Person, 'parent')
     yield 17, Person,  'partner',          Ref(Person, 'partner')
     yield 18, Company, 'name',             Str
     yield 19, Company, 'owner',            Str
-    yield 20, Company, 'address',          Ref(Address, 'companies')
+    yield 20, Company, 'address',          Ref(Address, 'company')
     yield 21, Company, 'homepage',         Url
     yield 22, Company, 'mobile',           PhoneNumber
     yield 23, Company, 'email',            EMail
@@ -248,7 +280,12 @@ class ContactModel:
     for serial, subject_class, name, object_type in _iter_predicates_data():
         predicates[serial] = Predicate(serial, subject_class, name, object_type)
         subject_class.attributes[name] = Attribute(name, object_type, serial)
-        
+    for serial, subject_class, name, object_type in _iter_predicates_data():
+        if isinstance(object_type, Ref):
+            ref = object_type
+            ref.target_class.back_attributes[ref.target_attributename] = \
+                Attribute(ref.target_attributename, subject_class, serial)
+
     @staticmethod
     def iter_object_classes():
         yield Person
@@ -294,6 +331,15 @@ class ContactModel:
     def iter_objects(self):
         yield from self._data.values()
 
+    def iter_back_facts(self, obj):
+        for fact in self._fact_changes.values():
+            predicate = self.predicates[fact.predicate_serial]
+            if isinstance(predicate.value_type, Ref):
+                ref = predicate.value_type
+                if ref.target_class.type_id == obj.type_id \
+                and int(fact.value) == obj.serial:
+                    yield fact
+
     def update(self):
         pass
 
@@ -315,7 +361,8 @@ class ContactModel:
 
     def get_fact_value(self, fact, attr):
         if isinstance(attr.value_type, Ref):
-            type_id = attr.value_type.target_class.type_id
+            ref = attr.value_type
+            type_id = ref.target_class.type_id
             serial = int(fact.value)
             if serial == 0:
                 return ''
@@ -324,6 +371,12 @@ class ContactModel:
                 return obj.title
         else:
             return fact.value
+
+    def get_subject(self, fact):
+        predicate = self.predicates[fact.predicate_serial]
+        type_id = predicate.subject_class.type_id
+        subject_id = (type_id, fact.subject_serial)
+        return self._data.get(subject_id, None)
 
     def add_changes(self, date_changes, fact_changes):
         self._date_changes.update(date_changes)
