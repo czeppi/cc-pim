@@ -59,7 +59,7 @@ class MainWindow(QMainWindow):
         self.ui.search_edit.textChanged.connect(self.on_search_text_changed)
         self.ui.search_result_list.currentItemChanged.connect(self.on_cur_list_item_changed)
         self.ui.search_result_list.itemActivated.connect(self.on_list_item_activated)
-        self.ui.output_edit.click_link_observers.append(self.on_html_click_link)
+        self.ui.html_view.click_link_observers.append(self.on_html_view_click_link)
 
     def on_new_contact(self):
         type_map = OrderedDict((x.type_name, x) for x in self._contact_model.iter_object_classes())
@@ -101,13 +101,13 @@ class MainWindow(QMainWindow):
             self._show_contact_id = None
             html_text = ''
         
-        self.ui.output_edit.setText(html_text)
+        self.ui.html_view.setText(html_text)
         
-    def on_html_click_link(self, href_str):
+    def on_html_view_click_link(self, href_str):
         contact_id = ContactID.create_from_string(href_str)
         contact = self._contact_model.get(contact_id)
         html_text = contact.get_html_text(self._contact_model)
-        self.ui.output_edit.setText(html_text)
+        self.ui.html_view.setText(html_text)
         self._show_contact_id = contact_id
 
     def on_list_item_activated(self, item):
@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
 
         contact = self._contact_model.get(contact_id)
         html_text = contact.get_html_text(self._contact_model)
-        self.ui.output_edit.setText(html_text)
+        self.ui.html_view.setText(html_text)
 
     def _select_contact(self, contact_id):
         list_ctrl = self.ui.search_result_list

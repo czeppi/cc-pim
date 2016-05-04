@@ -22,7 +22,7 @@
 from PySide.QtGui import QTextEdit
 
 
-class HtmlOutput(QTextEdit):
+class HtmlView(QTextEdit):
 
     def __init__(self, parent):
         super().__init__(parent)
