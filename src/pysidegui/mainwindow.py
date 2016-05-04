@@ -73,31 +73,29 @@ class MainWindow(QMainWindow):
                     fact_changes=dlg.fact_changes
                 )
             self._update_icons()
-            self._update_list()
-            self._select_contact(new_contact.id)
+            self._update_list(select_contact_id=new_contact.id)
+            self._update_html_view(new_contact.id)
 
     def on_edit_contact(self):
         self._edit_show_contact()
         
     def on_search_text_changed(self, new_text):
-        stripped_text = new_text.strip()
-        #if new_text == '' or len(stripped_text) > 0 and stripped_text[-1] == ',':
         self._update_list()
         
     def on_cur_list_item_changed(self, item, previous_item):
         self.ui.action_edit_contact.setEnabled(item is not None)
 
         if self._enable_show_details:
-            self._show_contact_id = None if item is None else item.data(Qt.UserRole)
-            self._update_html_view()
+            contact_id = None if item is None else item.data(Qt.UserRole)
+            self._update_html_view(contact_id)
 
     def on_html_view_click_link(self, href_str):
-        self._show_contact_id = ContactID.create_from_string(href_str)
-        self._update_html_view()
+        contact_id = ContactID.create_from_string(href_str)
+        self._update_html_view(contact_id)
 
     def on_list_item_activated(self, item):
         self._show_contact_id = item.data(Qt.UserRole)
-        self._edit_show_contact(item)
+        self._edit_show_contact()
 
     def _edit_show_contact(self):
         contact_id = self._show_contact_id
@@ -114,20 +112,9 @@ class MainWindow(QMainWindow):
             fact_changes=dlg.fact_changes
         )
 
-        old_cur_list_item = self.ui.search_result_list.currentItem()
-        if old_cur_list_item:
-            old_cur_contact_id = old_cur_list_item.data(Qt.UserRole)
-
         self._update_icons()
         self._update_list()
-
-        if old_cur_list_item and old_cur_contact_id:
-            self._enable_show_details = False
-            self._select_contact(old_cur_contact_id)
-            self._enable_show_details = True
-
-        self._show_contact_id = contact_id
-        self._update_html_view()
+        self._update_html_view(contact_id)
 
     def _select_contact(self, contact_id):
         list_ctrl = self.ui.search_result_list
@@ -136,6 +123,7 @@ class MainWindow(QMainWindow):
             if item.data(Qt.UserRole) == contact_id:
                 list_ctrl.setCurrentItem(item)
                 break
+
 
     def on_save_all(self):
         comment, ok = QInputDialog.getText(None, 'Commit', 'please enter a comment')
@@ -147,23 +135,41 @@ class MainWindow(QMainWindow):
         date_changes, fact_changes = self._contact_repo.aggregate_revisions()
         self._contact_model = ContactModel(date_changes, fact_changes)
         self._update_icons()
-        self._update_list()
+        self._update_list(select_contact_id=None)
+        self._update_html_view(contact_id=None)
 
     def _update_icons(self):
         exists_uncommited_changes = self._contact_model.exists_uncommited_changes()
         self.ui.action_save_all.setEnabled(exists_uncommited_changes)
         self.ui.action_revert_changes.setEnabled(exists_uncommited_changes)
 
-    def _update_list(self):
-        keywords_str = self.ui.search_edit.text()
-        keywords = [x.strip() for x in keywords_str.split() if x.strip() != '']
-        filtered_contacts = self._iter_filtered_contacts(keywords)
-        sorted_contacts = self._sort_contacts(filtered_contacts)
-        
+    def _update_list(self, select_contact_id=None):
+        self._enable_show_details = False
+        old_cur_contact_id = self._get_cur_list_contact_id()
+
+        sorted_contacts = self._get_sorted_contacts_from_keywords()
         self.ui.search_result_list.clear()
         for contact in sorted_contacts:
             self._add_contact_item(contact)
-            
+
+        if select_contact_id is None:
+            select_contact_id = old_cur_contact_id
+        if select_contact_id:
+            self._select_contact(select_contact_id)
+
+        self._enable_show_details = True
+
+    def _get_cur_list_contact_id(self):
+        old_cur_list_item = self.ui.search_result_list.currentItem()
+        if old_cur_list_item:
+            return old_cur_list_item.data(Qt.UserRole)
+
+    def _get_sorted_contacts_from_keywords(self):
+        keywords_str = self.ui.search_edit.text()
+        keywords = [x.strip() for x in keywords_str.split() if x.strip() != '']
+        filtered_contacts = self._iter_filtered_contacts(keywords)
+        return self._sort_contacts(filtered_contacts)
+
     def _iter_filtered_contacts(self, keywords):
         for contact in self._contact_model.iter_objects():
             if contact.contains_all_keywords(keywords):
@@ -181,8 +187,8 @@ class MainWindow(QMainWindow):
         new_item.setData(Qt.UserRole, contact.id)
         return new_item
 
-    def _update_html_view(self):
-        contact_id = self._show_contact_id
+    def _update_html_view(self, contact_id):
+        self._show_contact_id = contact_id
         if contact_id:
             contact = self._contact_model.get(contact_id)
             html_text = ContactHtmlCreator(contact, self._contact_model).create_html_text()
