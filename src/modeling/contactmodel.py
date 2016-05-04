@@ -21,7 +21,8 @@
 from collections import OrderedDict, defaultdict
 from enum import Enum
 from functools import total_ordering
-from modeling.basetypes import Name, Date, EMail, PhoneNumber, Url, Str, Text, Ref
+
+from modeling.basetypes import Date, EMail, PhoneNumber, Url, Str, Text, Ref
 
 
 class ContactTypes(Enum):
@@ -102,10 +103,6 @@ class Contact:
     def contains_all_keywords(self, keywords):
         return all(self.contains_keyword(x) for x in keywords)
 
-    def get_html_text(self, contact_model):
-        creator = ContactHtmlCreator(self, contact_model)
-        return creator.create_html_text()
-
     def copy(self):
         new_contact = _create_contact(self.type_id, self.serial)
         for attr_name, fact_list in self._facts_map.items():
@@ -114,72 +111,6 @@ class Contact:
         return new_contact
 
 
-class ContactHtmlCreator:
-
-    def __init__(self, contact, contact_model):
-        self._contact = contact
-        self._contact_model = contact_model
-
-    def create_html_text(self):
-        self._lines = []
-        self._add_header()
-        self._add_title()
-        self._add_table()
-        self._add_footer()
-        return '\n'.join(self._lines)
-
-    def _add_header(self):
-        self._add('<html>')
-        self._add('<head>')
-        #self._add('  <style> table, td, th { border: 1px solid black; } </style>')
-        self._add('</head>')
-        self._add('<body>')
-
-    def _add_title(self):
-        self._add('<h1 align="center">{}</h1>'.format(self._contact.title))
-
-    def _add_table(self):
-        self._add('<table align="center" cellspacing="10" cellpadding="1">')
-        for attr in self._contact.iter_attributes():
-            for fact in self._contact.get_facts(attr.name):
-                if fact.is_valid:
-                    val = self._contact_model.get_fact_value(fact)
-                    href_obj = self._contact_model.get_fact_object(fact)
-                    self._add_row(attr.name, val, fact, href_obj)
-        back_facts = self._create_back_facts()
-        for attr in self._contact.iter_back_attributes():
-            for fact in back_facts.get(attr.name, []):
-                if fact.is_valid:
-                    subject = self._contact_model.get_fact_subject(fact)
-                    val = subject.title
-                    self._add_row(attr.name, val, fact, subject)
-        self._add('</table)>')
-
-    def _create_back_facts(self):
-        back_facts = defaultdict(list)  # attr_name -> [fact]
-        for fact in self._contact_model.iter_back_facts(self._contact):
-            predicate = self._contact_model.predicates[fact.predicate_serial]
-            ref = predicate.value_type
-            back_facts[ref.target_attributename].append(fact)
-        return back_facts
-
-    def _add_row(self, attr_name, val, fact, href_obj):
-        self._add('  <tr>')
-        self._add('    <td>{}:</td>'.format(attr_name))
-        if href_obj:
-            self._add('    <td><a href="{}">{}</a></td>'.format(str(href_obj.id), val))
-        else:
-            self._add('    <td><b>{}</b></td>'.format(val))
-        self._add('  </tr>')
-
-    def _add_footer(self):
-        self._add('</body>')
-        self._add('</html>')
-
-    def _add(self, line):
-        self._lines.append(line)
-
-        
 class Person(Contact):
 
     type_id = ContactTypes.person.value

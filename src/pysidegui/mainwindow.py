@@ -27,6 +27,7 @@ from PySide.QtGui import QListWidgetItem, QInputDialog
 from PySide.QtCore import Qt
 from pysidegui._ui_.ui_mainwindow import Ui_MainWindow
 from pysidegui.contacteditdialog import ContactEditDialog
+from pysidegui.htmlview import ContactHtmlCreator
 from context import Context
 from modeling.repository import Repository
 from modeling.contactmodel import ContactModel, ContactID
@@ -96,7 +97,7 @@ class MainWindow(QMainWindow):
             contact_id = item.data(Qt.UserRole)
             self._show_contact_id = contact_id
             contact = self._contact_model.get(contact_id)
-            html_text = contact.get_html_text(self._contact_model)
+            html_text = ContactHtmlCreator(contact, self._contact_model).create_html_text()
         else:
             self._show_contact_id = None
             html_text = ''
@@ -106,7 +107,7 @@ class MainWindow(QMainWindow):
     def on_html_view_click_link(self, href_str):
         contact_id = ContactID.create_from_string(href_str)
         contact = self._contact_model.get(contact_id)
-        html_text = contact.get_html_text(self._contact_model)
+        html_text = ContactHtmlCreator(contact, self._contact_model).create_html_text()
         self.ui.html_view.setText(html_text)
         self._show_contact_id = contact_id
 
@@ -144,7 +145,7 @@ class MainWindow(QMainWindow):
         #contact_id = self._show_contact_id
 
         contact = self._contact_model.get(contact_id)
-        html_text = contact.get_html_text(self._contact_model)
+        html_text = ContactHtmlCreator(contact, self._contact_model).create_html_text()
         self.ui.html_view.setText(html_text)
 
     def _select_contact(self, contact_id):
