@@ -31,7 +31,7 @@ class ContactEditDialog(QDialog):
     def __init__(self, parent, contact, contacts_model):
         super().__init__(parent, f=Qt.WindowMaximizeButtonHint)
 
-        self._contact_is_new = not contacts_model.contains(contact.type_id, contact.serial)
+        self._contact_is_new = not contacts_model.contains(contact.id)
         if self._contact_is_new:
             self._contact = contact
         else:

@@ -20,6 +20,7 @@
 
 from collections import OrderedDict, defaultdict
 from enum import Enum
+from functools import total_ordering
 from modeling.basetypes import Name, Date, EMail, PhoneNumber, Url, Str, Text, Ref
 
 
@@ -78,7 +79,7 @@ class Contact:
 
     @property
     def id(self):
-        return (self.type_id, self.serial)
+        return ContactID(self.type_id, self.serial)
 
     def add_fact(self, attr_name, fact):
         self._facts_map[attr_name].append(fact)
@@ -166,8 +167,7 @@ class ContactHtmlCreator:
         self._add('  <tr>')
         self._add('    <td>{}:</td>'.format(attr_name))
         if href_obj:
-            href_id = ContactID(href_obj.type_id, href_obj.serial)
-            self._add('    <td><a href="{}">{}</a></td>'.format(str(href_id), val))
+            self._add('    <td><a href="{}">{}</a></td>'.format(str(href_obj.id), val))
         else:
             self._add('    <td><b>{}</b></td>'.format(val))
         self._add('  </tr>')
@@ -245,6 +245,7 @@ def _create_contact(type_id, obj_serial):
     return cls_map[type_id](obj_serial)
 
 
+@total_ordering
 class ContactID: # noch unbenutzt
 
     type_id_map = {
@@ -282,6 +283,16 @@ class ContactID: # noch unbenutzt
     def __str__(self):
         type_name = ContactID.type_id2name(self.type_id)
         return type_name + str(self.serial)
+
+    def __eq__(self, other):
+        return (self.type_id, self.serial) == (other.type_id, other.serial)
+
+    def __lt__(self, other):
+        return (self.type_id, self.serial) < (other.type_id, other.serial)
+
+    @property
+    def type_serial(self):
+        return (self.type_id, self.serial)
 
 
 def _iter_predicates_data():
@@ -392,11 +403,11 @@ class ContactModel:
     def get_date(self, date_serial):
         return self._date_changes[date_serial]
 
-    def contains(self, type_id, obj_serial):
-        return (type_id, obj_serial) in self._data
+    def contains(self, contact_id):
+        return contact_id.type_serial in self._data
         
-    def get(self, type_id, obj_serial):
-        return self._data[(type_id, obj_serial)]
+    def get(self, contact_id):
+        return self._data[contact_id.type_serial]
 #        return self._data.get((type_id, obj_serial), '{}.{}?'.format(type_id, obj_serial))
         
     def find(self, search_parameters):
@@ -411,7 +422,7 @@ class ContactModel:
             if serial == 0:
                 return ''
             else:
-                obj = self.get(type_id, serial)
+                obj = self.get(ContactID(type_id, serial))
                 return obj.title
         else:
             return fact.value
@@ -429,7 +440,7 @@ class ContactModel:
             type_id = ref.target_class.type_id
             serial = int(fact.value)
             if serial != 0:
-                return self.get(type_id, serial)
+                return self.get(ContactID(type_id, serial))
 
     def add_changes(self, date_changes, fact_changes):
         self._date_changes.update(date_changes)

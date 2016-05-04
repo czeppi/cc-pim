@@ -93,28 +93,25 @@ class MainWindow(QMainWindow):
             return
 
         if item is not None:
-            type_id, obj_serial = item.data(Qt.UserRole)
-            self._show_contact_id = ContactID(type_id, obj_serial)
-            #print('type_id={}, serial={}'.format(type_id, obj_serial))
-            contact = self._contact_model.get(type_id, obj_serial)
+            contact_id = item.data(Qt.UserRole)
+            self._show_contact_id = contact_id
+            contact = self._contact_model.get(contact_id)
             html_text = contact.get_html_text(self._contact_model)
         else:
             self._show_contact_id = None
             html_text = ''
         
-        #self.ui.html_edit.setText(html_text)
         self.ui.output_edit.setText(html_text)
         
     def on_html_click_link(self, href_str):
         contact_id = ContactID.create_from_string(href_str)
-        contact = self._contact_model.get(contact_id.type_id, contact_id.serial)
+        contact = self._contact_model.get(contact_id)
         html_text = contact.get_html_text(self._contact_model)
         self.ui.output_edit.setText(html_text)
         self._show_contact_id = contact_id
 
     def on_list_item_activated(self, item):
-        type_id, obj_serial = item.data(Qt.UserRole)
-        self._show_contact_id = ContactID(type_id, obj_serial)
+        self._show_contact_id = item.data(Qt.UserRole)
         self._edit_show_contact(item)
 
     def _edit_show_contact(self):
@@ -122,7 +119,7 @@ class MainWindow(QMainWindow):
         if contact_id is None:
             return
 
-        contact = self._contact_model.get(contact_id.type_id, contact_id.serial)
+        contact = self._contact_model.get(contact_id)
         dlg = ContactEditDialog(self, contact, self._contact_model)
         if dlg.exec() != dlg.Accepted:
             return
@@ -134,30 +131,27 @@ class MainWindow(QMainWindow):
 
         old_cur_list_item = self.ui.search_result_list.currentItem()
         if old_cur_list_item:
-            old_cur_data = old_cur_list_item.data(Qt.UserRole)
+            old_cur_contact_id = old_cur_list_item.data(Qt.UserRole)
 
         self._update_list()
         self._update_icons()
 
-        if old_cur_list_item and old_cur_data:
+        if old_cur_list_item and old_cur_contact_id:
             self._enable_show_details = False
-            old_type_id, old_serial = old_cur_data
-            self._select_contact((old_type_id, old_serial))
+            self._select_contact(old_cur_contact_id)
             self._enable_show_details = True
 
         #contact_id = self._show_contact_id
 
-        contact = self._contact_model.get(contact_id.type_id, contact_id.serial)
+        contact = self._contact_model.get(contact_id)
         html_text = contact.get_html_text(self._contact_model)
         self.ui.output_edit.setText(html_text)
 
     def _select_contact(self, contact_id):
-        target_type_id, target_serial = contact_id
         list_ctrl = self.ui.search_result_list
         for i in range(list_ctrl.count()):
             item = list_ctrl.item(i)
-            type_id, contact_serial = item.data(Qt.UserRole) # !! data() returns list - why ever !!
-            if (type_id, contact_serial) == (target_type_id, target_serial):
+            if item.data(Qt.UserRole) == contact_id:
                 list_ctrl.setCurrentItem(item)
                 break
 
@@ -202,6 +196,6 @@ class MainWindow(QMainWindow):
         
     def _create_new_list_item(self, contact):
         new_item = QListWidgetItem(contact.title)
-        new_item.setData(Qt.UserRole, contact.id) # !! make [type_id, serial] from (type_id, serial)
+        new_item.setData(Qt.UserRole, contact.id)
         return new_item
 
