@@ -46,6 +46,8 @@ class MainWindow(QMainWindow):
         self._contact_repo.reload()
         date_changes, fact_changes = self._contact_repo.aggregate_revisions()
         self._contact_model = ContactModel(date_changes, fact_changes)
+        self._show_contact_id = None
+        self._enable_show_details = True
 
         self._update_list()
         self.ui.search_edit.setFocus()
@@ -77,11 +79,7 @@ class MainWindow(QMainWindow):
             self._select_contact(new_contact.id)
 
     def on_edit_contact(self):
-        cur_item = self.ui.search_result_list.currentItem()
-        if cur_item is None:
-            raise Exception('')
-            
-        self._edit_item(cur_item)
+        self._edit_show_contact()
         
     def on_search_text_changed(self, new_text):
         stripped_text = new_text.strip()
@@ -91,12 +89,17 @@ class MainWindow(QMainWindow):
     def on_cur_list_item_changed(self, item, previous_item):
         self.ui.action_edit_contact.setEnabled(item is not None)
 
+        if not self._enable_show_details:
+            return
+
         if item is not None:
             type_id, obj_serial = item.data(Qt.UserRole)
-#            print('type_id={}, serial={}'.format(type_id, obj_serial))
+            self._show_contact_id = ContactID(type_id, obj_serial)
+            #print('type_id={}, serial={}'.format(type_id, obj_serial))
             contact = self._contact_model.get(type_id, obj_serial)
             html_text = contact.get_html_text(self._contact_model)
         else:
+            self._show_contact_id = None
             html_text = ''
         
         #self.ui.html_edit.setText(html_text)
@@ -107,38 +110,52 @@ class MainWindow(QMainWindow):
         contact = self._contact_model.get(contact_id.type_id, contact_id.serial)
         html_text = contact.get_html_text(self._contact_model)
         self.ui.output_edit.setText(html_text)
+        self._show_contact_id = contact_id
 
     def on_list_item_activated(self, item):
-        self._edit_item(item)
+        type_id, obj_serial = item.data(Qt.UserRole)
+        self._show_contact_id = ContactID(type_id, obj_serial)
+        self._edit_show_contact(item)
 
-    def _edit_item(self, item):
-        contact_id = item.data(Qt.UserRole)
-        type_id, obj_serial = contact_id
-        contact = self._contact_model.get(type_id, obj_serial)
+    def _edit_show_contact(self):
+        contact_id = self._show_contact_id
+        if contact_id is None:
+            return
 
+        contact = self._contact_model.get(contact_id.type_id, contact_id.serial)
         dlg = ContactEditDialog(self, contact, self._contact_model)
-        if dlg.exec() == dlg.Accepted:
-            self._contact_model.add_changes(
-                date_changes=dlg.date_changes,
-                fact_changes=dlg.fact_changes
-            )
-            # if note.last_revision.have_values_changed(dlg_values):
-            #     new_note_rev = note.create_new_revision(**dlg_values)
-            #     self._notes_model.add_note_revision(new_note_rev)
-            #
-            #     html_text = note.last_revision.get_html_text()
-            #     self.ui.html_edit.setText(html_text)
+        if dlg.exec() != dlg.Accepted:
+            return
+
+        self._contact_model.add_changes(
+            date_changes=dlg.date_changes,
+            fact_changes=dlg.fact_changes
+        )
+
+        old_cur_list_item = self.ui.search_result_list.currentItem()
+        if old_cur_list_item:
+            old_cur_data = old_cur_list_item.data(Qt.UserRole)
 
         self._update_list()
         self._update_icons()
-        self._select_contact(contact_id)
+
+        if old_cur_list_item and old_cur_data:
+            self._enable_show_details = False
+            old_type_id, old_serial = old_cur_data
+            self._select_contact((old_type_id, old_serial))
+            self._enable_show_details = True
+
+        #contact_id = self._show_contact_id
+
+        contact = self._contact_model.get(contact_id.type_id, contact_id.serial)
+        html_text = contact.get_html_text(self._contact_model)
+        self.ui.output_edit.setText(html_text)
 
     def _select_contact(self, contact_id):
         target_type_id, target_serial = contact_id
         list_ctrl = self.ui.search_result_list
         for i in range(list_ctrl.count()):
             item = list_ctrl.item(i)
-            cur_data = item.data(Qt.UserRole)
             type_id, contact_serial = item.data(Qt.UserRole) # !! data() returns list - why ever !!
             if (type_id, contact_serial) == (target_type_id, target_serial):
                 list_ctrl.setCurrentItem(item)
