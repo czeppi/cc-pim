@@ -21,14 +21,11 @@
 
 from collections import OrderedDict
 from PySide.QtGui import QMainWindow
-from PySide.QtGui import QLabel
-from PySide.QtGui import QCompleter
 from PySide.QtGui import QListWidgetItem, QInputDialog
 from PySide.QtCore import Qt
 from pysidegui._ui_.ui_mainwindow import Ui_MainWindow
 from pysidegui.contacteditdialog import ContactEditDialog
 from pysidegui.htmlview import ContactHtmlCreator
-from context import Context
 from modeling.repository import Repository
 from modeling.contactmodel import ContactModel, ContactID
 
@@ -75,8 +72,8 @@ class MainWindow(QMainWindow):
                     date_changes=dlg.date_changes,
                     fact_changes=dlg.fact_changes
                 )
-            self._update_list()
             self._update_icons()
+            self._update_list()
             self._select_contact(new_contact.id)
 
     def on_edit_contact(self):
@@ -90,26 +87,13 @@ class MainWindow(QMainWindow):
     def on_cur_list_item_changed(self, item, previous_item):
         self.ui.action_edit_contact.setEnabled(item is not None)
 
-        if not self._enable_show_details:
-            return
+        if self._enable_show_details:
+            self._show_contact_id = None if item is None else item.data(Qt.UserRole)
+            self._update_html_view()
 
-        if item is not None:
-            contact_id = item.data(Qt.UserRole)
-            self._show_contact_id = contact_id
-            contact = self._contact_model.get(contact_id)
-            html_text = ContactHtmlCreator(contact, self._contact_model).create_html_text()
-        else:
-            self._show_contact_id = None
-            html_text = ''
-        
-        self.ui.html_view.setText(html_text)
-        
     def on_html_view_click_link(self, href_str):
-        contact_id = ContactID.create_from_string(href_str)
-        contact = self._contact_model.get(contact_id)
-        html_text = ContactHtmlCreator(contact, self._contact_model).create_html_text()
-        self.ui.html_view.setText(html_text)
-        self._show_contact_id = contact_id
+        self._show_contact_id = ContactID.create_from_string(href_str)
+        self._update_html_view()
 
     def on_list_item_activated(self, item):
         self._show_contact_id = item.data(Qt.UserRole)
@@ -134,19 +118,16 @@ class MainWindow(QMainWindow):
         if old_cur_list_item:
             old_cur_contact_id = old_cur_list_item.data(Qt.UserRole)
 
-        self._update_list()
         self._update_icons()
+        self._update_list()
 
         if old_cur_list_item and old_cur_contact_id:
             self._enable_show_details = False
             self._select_contact(old_cur_contact_id)
             self._enable_show_details = True
 
-        #contact_id = self._show_contact_id
-
-        contact = self._contact_model.get(contact_id)
-        html_text = ContactHtmlCreator(contact, self._contact_model).create_html_text()
-        self.ui.html_view.setText(html_text)
+        self._show_contact_id = contact_id
+        self._update_html_view()
 
     def _select_contact(self, contact_id):
         list_ctrl = self.ui.search_result_list
@@ -155,11 +136,6 @@ class MainWindow(QMainWindow):
             if item.data(Qt.UserRole) == contact_id:
                 list_ctrl.setCurrentItem(item)
                 break
-
-    def _update_icons(self):
-        exists_uncommited_changes = self._contact_model.exists_uncommited_changes()
-        self.ui.action_save_all.setEnabled(exists_uncommited_changes)
-        self.ui.action_revert_changes.setEnabled(exists_uncommited_changes)
 
     def on_save_all(self):
         comment, ok = QInputDialog.getText(None, 'Commit', 'please enter a comment')
@@ -170,8 +146,13 @@ class MainWindow(QMainWindow):
     def on_revert_changed(self):
         date_changes, fact_changes = self._contact_repo.aggregate_revisions()
         self._contact_model = ContactModel(date_changes, fact_changes)
-        self._update_list()
         self._update_icons()
+        self._update_list()
+
+    def _update_icons(self):
+        exists_uncommited_changes = self._contact_model.exists_uncommited_changes()
+        self.ui.action_save_all.setEnabled(exists_uncommited_changes)
+        self.ui.action_revert_changes.setEnabled(exists_uncommited_changes)
 
     def _update_list(self):
         keywords_str = self.ui.search_edit.text()
@@ -200,3 +181,11 @@ class MainWindow(QMainWindow):
         new_item.setData(Qt.UserRole, contact.id)
         return new_item
 
+    def _update_html_view(self):
+        contact_id = self._show_contact_id
+        if contact_id:
+            contact = self._contact_model.get(contact_id)
+            html_text = ContactHtmlCreator(contact, self._contact_model).create_html_text()
+        else:
+            html_text = ''
+        self.ui.html_view.setText(html_text)
