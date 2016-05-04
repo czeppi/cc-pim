@@ -146,17 +146,20 @@ class Repository:
         pass
         
     def commit(self, comment, date_changes, fact_changes):
-        rev_no = len(self._revisions) + 1
+        rev_no = max(self._revisions.keys(), default=0) + 1
         now = time.time()
         new_rev = Revision(rev_no, now, comment, date_changes, fact_changes)
         self._execute_sql("insert into revisions (serial, timestamp, comment) values (?, ?, ?)",
                           (rev_no, now, comment))
+        self._revisions[rev_no] = new_rev
+
         for date_serial, date in new_rev.date_changes.items():
             self._execute_sql("insert into dates (serial, revision, date) values (?, ?, ?)",
                               (date_serial, rev_no, str(date)))
             if date_serial in self._uncommited_date_serial_set:
                 self._uncommited_date_serial_set.remove(date_serial)
                 self._commited_date_serial_set.add(date_serial)
+
         for fact_serial, fact in new_rev.fact_changes.items():
             self._execute_sql("insert into facts (serial, revision, predicate, subject, value, " +
                               "note, date_begin, date_end, is_valid) values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -166,6 +169,7 @@ class Repository:
                 self._uncommited_fact_serial_set.remove(fact_serial)
                 self._commited_fact_serial_set.add(fact_serial)
         self._conn.commit()
+
         return new_rev
 
     # def get_contacts(self, revision_number=None):
