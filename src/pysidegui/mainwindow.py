@@ -106,6 +106,8 @@ class MainWindow(QMainWindow):
         dlg = ContactEditDialog(self, contact, self._contact_model)
         if dlg.exec() != dlg.Accepted:
             return
+        if not dlg.check_contact_with_message_box():
+            return
 
         self._contact_model.add_changes(
             date_changes=dlg.date_changes,

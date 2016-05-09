@@ -19,6 +19,7 @@
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
 from collections import OrderedDict
+import difflib
 from PySide.QtGui import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
                           QLineEdit, QMessageBox, QPushButton, QVBoxLayout)
 from PySide.QtCore import Qt
@@ -406,6 +407,38 @@ class ContactEditDialog(QDialog):
             attr = attr_map[attr_name]
             self._add_row_to_grid(attr, fact=None)
 
+    def check_contact_with_message_box(self):
+        other_titles = list(self._iter_all_other_titles())
+        if self._contact.title in  other_titles:
+            msg_box = QMessageBox()
+            msg = 'Title already exists!'
+            msg_box.setText(msg)
+            msg_box.exec_()
+            return False
+
+        similar_titles = difflib.get_close_matches(self._contact.title, other_titles, n=10, cutoff=0.6)
+        if len(similar_titles) == 0:
+            return True
+
+        msg_box = QMessageBox()
+        msg = 'Similar titles:\n\n' + '\n'.join(similar_titles)
+        msg_box.setText(msg)
+        msg_box.setInformativeText("Continue?")
+        msg_box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        msg_box.setDefaultButton(QMessageBox.Ok)
+        ret = msg_box.exec_()
+        if ret == QMessageBox.Ok:
+            return True
+        elif ret == QMessageBox.Cancel:
+            return False
+        else:
+            raise Exception(str(ret))
+
+    def _iter_all_other_titles(self):
+        for contact in self._contacts_model.iter_objects():
+            if contact.id != self._contact.id:
+                yield contact.title
+
     @property
     def fact_changes(self):
         return self._fact_changes
@@ -438,3 +471,5 @@ class RowWidgets:
     #         self.note_edit.fact = fact
     #     if self.valid_checkbox is not None:
     #         self.valid_checkbox.fact = fact
+
+
