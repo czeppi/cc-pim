@@ -72,9 +72,9 @@ class MainWindow(QMainWindow):
                     date_changes=dlg.date_changes,
                     fact_changes=dlg.fact_changes
                 )
-            self._update_icons()
-            self._update_list(select_contact_id=new_contact.id)
-            self._update_html_view(new_contact.id)
+                self._update_icons()
+                self._update_list(select_contact_id=new_contact.id)
+                self._update_html_view(new_contact.id)
 
     def on_edit_contact(self):
         self._edit_show_contact()
