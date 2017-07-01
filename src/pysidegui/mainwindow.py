@@ -50,6 +50,13 @@ class MainWindow(QMainWindow):
         self._update_list()
         self.ui.search_edit.setFocus()
         
+        self.ui.action_contacts.triggered.connect(self.on_contacts_mode)
+        self.ui.action_notes.triggered.connect(self.on_notes_mode)
+        self.ui.action_tasks.triggered.connect(self.on_tasks_mode)
+        self.ui.action_contacts.setChecked(True)
+        self.ui.action_notes.setChecked(False)
+        self.ui.action_tasks.setChecked(False)
+
         self.ui.action_new_contact.triggered.connect(self.on_new_contact)
         self.ui.action_edit_contact.triggered.connect(self.on_edit_contact)
         self.ui.action_save_all.triggered.connect(self.on_save_all)
@@ -58,6 +65,21 @@ class MainWindow(QMainWindow):
         self.ui.search_result_list.currentItemChanged.connect(self.on_cur_list_item_changed)
         self.ui.search_result_list.itemActivated.connect(self.on_list_item_activated)
         self.ui.html_view.click_link_observers.append(self.on_html_view_click_link)
+
+    def on_contacts_mode(self):
+        self.ui.action_contacts.setChecked(True)
+        self.ui.action_notes.setChecked(False)
+        self.ui.action_tasks.setChecked(False)
+
+    def on_notes_mode(self):
+        self.ui.action_contacts.setChecked(False)
+        self.ui.action_notes.setChecked(True)
+        self.ui.action_tasks.setChecked(False)
+
+    def on_tasks_mode(self):
+        self.ui.action_contacts.setChecked(False)
+        self.ui.action_notes.setChecked(False)
+        self.ui.action_tasks.setChecked(True)
 
     def on_new_contact(self):
         type_map = OrderedDict((x.type_name, x) for x in self._contact_model.iter_object_classes())
@@ -125,7 +147,6 @@ class MainWindow(QMainWindow):
             if item.data(Qt.UserRole) == contact_id:
                 list_ctrl.setCurrentItem(item)
                 break
-
 
     def on_save_all(self):
         comment, ok = QInputDialog.getText(None, 'Commit', 'please enter a comment')

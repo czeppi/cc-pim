@@ -7,3 +7,6 @@ Name              Originalname                  Source
 search.ico        edit-find-2.ico               crystal project
 save.ico          document-save-all.ico         actions
 revert.ico        document-revert-4.ico         actions
+note.ico          view-pim-tasks.ico            actions
+task.ico          task-complete.ico             status
+contact.ico       view-pim-contacts.ico         actions
