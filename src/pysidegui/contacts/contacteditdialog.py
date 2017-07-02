@@ -18,13 +18,15 @@
 # along with CC-Notes.  If not, see <http://www.gnu.org/licenses/>.
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
-from collections import OrderedDict
 import difflib
+from collections import OrderedDict
+
+from PySide.QtCore import Qt
 from PySide.QtGui import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
                           QLineEdit, QMessageBox, QPushButton, QVBoxLayout)
-from PySide.QtCore import Qt
+
 from modeling.basetypes import Ref, Fact, VagueDate
-from pysidegui.vaguedatedialog import VagueDateDialog
+from pysidegui.contacts.vaguedatedialog import VagueDateDialog
 
 
 class ContactEditDialog(QDialog):
