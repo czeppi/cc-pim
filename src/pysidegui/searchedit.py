@@ -14,7 +14,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
-# Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
 from PySide.QtGui import QLineEdit
 from PySide.QtGui import QCompleter

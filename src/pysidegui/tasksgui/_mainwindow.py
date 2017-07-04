@@ -14,7 +14,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
-# Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
 from PySide.QtGui import QMainWindow
 from PySide.QtGui import QLabel
@@ -27,9 +26,9 @@ from context import Context
 from modeling.notesmodel import NotesModel
 from modeling.notesmodel import Note
 
-#-------------------------------------------------------------------------------
 
 class MainWindow(QMainWindow):
+
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.ui = Ui_MainWindow()
