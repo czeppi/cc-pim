@@ -1,22 +1,19 @@
-﻿#! /usr/bin/env python3
-#-*- coding: utf-8 -*-
-
-# Copyright (C) 2014  Christian Czepluch
+﻿# Copyright (C) 2014  Christian Czepluch
 #
 # This file is part of CC-PIM.
 #
-# CC-Notes is free software: you can redistribute it and/or modify
+# CC-PIM is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# CC-Notes is distributed in the hope that it will be useful,
+# CC-PIM is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with CC-Notes.  If not, see <http://www.gnu.org/licenses/>.
+# along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
    
 GUI = 'pyside'
@@ -36,7 +33,6 @@ elif GUI == 'pyside':
     
 from context import Context
  
-#-------------------------------------------------------------------------------
 
 def main():
     root_dir = None
@@ -51,7 +47,6 @@ def main():
     elif GUI == 'pyside':
         start_pyside_app(context)
 
-#-------------------------------------------------------------------------------
 
 def start_wx_app(context):
     app = wx.App()
@@ -64,7 +59,6 @@ def start_wx_app(context):
         
     app.MainLoop()
     
-#-------------------------------------------------------------------------------
 
 def start_pyside_app(context):
     app = QApplication(sys.argv)
@@ -72,7 +66,6 @@ def start_pyside_app(context):
     frame.show()
     sys.exit(app.exec_())
 
-#-------------------------------------------------------------------------------
 
 if __name__ == '__main__':
     main()
