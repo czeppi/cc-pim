@@ -14,7 +14,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
-# Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
 from collections import OrderedDict
 from PySide.QtGui import QInputDialog
@@ -33,7 +32,7 @@ class ContactsGui(ModelGui):
         date_changes, fact_changes = self._contact_repo.aggregate_revisions()
         self._contact_model = ContactModel(date_changes, fact_changes)
 
-    def new_object(self, frame):
+    def new_item(self, frame):
         contact_model = self._contact_model
         type_map = OrderedDict((x.type_name, x) for x in contact_model.iter_object_classes())
         type_name, ok = QInputDialog.getItem(frame, 'new', 'select a type', list(type_map.keys()), editable=False)
@@ -49,7 +48,7 @@ class ContactsGui(ModelGui):
                 )
                 return new_contact.id
 
-    def edit_object(self, obj_id, frame):
+    def edit_item(self, obj_id, frame):
         contact_id = obj_id
         contact = self._contact_model.get(contact_id)
         dlg = ContactEditDialog(frame, contact, self._contact_model)

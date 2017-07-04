@@ -19,7 +19,6 @@
 from configparser import RawConfigParser
 from collections import OrderedDict
 
-from context import Context
 from tasks.types import *
 
 

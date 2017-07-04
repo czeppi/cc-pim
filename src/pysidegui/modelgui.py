@@ -19,10 +19,10 @@
 
 class ModelGui:
 
-    def new_object(self, frame):
+    def new_item(self, frame):
         raise Exception('net yet implemented.')
 
-    def edit_object(self, obj_id, frame):
+    def edit_item(self, obj_id, frame):
         raise Exception('net yet implemented.')
 
     def save_all(self):

@@ -59,8 +59,8 @@ class DB:
         self._conn.commit()
         
     def _del_db_if_exists(self):
-        if os.path.exists(self._sqlite_path):
-            os.remove(self._sqlite_path)
+        if self._sqlite_path.exists():
+            self._sqlite_path.remove()
             
     def _create_tables(self):
         for table in self.tables:

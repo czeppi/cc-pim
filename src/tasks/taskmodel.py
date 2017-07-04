@@ -28,23 +28,24 @@ from tasks.db import Row
 
 class TaskModel:
 
-    def __init__(self, context):
-        self._context = context
-        path = context.sqlite3_pathname
-        self._meta_model = MetaModel(context.logging_enabled)
-        self._meta_model.read(context.metamodel_pathname)
-        self._db = DB(context.sqlite3_pathname, self._meta_model, 
-            logging_enabled=context.logging_enabled)
+    def __init__(self, db, keyword_extractor):
+        #self._context = context
+        #self._meta_model = MetaModel(context.logging_enabled)
+        #self._meta_model.read(context.metamodel_pathname)
+        #self._db = DB(context.sqlite3_pathname, self._meta_model, 
+        #    logging_enabled=context.logging_enabled)
+        self._db = db
         self._tasks_revisions_table = self._db.table('tasks_revisions')
-        self._keyword_extractor = KeywordExtractor(context.no_keywords_pathname)
+        #self._keyword_extractor = KeywordExtractor(context.no_keywords_pathname)
+        self._keyword_extractor = keyword_extractor
         
     @property
     def tasks(self):
         return self._tasks.values()
         
-    @property
-    def context(self):
-        return self._context
+    #@property
+    #def context(self):
+    #    return self._context
         
     def read(self):
         self._db.open()

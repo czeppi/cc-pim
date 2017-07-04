@@ -14,7 +14,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
-# Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
 from PySide.QtCore import Qt
 from PySide.QtGui import QListWidgetItem
@@ -22,6 +21,7 @@ from PySide.QtGui import QMainWindow
 
 from pysidegui._ui_.ui_mainwindow import Ui_MainWindow
 from pysidegui.contactsgui.contactsgui import ContactsGui
+from pysidegui.tasksgui.tasksgui import TasksGui
 
 
 class MainWindow(QMainWindow):
@@ -35,6 +35,7 @@ class MainWindow(QMainWindow):
         self.ui.splitter.setStretchFactor(1, 1)
 
         self._contacts_gui = ContactsGui(context)
+        self._tasks_gui = TasksGui()
 
         self._cur_model_gui = self._contacts_gui
         self._show_obj_id = None
@@ -75,7 +76,7 @@ class MainWindow(QMainWindow):
         self.ui.action_tasks.setChecked(True)
 
     def on_new_item(self):
-        new_obj_id = self._cur_model_gui.new_object(frame=self)
+        new_obj_id = self._cur_model_gui.new_item(frame=self)
         if new_obj_id is not None:
             self._update_icons()
             self._update_list(select_obj_id=new_obj_id)
@@ -93,7 +94,7 @@ class MainWindow(QMainWindow):
         if obj_id is None:
             return
 
-        if self._cur_model_gui.edit_object(obj_id, frame=self):
+        if self._cur_model_gui.edit_item(obj_id, frame=self):
             self._update_icons()
             self._update_list()
             self._update_html_view(obj_id)

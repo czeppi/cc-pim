@@ -102,7 +102,7 @@
   <customwidget>
    <class>SearchEdit</class>
    <extends>QLineEdit</extends>
-   <header location="global">gui.searchedit</header>
+   <header location="global">pysidegui.searchedit</header>
   </customwidget>
  </customwidgets>
  <resources/>
