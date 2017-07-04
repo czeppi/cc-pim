@@ -68,36 +68,36 @@
    <addaction name="action_notes"/>
    <addaction name="action_tasks"/>
    <addaction name="separator"/>
-   <addaction name="action_new_contact"/>
-   <addaction name="action_edit_contact"/>
+   <addaction name="action_new_item"/>
+   <addaction name="action_edit_item"/>
    <addaction name="action_save_all"/>
    <addaction name="action_revert_changes"/>
   </widget>
-  <action name="action_edit_contact">
+  <action name="action_edit_item">s
    <property name="enabled">
     <bool>true</bool>
    </property>
    <property name="icon">
     <iconset>
-     <normaloff>../etc/icons/edit-contact.ico</normaloff>../etc/icons/edit-contact.ico</iconset>
+     <normaloff>../etc/icons/edit.ico</normaloff>../etc/icons/edit.ico</iconset>
    </property>
    <property name="text">
-    <string>EditContact</string>
+    <string>EditItem</string>
    </property>
    <property name="toolTip">
-    <string>edit contact</string>
+    <string>edit item</string>
    </property>
   </action>
-  <action name="action_new_contact">
+  <action name="action_new_item">
    <property name="icon">
     <iconset>
-     <normaloff>../etc/icons/new-contact.ico</normaloff>../etc/icons/new-contact.ico</iconset>
+     <normaloff>../etc/icons/new.ico</normaloff>../etc/icons/new.ico</iconset>
    </property>
    <property name="text">
-    <string>NewContact</string>
+    <string>NewItem</string>
    </property>
    <property name="toolTip">
-    <string>new contact</string>
+    <string>new item</string>
    </property>
   </action>
   <action name="action_save_all">
