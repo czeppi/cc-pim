@@ -24,7 +24,7 @@ import sys
 sys.path += [
     os.path.join(os.path.dirname(__file__), '..'),
 ]
-from modeling.basetypes import VagueDate
+from contacts.basetypes import VagueDate
 
 
 class TestVagueDate(unittest.TestCase):

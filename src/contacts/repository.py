@@ -62,7 +62,7 @@ import sqlite3
 import time
 from pathlib import Path
 
-from modeling.basetypes import VagueDate, Fact
+from contacts.basetypes import VagueDate, Fact
 
 
 class Repository:

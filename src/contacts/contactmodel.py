@@ -22,7 +22,7 @@ from collections import OrderedDict, defaultdict
 from enum import Enum
 from functools import total_ordering
 
-from modeling.basetypes import Date, EMail, PhoneNumber, Url, Str, Text, Ref
+from contacts.basetypes import Date, EMail, PhoneNumber, Url, Str, Text, Ref
 
 
 class ContactTypes(Enum):

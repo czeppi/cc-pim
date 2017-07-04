@@ -22,7 +22,7 @@
 from PySide.QtGui import QDialog, QLineEdit, QRegExpValidator
 from PySide.QtCore import QRegExp
 from pysidegui._ui_.ui_vaguedatedialog import Ui_VagueDateDialog
-from modeling.basetypes import VagueDate
+from contacts.basetypes import VagueDate
 
 
 class VagueDateDialog(QDialog):

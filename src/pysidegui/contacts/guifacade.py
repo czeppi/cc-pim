@@ -2,8 +2,8 @@ from collections import OrderedDict
 from PySide.QtGui import QInputDialog
 from pysidegui.iguifacade import IGuiFacade
 from pysidegui.contacts.contacteditdialog import ContactEditDialog
-from modeling.repository import Repository
-from modeling.contactmodel import ContactModel, ContactID
+from contacts.repository import Repository
+from contacts.contactmodel import ContactModel, ContactID
 from pysidegui.htmlview import ContactHtmlCreator
 
 

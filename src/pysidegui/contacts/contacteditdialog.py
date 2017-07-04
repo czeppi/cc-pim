@@ -25,7 +25,7 @@ from PySide.QtCore import Qt
 from PySide.QtGui import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
                           QLineEdit, QMessageBox, QPushButton, QVBoxLayout)
 
-from modeling.basetypes import Ref, Fact, VagueDate
+from contacts.basetypes import Ref, Fact, VagueDate
 from pysidegui.contacts.vaguedatedialog import VagueDateDialog
 
 

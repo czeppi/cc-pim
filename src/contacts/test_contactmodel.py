@@ -24,8 +24,8 @@ import sys
 sys.path += [
     os.path.join(os.path.dirname(__file__), '..'),
 ]
-from modeling.contactmodel import Person, Attribute
-from modeling.repository import Repository
+from contacts.contactmodel import Person, Attribute
+from contacts.repository import Repository
 
 
 class TestContactModel(unittest.TestCase):
