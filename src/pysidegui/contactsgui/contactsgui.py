@@ -18,14 +18,14 @@
 
 from collections import OrderedDict
 from PySide.QtGui import QInputDialog
-from pysidegui.iguifacade import IGuiFacade
-from pysidegui.contacts.contacteditdialog import ContactEditDialog
+from pysidegui.modelgui import ModelGui
+from pysidegui.contactsgui.contacteditdialog import ContactEditDialog
 from contacts.repository import Repository
 from contacts.contactmodel import ContactModel, ContactID
 from pysidegui.htmlview import ContactHtmlCreator
 
 
-class ContactsGuiFacade(IGuiFacade):
+class ContactsGui(ModelGui):
 
     def __init__(self, context):
         self._contact_repo = Repository(context.contacts_db_path)

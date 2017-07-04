@@ -24,7 +24,7 @@ from PySide.QtGui import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGrid
                           QLineEdit, QMessageBox, QPushButton, QVBoxLayout)
 
 from contacts.basetypes import Ref, Fact, VagueDate
-from pysidegui.contacts.vaguedatedialog import VagueDateDialog
+from pysidegui.contactsgui.vaguedatedialog import VagueDateDialog
 
 
 class ContactEditDialog(QDialog):

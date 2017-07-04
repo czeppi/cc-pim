@@ -17,7 +17,7 @@
 # Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
 
-class IGuiFacade:
+class ModelGui:
 
     def new_object(self, frame):
         raise Exception('net yet implemented.')
