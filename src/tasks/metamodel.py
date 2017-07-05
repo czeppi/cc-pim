@@ -30,11 +30,11 @@ class MetaModel:
     def structures(self):
         return self._structures.values()
         
-    def read(self, pathname):
+    def read(self, config_path):
         self._structures = OrderedDict()
         config = RawConfigParser()
-        config.optionxform = lambda x: x  # ansonsten werden Buchstaben der Attribute in Kleinbuchstaben umgewandelt
-        config.read(pathname)
+        config.optionxform = lambda x: x  # necessary, for prevent letters to convert in small letters
+        config.read(str(config_path))
         for section_name in config.sections():
             new_struct = self._process_section(config[section_name])
             self._structures[new_struct.name] = new_struct
@@ -89,7 +89,6 @@ class Attribute:
     
 
 if __name__ == '__main__':
-
     context = Context()
     meta_model = MetaModel()
     meta_model.read(context.metamodel_pathname)

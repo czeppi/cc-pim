@@ -45,10 +45,8 @@ class MainWindow(QMainWindow):
         self.ui.search_edit.setFocus()
         
         self.ui.action_contacts.triggered.connect(self.on_contacts_mode)
-        self.ui.action_notes.triggered.connect(self.on_notes_mode)
         self.ui.action_tasks.triggered.connect(self.on_tasks_mode)
         self.ui.action_contacts.setChecked(True)
-        self.ui.action_notes.setChecked(False)
         self.ui.action_tasks.setChecked(False)
 
         self.ui.action_new_item.triggered.connect(self.on_new_item)
@@ -62,18 +60,14 @@ class MainWindow(QMainWindow):
 
     def on_contacts_mode(self):
         self.ui.action_contacts.setChecked(True)
-        self.ui.action_notes.setChecked(False)
         self.ui.action_tasks.setChecked(False)
-
-    def on_notes_mode(self):
-        self.ui.action_contacts.setChecked(False)
-        self.ui.action_notes.setChecked(True)
-        self.ui.action_tasks.setChecked(False)
+        self._cur_model_gui = self._contacts_gui
 
     def on_tasks_mode(self):
         self.ui.action_contacts.setChecked(False)
-        self.ui.action_notes.setChecked(False)
         self.ui.action_tasks.setChecked(True)
+        self._cur_model_gui = self._tasks_gui
+
 
     def on_new_item(self):
         new_obj_id = self._cur_model_gui.new_item(frame=self)

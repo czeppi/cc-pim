@@ -15,17 +15,35 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
+from pathlib import Path
 from pysidegui.modelgui import ModelGui
-from tasks.taskmodel import TaskModel, Task
+from tasks.taskmodel import TaskModel, KeywordExtractor
 from pysidegui.tasksgui.taskeditdialog import TaskEditDialog
-from pysidegui.tasksgui.context import Context
+from tasks.context import Context
+from tasks.metamodel import MetaModel
+from tasks.db import DB
 
 
 class TasksGui(ModelGui):
 
     def __init__(self):
         context = Context()
-        self._task_model = TaskModel(context)
+
+        metamodel_path = Path(context.metamodel_pathname)
+        meta_model = MetaModel(context.logging_enabled)
+        meta_model.read(metamodel_path)
+
+        db = DB(context.sqlite3_pathname, meta_model,
+            logging_enabled=context.logging_enabled)
+
+        keyword_extractor = KeywordExtractor(context.no_keywords_pathname)
+
+        overrides = {
+            'template':        context.template_pathname,
+            'stylesheet_path': context.user_css_pathname,
+        }
+
+        self._task_model = TaskModel(db, keyword_extractor=keyword_extractor, overrides=overrides)
         self._task_model.read()
 
         keywords = self._task_model.calc_keywords()

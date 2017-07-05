@@ -27,7 +27,7 @@ from tasks.db import Row
 
 class TaskModel:
 
-    def __init__(self, db, keyword_extractor):
+    def __init__(self, db, keyword_extractor, overrides):
         #self._context = context
         #self._meta_model = MetaModel(context.logging_enabled)
         #self._meta_model.read(context.metamodel_pathname)
@@ -37,6 +37,7 @@ class TaskModel:
         self._tasks_revisions_table = self._db.table('tasks_revisions')
         #self._keyword_extractor = KeywordExtractor(context.no_keywords_pathname)
         self._keyword_extractor = keyword_extractor
+        self._overrides = overrides
         
     @property
     def tasks(self):
@@ -300,11 +301,7 @@ class TaskRevision:
         return html_text
         
     def rst2html(self, rst_text):
-        context = self._model.context
-        overrides = {
-            'template':        context.template_pathname,
-            'stylesheet_path': context.user_css_pathname,
-        }
+        overrides = self._model._overrides
         html_bytes = publish_string(rst_text, writer_name='html', 
             settings_overrides=overrides)
         html_text = str(html_bytes, encoding='utf-8')

@@ -59,14 +59,15 @@ class DB:
         
     def _del_db_if_exists(self):
         if self._sqlite_path.exists():
-            self._sqlite_path.remove()
+            self._sqlite_path.unlink()
             
     def _create_tables(self):
         for table in self.tables:
             table.create()
             
     def open(self):
-        self._conn = sqlite3.connect(self._sqlite_path)
+        sqlite_pathname = str(self._sqlite_path)
+        self._conn = sqlite3.connect(sqlite_pathname)
         self._conn.row_factory = sqlite3.Row
         
     def execute_sql(self, sql_cmd):
