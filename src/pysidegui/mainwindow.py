@@ -62,12 +62,15 @@ class MainWindow(QMainWindow):
         self.ui.action_contacts.setChecked(True)
         self.ui.action_tasks.setChecked(False)
         self._cur_model_gui = self._contacts_gui
+        self.ui.search_result_list.setCurrentItem(None)
+        self._update_list()
 
     def on_tasks_mode(self):
         self.ui.action_contacts.setChecked(False)
         self.ui.action_tasks.setChecked(True)
         self._cur_model_gui = self._tasks_gui
-
+        self.ui.search_result_list.setCurrentItem(None)
+        self._update_list()
 
     def on_new_item(self):
         new_obj_id = self._cur_model_gui.new_item(frame=self)

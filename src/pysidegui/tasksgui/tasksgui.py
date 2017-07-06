@@ -22,6 +22,8 @@ from pysidegui.tasksgui.taskeditdialog import TaskEditDialog
 from tasks.context import Context
 from tasks.metamodel import MetaModel
 from tasks.db import DB
+from tasks.html_creator import write_htmlstr
+from tasks.markup_reader import read_markup
 
 
 class TasksGui(ModelGui):
@@ -93,7 +95,12 @@ class TasksGui(ModelGui):
     def get_html_text(self, obj_id) -> str:
         task_id = obj_id
         task = self._task_model.get_task(task_id)
-        html_text = task.last_revision.get_html_text()
+        #html_text = task.last_revision.get_html_text()
+        header = task.get_header()
+        body = task.last_revision.body
+        markup_str = f'# {header}\n\n{body}'
+        page = read_markup(markup_str)
+        html_text = write_htmlstr(page)
         return html_text
 
     def exists_uncommited_changes(self) -> bool:

@@ -12,3 +12,5 @@ import.zip
 etc\icons\16x16
 etc\icons\24x24
 etc\icons\32x32
+etc/tasks.sqlite3
+etc/tasks.sqlite3_orig
