@@ -62,9 +62,17 @@ class _HtmlCreator:
 
     def _add_html_listitem(self, html_parent, list_item):
         html_list_item = ET.SubElement(html_parent, 'li')
-        self._add_html_inline_elements(html_list_item, list_item.inline_elements)
+
+        inline_elements = list_item.inline_elements
+        if list_item.symbol == '=>':
+            if len(inline_elements) > 0 and isinstance(inline_elements[0], NormalText):
+                inline_elements[0] = NormalText('=> ' + inline_elements[0].text)
+            else:
+                inline_elements = [NormalText('=> ')] + inline_elements
+        self._add_html_inline_elements(html_list_item, inline_elements)
         for sub_item in list_item.sub_items:
-            self._add_html_listitem(html_list_item, sub_item)
+            html_list = ET.SubElement(html_list_item, 'ul')
+            self._add_html_listitem(html_list, sub_item)
 
     def _add_html_table(self, html_parent, table):
         html_table = ET.SubElement(html_parent, 'table')

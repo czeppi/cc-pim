@@ -30,7 +30,7 @@ from modeling.notesmodel import Note
 class MainWindow(QMainWindow):
 
     def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
+        super().__init__(parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         

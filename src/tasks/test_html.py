@@ -42,9 +42,32 @@ class TestHtml(unittest.TestCase):
             '<p>aaa<b>bbb</b>ccc</p>'
         )
 
-    def test_list(self):        self._test_one_element(
+    def test_list(self):
+        self._test_one_element(
             List([ ListItem([ NormalText('aaa') ]) ]),
             '<ul><li>aaa</li></ul>'
+        )
+
+    def test_nested_list(self):
+        self._test_one_element(
+            List([
+                ListItem([ NormalText('aaa') ],
+                         sub_items=[ListItem([NormalText('bbb')])])
+            ]),
+            '<ul>'
+              '<li>aaa'
+                '<ul>'
+                  '<li>bbb</li>'
+                '</ul>'
+              '</li>'
+            '</ul>'
+        )
+
+    def test_list_with_arrow(self):
+        self._test_one_element(
+            List([ ListItem([NormalText('aaa')]),
+                   ListItem([NormalText('bbb')], symbol='=>')]),
+            '<ul><li>aaa</li><li>=&gt; bbb</li></ul>'
         )
 
     def test_table(self):

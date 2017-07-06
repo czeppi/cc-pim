@@ -65,7 +65,7 @@ class TasksGui(ModelGui):
         task_id = obj_id
         task = self._task_model.get_task(task_id)
 
-        dlg = TaskEditDialog(self, task, task_model=self._task_model)
+        dlg = TaskEditDialog(frame, task, task_model=self._task_model)
         if dlg.exec() != dlg.Accepted:
             return False
 
@@ -101,6 +101,8 @@ class TasksGui(ModelGui):
         markup_str = f'# {header}\n\n{body}'
         page = read_markup(markup_str)
         html_text = write_htmlstr(page)
+        print(markup_str)
+        print(html_text)
         return html_text
 
     def exists_uncommited_changes(self) -> bool:

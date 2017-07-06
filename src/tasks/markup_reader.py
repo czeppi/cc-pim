@@ -124,7 +124,7 @@ class _MarkupParser:
         text = '\n'.join(lines)
         inline_parser = InlineParser(text)
         inline_elements = inline_parser.parse()
-        return ListItem(inline_elements=inline_elements)
+        return ListItem(inline_elements=inline_elements, symbol=list_line0.symbol)
 
     def _iter_list_item_lines(self, list_line0):
         yield list_line0.text

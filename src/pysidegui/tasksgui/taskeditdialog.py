@@ -19,12 +19,14 @@ from PySide.QtGui import QDialog, QApplication
 from PySide.QtCore import Qt
 from pysidegui._ui_.ui_taskeditdialog import Ui_TaskEditDialog
 from tasks.taskmodel import TaskRevision
+from tasks.html_creator import write_htmlstr
+from tasks.markup_reader import read_markup
 
 
 class TaskEditDialog(QDialog):
 
     def __init__(self, parent, task, task_model):
-        super(TaskEditDialog, self).__init__(parent, f=Qt.WindowMaximizeButtonHint)
+        super().__init__(parent, f=Qt.WindowMaximizeButtonHint)
         self.ui = Ui_TaskEditDialog()
         self.ui.setupUi(self)
         
@@ -82,17 +84,31 @@ class TaskEditDialog(QDialog):
     
     def _init_preview(self):
         task = self._task
-        self.ui.preview.setText(task.last_revision.get_html_text())
+        #self.ui.preview.setText(task.last_revision.get_html_text())
+        html_text = self._get_html_text()
+        self.ui.preview.setText(html_text)
         self.ui.preview.setReadOnly(True)
     
     def _update_preview(self):
-        task = self._task
-        values = task.last_revision.get_values()
-        values.update(self.get_values())
-        tmp_task_rev = TaskRevision(**values)
-        html_text = tmp_task_rev.get_html_text()
+        #task = self._task
+        #values = task.last_revision.get_values()
+        #values.update(self.get_values())
+        #tmp_task_rev = TaskRevision(**values)
+        #html_text = tmp_task_rev.get_html_text()
+        html_text = self._get_html_text()
         self.ui.preview.setText(html_text)
-        
+
+    def _get_html_text(self) -> str:
+        title = self.ui.title_edit.text()
+        body = self.ui.body_edit.toPlainText()
+        #category = self.ui.cat_combo.currentText()
+
+        markup_str = f'# {title}\n\n{body}'
+        page = read_markup(markup_str)
+        html_text = write_htmlstr(page)
+        print(html_text)
+        return html_text
+
     def get_values(self):
         return {
             'title':    self.ui.title_edit.text(),

@@ -162,9 +162,12 @@ class Paragraph(BlockElement):
 
 class ListItem(ElementBase):
 
-    def __init__(self, inline_elements: TList[InlineElement] = [], sub_items: TList['ListItem'] = []):
+    def __init__(self, inline_elements: TList[InlineElement] = [],
+                       sub_items: TList['ListItem'] = [],
+                       symbol = '-'):
         assert  all(isinstance(x, InlineElement) for x in inline_elements) \
             and all(isinstance(x, ListItem) for x in sub_items)
+        self.symbol = symbol
         self.inline_elements = inline_elements
         self.sub_items = sub_items
 
