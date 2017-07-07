@@ -42,8 +42,5 @@ class ModelGui:
     def iter_sorted_ids_from_keywords(self, keywords):
         raise Exception('net yet implemented.')
 
-    def _iter_filtered_contacts(self, keywords):
-        raise Exception('net yet implemented.')
-
     def get_object_title(self, obj_id) -> str:
         raise Exception('net yet implemented.')

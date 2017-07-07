@@ -114,12 +114,12 @@ class TasksGui(ModelGui):
         return contact_id
 
     def iter_sorted_ids_from_keywords(self, keywords):
-        filtered_contacts = self._iter_filtered_contacts(keywords)
-        sorted_contacts = sorted(filtered_contacts, key=lambda x: x.id)
-        for contact in sorted_contacts:
-            yield contact.id
+        filtered_tasks = self._iter_filtered_tasks(keywords)
+        sorted_tasks = sorted(filtered_tasks, key=lambda x: x.id, reverse=True)
+        for task in sorted_tasks:
+            yield task.id
 
-    def _iter_filtered_contacts(self, keywords):
+    def _iter_filtered_tasks(self, keywords):
         for task in self._task_model.tasks:
             if task.last_revision.contains_all_keyword(keywords):
                 yield task

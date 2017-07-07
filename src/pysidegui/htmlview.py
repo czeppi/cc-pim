@@ -23,6 +23,7 @@ class HtmlView(QTextEdit):
 
     def __init__(self, parent):
         super().__init__(parent)
+        self.zoomIn(range=1)
         self.click_link_observers = []
 
     def mousePressEvent(self, event):

@@ -20,56 +20,46 @@ class BaseType:
 
     def convert_to_db(self, value):
         return value
-        
+
+
+class Int(BaseType):
+    sqlite3_typename = 'integer'
+
 
 class String(BaseType):
-
-    def get_sqlite3_typename(self):
-        return 'text'  # !! nicht 'string' ansonsten wird '0123' zu '123' !!
+    sqlite3_typename = 'text'  # !! Not 'string', otherwise '0123' will converted to '123' !!
         
     def convert_to_db(self, value):
         return value.replace('"', '""')
         
 
 class ID(BaseType):
-
-    def get_sqlite3_typename(self):
-        return 'integer primary key'
+    sqlite3_typename = 'integer primary key'
     
     
 class UserID(BaseType):
-
-    def get_sqlite3_typename(self):
-        return 'text'
+    sqlite3_typename = 'text'
     
     
 class Ref(BaseType):
+    sqlite3_typename = 'integer'  # ??
 
     def __init__(self, table_name, id_attribute_name):
         BaseType.__init__(self)
         self._table_name = table_name
         self._id_attribute_name = id_attribute_name
-    
-    def get_sqlite3_typename(self):
-        return 'integer'  # ??
-        
-    
-class Date(BaseType):
 
-    def get_sqlite3_typename(self):
-        return 'text'
+
+class Date(BaseType):
+    sqlite3_typename = 'text'
     
     
 class StringList(BaseType):
-
-    def get_sqlite3_typename(self):
-        return 'text'
+    sqlite3_typename = 'text'
     
     def convert_to_db(self, value):
         return value.replace('"', '""')  # besser ','.join(value)
     
 
-class ReStructuredString(String):
-
+class XmlString(String):
     pass
-    

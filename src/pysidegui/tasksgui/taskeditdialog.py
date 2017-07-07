@@ -55,7 +55,7 @@ class TaskEditDialog(QDialog):
     
     def _init_id_edit(self):
         task = self._task
-        self.ui.id_edit.setText(task.id)
+        self.ui.id_edit.setText(str(task.id))
         self.ui.id_edit.setReadOnly(True)
     
     def _init_cat_combo(self):

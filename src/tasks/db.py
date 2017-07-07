@@ -99,7 +99,7 @@ class Table:
         return self._struct.attribute(name)
         
     def create(self):
-        fields = [x.name + ' ' + x.type.get_sqlite3_typename()
+        fields = [x.name + ' ' + x.type.sqlite3_typename
                   for x in self.attributes]
         sql_cmd = "create table {} ({})".format(
             self.name, ', '.join(fields))

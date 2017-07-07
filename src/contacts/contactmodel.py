@@ -174,7 +174,7 @@ def _create_contact(type_id, obj_serial):
 
 
 @total_ordering
-class ContactID: # noch unbenutzt
+class ContactID:
 
     type_id_map = {
         Person.type_id:  Person,
@@ -403,8 +403,3 @@ class ContactModel:
         new_serial = self._last_date_serial + 1
         self._last_date_serial = new_serial
         return new_serial
-
-
-
-
-

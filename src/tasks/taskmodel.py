@@ -16,12 +16,10 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-from collections import defaultdict
 from datetime import datetime
 from docutils.core import publish_string
+from functools import total_ordering
 
-from tasks.metamodel import MetaModel
-from tasks.db import DB
 from tasks.db import Row
 
 
@@ -71,13 +69,16 @@ class TaskModel:
         default_rev = self._tasks_revisions[0]
         return Task(task_id, revisions=[default_rev], model=self)
 
-    def _get_next_task_id(self, date_str):
-        for i in range(1, 100):
-            task_id = '{}-{:02}'.format(date_str, i)
-            if task_id not in self._tasks:
-                return task_id
-        raise Exception()
+    # def _get_next_task_id(self, date_str):
+    #     for i in range(1, 100):
+    #         task_id = '{}-{:02}'.format(date_str, i)
+    #         if task_id not in self._tasks:
+    #             return task_id
+    #     raise Exception()
         
+    def _get_next_task_id(self, date_str):
+        return max(self._tasks.keys()) + 1
+
     def add_task_revision(self, task_rev):
         if task_rev.id == 0:
             raise Exception()
@@ -96,8 +97,8 @@ class TaskModel:
     def _write_task_revision(self, task_rev):
         tasks_revisions_table = self._tasks_revisions_table
         task_rev_values = task_rev.get_values()
-        row_values = { x.name: task_rev_values[x.name] 
-            for x in tasks_revisions_table.attributes }
+        row_values = { x.name: task_rev_values[x.name]
+                       for x in tasks_revisions_table.attributes }
         new_row = Row(table=tasks_revisions_table, values=row_values)
         tasks_revisions_table.insert_row(new_row)
         self._db.commit()
@@ -134,7 +135,27 @@ class TaskModel:
         
     def extract_keywords(self, text):
         return self._keyword_extractor.get_keywords(text)
-        
+
+
+@total_ordering
+class TaskID:  # todo: use it
+
+    def __init__(self, serial: int):
+        self._serial = serial
+
+    def __str__(self):
+        return f'{self._serial:05}'
+
+    def __eq__(self, other):
+        return self._serial == other.serial
+
+    def __lt__(self, other):
+        return self._serial < other.serial
+
+    @property
+    def serial(self):
+        return self._serial
+
 
 class Task:
 
@@ -290,23 +311,6 @@ class TaskRevision:
         #return '{}-{}: {}'.format(self._task_id[:6], self._task_id[6:].upper(), self._title)
         return self.task.get_header()
         
-    def get_rst_text(self):
-        header = self.get_header()
-        rst_text = '{}\n{}\n\n{}'.format(header, len(header) * '=', self._body)
-        return rst_text
-        
-    def get_html_text(self):
-        rst_text = self.get_rst_text()
-        html_text = self.rst2html(rst_text)
-        return html_text
-        
-    def rst2html(self, rst_text):
-        overrides = self._model._overrides
-        html_bytes = publish_string(rst_text, writer_name='html', 
-            settings_overrides=overrides)
-        html_text = str(html_bytes, encoding='utf-8')
-        return html_text
-       
     def have_values_changed(self, new_values):
         return self._title != new_values['title'] or \
             self._body != new_values['body'] or \
@@ -338,4 +342,3 @@ class KeywordExtractor:
                 
     def _is_alnum(self, ch):
         return ch.isalnum() or ch in ['ä', 'ö', 'ü', 'ß', 'Ä', 'Ö', 'Ü']
-        
