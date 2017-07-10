@@ -171,10 +171,10 @@ class ContactEditDialog(QDialog):
 
     def _create_ref_map(self, attr):
         ref = attr.value_type
-        ref_type_id = ref.target_class.type_id
+        ref_contact_type = ref.target_class.contact_type
         ref_map = {}  # title -> obj
         for obj in self._contacts_model.iter_objects():
-            if obj.type_id == ref_type_id:
+            if obj.contact_type == ref_contact_type:
                 obj_title = obj.title
                 if obj_title:
                     ref_map[obj_title] = obj

@@ -17,33 +17,21 @@
 
 import re
 from datetime import datetime
-from docutils.core import publish_string
 from functools import total_ordering
-
 from tasks.db import Row
 
 
 class TaskModel:
 
     def __init__(self, db, keyword_extractor, overrides):
-        #self._context = context
-        #self._meta_model = MetaModel(context.logging_enabled)
-        #self._meta_model.read(context.metamodel_pathname)
-        #self._db = DB(context.sqlite3_pathname, self._meta_model, 
-        #    logging_enabled=context.logging_enabled)
         self._db = db
         self._tasks_revisions_table = self._db.table('tasks_revisions')
-        #self._keyword_extractor = KeywordExtractor(context.no_keywords_pathname)
         self._keyword_extractor = keyword_extractor
         self._overrides = overrides
         
     @property
     def tasks(self):
         return self._tasks.values()
-        
-    #@property
-    #def context(self):
-    #    return self._context
         
     def read(self):
         self._db.open()
@@ -69,13 +57,6 @@ class TaskModel:
         default_rev = self._tasks_revisions[0]
         return Task(task_id, revisions=[default_rev], model=self)
 
-    # def _get_next_task_id(self, date_str):
-    #     for i in range(1, 100):
-    #         task_id = '{}-{:02}'.format(date_str, i)
-    #         if task_id not in self._tasks:
-    #             return task_id
-    #     raise Exception()
-        
     def _get_next_task_id(self, date_str):
         return max(self._tasks.keys()) + 1
 

@@ -15,13 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
+from pysidegui.globalitemid import GlobalItemID
+from typing import Optional, Iterator
+
 
 class ModelGui:
 
-    def new_item(self, frame):
+    def new_item(self, frame) -> Optional[GlobalItemID]:
         raise Exception('net yet implemented.')
 
-    def edit_item(self, obj_id, frame):
+    def edit_item(self, glob_item_id: GlobalItemID, frame) -> bool:
         raise Exception('net yet implemented.')
 
     def save_all(self):
@@ -30,17 +33,17 @@ class ModelGui:
     def revert_change(self):
         raise Exception('net yet implemented.')
 
-    def get_html_text(self, obj_id) -> str:
+    def get_html_text(self, glob_item_id: GlobalItemID) -> str:
         raise Exception('net yet implemented.')
 
     def exists_uncommited_changes(self) -> bool:
         raise Exception('net yet implemented.')
 
-    def get_id_from_href(self, href_str: str) -> id:
+    def get_id_from_href(self, href_str: str) -> GlobalItemID:
         raise Exception('net yet implemented.')
 
-    def iter_sorted_ids_from_keywords(self, keywords):
+    def iter_sorted_ids_from_keywords(self, keywords) -> Iterator[GlobalItemID]:
         raise Exception('net yet implemented.')
 
-    def get_object_title(self, obj_id) -> str:
+    def get_object_title(self, glob_item_id: GlobalItemID) -> str:
         raise Exception('net yet implemented.')

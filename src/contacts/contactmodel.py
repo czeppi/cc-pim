@@ -18,6 +18,7 @@
 from collections import OrderedDict, defaultdict
 from enum import Enum
 from functools import total_ordering
+import re
 
 from contacts.basetypes import Date, EMail, PhoneNumber, Url, Str, Text, Ref
 
@@ -77,7 +78,7 @@ class Contact:
 
     @property
     def id(self):
-        return ContactID(self.type_id, self.serial)
+        return ContactID(self.contact_type, self.serial)
 
     def add_fact(self, attr_name, fact):
         self._facts_map[attr_name].append(fact)
@@ -101,7 +102,7 @@ class Contact:
         return all(self.contains_keyword(x) for x in keywords)
 
     def copy(self):
-        new_contact = _create_contact(self.type_id, self.serial)
+        new_contact = _create_contact(self.contact_type, self.serial)
         for attr_name, fact_list in self._facts_map.items():
             for fact in fact_list:
                 new_contact.add_fact(attr_name, fact.copy())
@@ -110,8 +111,8 @@ class Contact:
 
 class Person(Contact):
 
-    type_id = ContactTypes.person.value
-    type_name = 'person'
+    contact_type = ContactTypes.person
+    type_name = contact_type.name
     attributes = OrderedDict()
     back_attributes = OrderedDict()
     last_serial = 0
@@ -132,8 +133,8 @@ class Person(Contact):
 
 class Company(Contact):
 
-    type_id = ContactTypes.company.value
-    type_name = 'company'
+    contact_type = ContactTypes.company
+    type_name = contact_type.name
     attributes = OrderedDict()
     back_attributes = OrderedDict()
     last_serial = 0
@@ -149,8 +150,8 @@ class Company(Contact):
 
 class Address(Contact):
 
-    type_id = ContactTypes.address.value
-    type_name = 'address'
+    contact_type = ContactTypes.address
+    type_name = contact_type.name
     attributes = OrderedDict()
     back_attributes = OrderedDict()
     last_serial = 0
@@ -164,63 +165,45 @@ class Address(Contact):
         return ', '.join(parts)
 
 
-def _create_contact(type_id, obj_serial):
+def _create_contact(contact_type, obj_serial):
     cls_map = {
-        Person.type_id:  Person,
-        Company.type_id: Company,
-        Address.type_id: Address,
+        Person.contact_type:  Person,
+        Company.contact_type: Company,
+        Address.contact_type: Address,
     }
-    return cls_map[type_id](obj_serial)
+    return cls_map[contact_type](obj_serial)
 
 
 @total_ordering
 class ContactID:
+    _rex = re.compile(r"(?P<type>[a-zA-Z]+)(?P<serial>[0-9)])+")
 
-    type_id_map = {
-        Person.type_id:  Person,
-        Company.type_id: Company,
-        Address.type_id: Address,
-    }
+    @classmethod
+    def create_from_string(cls, id_str):
+        match = cls._rex.match(id_str)
+        if not match:
+            raise ValueError(id_str)
 
-    type_name_map = {
-        Person.type_name:  Person,
-        Company.type_name: Company,
-        Address.type_name: Address,
-    }
+        type_name = match.group('type')
+        contact_type = ContactTypes[type_name]
+        serial = int(match.group('serial'))
+        return ContactID(contact_type, serial)
 
-    @staticmethod
-    def type_id2name(type_id):
-        return ContactID.type_id_map[type_id].type_name
-
-    @staticmethod
-    def type_name2id(type_name):
-        return ContactID.type_name_map[type_name].type_id
-
-    @staticmethod
-    def create_from_string(id_str):
-        for type_name, cls in ContactID.type_name_map.items():
-            n = len(type_name)
-            if id_str[:n] == type_name:
-                return ContactID(cls.type_id, int(id_str[n:]))
-        raise ValueError(id_str)
-
-    def __init__(self, type_id, serial):
-        self.type_id = type_id
+    def __init__(self, contact_type, serial):
+        self.contact_type = contact_type
         self.serial = serial
 
     def __str__(self):
-        type_name = ContactID.type_id2name(self.type_id)
-        return type_name + str(self.serial)
+        return self.contact_type.name + str(self.serial)
 
     def __eq__(self, other):
-        return (self.type_id, self.serial) == (other.type_id, other.serial)
+        return (self.contact_type, self.serial) == (other.contact_type, other.serial)
 
     def __lt__(self, other):
-        return (self.type_id, self.serial) < (other.type_id, other.serial)
+        return (self.contact_type.value, self.serial) < (other.contact_type.value, other.serial)
 
-    @property
-    def type_serial(self):
-        return (self.type_id, self.serial)
+    def __hash__(self):
+        return hash((self.contact_type, self.serial))
 
 
 def _iter_predicates_data():
@@ -286,21 +269,21 @@ class ContactModel:
         self._init_last_date_serial()
 
     def _init_data(self):
-        self._data = {}  # (type_id, serial) -> ContactObject
+        self._data = {}  # ContactID -> ContactObject
         for fact in self._fact_changes.values():
             predicate = self.predicates[fact.predicate_serial]
-            type_id = predicate.subject_class.type_id
+            contact_type = predicate.subject_class.contact_type
             obj_serial = fact.subject_serial
-            obj_id = (type_id, obj_serial)
-            obj = self._data.get(obj_id, None)
+            contact_id = ContactID(contact_type, obj_serial)
+            obj = self._data.get(contact_id, None)
             if obj is None:
-                obj = _create_contact(type_id, obj_serial)
-                self._data[obj_id] = obj
+                obj = _create_contact(contact_type, obj_serial)
+                self._data[contact_id] = obj
             obj.add_fact(predicate.name, fact)
 
     def _init_last_serial_map(self):
         self._last_serial_map = {
-            cls.type_id: max((serial for type_id, serial in self._data.keys() if type_id == cls.type_id), default=0)
+            cls.contact_type: max((contact_id.serial for contact_id in self._data.keys() if contact_id.contact_type == cls.contact_type), default=0)
             for cls in self.iter_object_classes()
         }
 
@@ -318,7 +301,7 @@ class ContactModel:
             predicate = self.predicates[fact.predicate_serial]
             if isinstance(predicate.value_type, Ref):
                 ref = predicate.value_type
-                if ref.target_class.type_id == obj.type_id \
+                if ref.target_class.contact_type == obj.contact_type \
                 and int(fact.value) == obj.serial:
                     yield fact
 
@@ -332,12 +315,11 @@ class ContactModel:
         return self._date_changes[date_serial]
 
     def contains(self, contact_id):
-        return contact_id.type_serial in self._data
+        return contact_id in self._data
         
     def get(self, contact_id):
-        return self._data[contact_id.type_serial]
-#        return self._data.get((type_id, obj_serial), '{}.{}?'.format(type_id, obj_serial))
-        
+        return self._data[contact_id]
+
     def find(self, search_parameters):
         pass
 
@@ -345,30 +327,30 @@ class ContactModel:
         predicate = self.predicates[fact.predicate_serial]
         if isinstance(predicate.value_type, Ref):
             ref = predicate.value_type
-            type_id = ref.target_class.type_id
+            contact_type = ref.target_class.contact_type
             serial = int(fact.value)
             if serial == 0:
                 return ''
             else:
-                obj = self.get(ContactID(type_id, serial))
+                obj = self.get(ContactID(contact_type, serial))
                 return obj.title
         else:
             return fact.value
 
     def get_fact_subject(self, fact):
         predicate = self.predicates[fact.predicate_serial]
-        type_id = predicate.subject_class.type_id
-        subject_id = (type_id, fact.subject_serial)
-        return self._data.get(subject_id, None)
+        contact_type = predicate.subject_class.contact_type
+        contact_id = ContactID(contact_type, fact.subject_serial)
+        return self._data.get(contact_id, None)
 
     def get_fact_object(self, fact):
         predicate = self.predicates[fact.predicate_serial]
         if isinstance(predicate.value_type, Ref):
             ref = predicate.value_type
-            type_id = ref.target_class.type_id
+            contact_type = ref.target_class.contact_type
             serial = int(fact.value)
             if serial != 0:
-                return self.get(ContactID(type_id, serial))
+                return self.get(ContactID(contact_type, serial))
 
     def add_changes(self, date_changes, fact_changes):
         self._date_changes.update(date_changes)
@@ -387,11 +369,11 @@ class ContactModel:
         self._uncommited_date_changes.clear()
         self._uncommited_fact_changes.clear()
 
-    def create_contact(self, type_id):
-        assert type_id in self._last_serial_map
-        new_serial = self._last_serial_map[type_id] + 1
-        self._last_serial_map[type_id] = new_serial
-        new_contact = _create_contact(type_id, new_serial)
+    def create_contact(self, contact_type):
+        assert contact_type in self._last_serial_map
+        new_serial = self._last_serial_map[contact_type] + 1
+        self._last_serial_map[contact_type] = new_serial
+        new_contact = _create_contact(contact_type, new_serial)
         return new_contact
 
     def create_fact_serial(self):
