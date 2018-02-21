@@ -1,4 +1,4 @@
-﻿# Copyright (C) 2014  Christian Czepluch
+# Copyright (C) 2014  Christian Czepluch
 #
 # This file is part of CC-PIM.
 #
