@@ -176,7 +176,7 @@ def _create_contact(contact_type, obj_serial):
 
 @total_ordering
 class ContactID:
-    _rex = re.compile(r"(?P<type>[a-zA-Z]+)(?P<serial>[0-9)])+")
+    _rex = re.compile(r"(?P<type>[a-zA-Z]+)(?P<serial>[0-9]+)")
 
     @classmethod
     def create_from_string(cls, id_str):
