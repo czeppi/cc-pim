@@ -101,7 +101,7 @@ class TasksGui(ModelGui):
         body = task.last_revision.body
         markup_str = f'# {header}\n\n{body}'
         page = read_markup(markup_str)
-        html_text = write_htmlstr(page)
+        html_text = write_htmlstr(page, markup_str)
         print(markup_str)
         print(html_text)
         return html_text

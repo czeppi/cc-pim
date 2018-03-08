@@ -21,8 +21,8 @@ from tasks.page import NormalText, BoldText, Link, Image
 from tasks.page import HAlign, Width
 
 
-def write_htmlstr(page: Page) -> str:
-    html_root = _HtmlCreator(page).create()
+def write_htmlstr(page: Page, markup_str=None) -> str:
+    html_root = _HtmlCreator(page).create(markup_str)
     return ET.tostring(html_root, encoding='unicode')
 
 
@@ -31,8 +31,13 @@ class _HtmlCreator:
     def __init__(self, page: Page):
         self._page = page
 
-    def create(self) -> ET.Element:
-        html_page = ET.fromstring('<p></p>')
+    def create(self, markup_str=None) -> ET.Element:
+        html_page = ET.fromstring('<body></body>')
+
+        if markup_str is not None:
+            html_pre = ET.SubElement(html_page, 'pre')
+            html_pre.text = markup_str
+
         for block_element in self._page.block_elements:
             self._add_html_block_element(html_page, block_element)
         return html_page

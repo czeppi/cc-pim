@@ -129,7 +129,7 @@ class _MarkupParser:
     def _iter_list_item_lines(self, list_line0):
         yield list_line0.text
 
-        text_indent_len = list_line0.indent_len + 2
+        text_indent_len = list_line0.indent_len + len(list_line0.symbol) + len(' ')
         while True:
             line_k = self._line_iter.get_next_line()
             if line_k is None or line_k.is_empty:  # end of line or new block?
@@ -231,7 +231,7 @@ class _Line:
 
     _strip_left_rex = re.compile(r"(?P<leading_spaces> *)(?P<tail>.*)")
     _header_rex = re.compile(r"(?P<leading_hashes>#+) (?P<text>.*)")
-    _list_rex = re.compile(r"(?P<leading_spaces> *)(?P<symbol>-|=>) (?P<text>.*)")
+    _list_rex = re.compile(r"(?P<leading_spaces> *)(?P<symbol>\-|\+|=>|\?|[0-9]+\.(\)?)|[a-z]\.(\)?)) (?P<text>.*)")
     _table_rex = re.compile(r"|(.*)")
     _bold_rex = re.compile(r"\*(?P<bold>\w[^*]*\w)\*")
     _link_rex = re.compile(r"\[(.*)(\|.*)]")
@@ -244,6 +244,12 @@ class _Line:
         assert m is not None
         self._indent_len = len(m.group('leading_spaces'))
         self._left_stripped = m.group('tail')
+
+    def __str__(self):
+        return f'{self._row}: {self._text}'
+
+    def __repr__(self):
+        return str(self)
         
     @property
     def row(self):

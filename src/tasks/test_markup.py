@@ -27,18 +27,53 @@ from tasks.page import HAlign, Width
 class TestMarkup(unittest.TestCase):
 
     def test_header(self):
-        self._test(
+        self._test1(
             Header(level=1, inline_elements=[NormalText('title')]),
             '# title\n')
 
+    def test_one_line_paragraph(self):
+        self._test1(
+            Paragraph([ NormalText('aaa') ]),
+            'aaa\n')
 
-    def test_list(self):
-        self._test(
+    def test_two_lines_paragraph(self):
+        self._test1(
+            Paragraph([ NormalText('aaa\nbbb') ]),
+            'aaa\n'
+            'bbb\n')
+
+    def test_two_paragraphs(self):
+        self._test_n(
+            [
+                Paragraph([NormalText('aaa')]),
+                Paragraph([NormalText('bbb')]),
+            ],
+            'aaa\n'
+            '\n'
+            'bbb\n')
+
+    # def test_paragraph_with_indented_line(self):
+    #     self._test(
+    #         Paragraph([ NormalText('aaa\n bbb') ]),
+    #         'aaa\n'
+    #         ' bbb\n')
+
+    def test_list_with_one_item(self):
+        self._test1(
             List([ ListItem(inline_elements=[NormalText('aaa')]) ]),
             '- aaa\n')
 
+    def test_list_with_two_items(self):
+        self._test1(
+            List([
+                ListItem(inline_elements=[NormalText('aaa')]),
+                ListItem(inline_elements=[NormalText('bbb')]),
+            ]),
+            '- aaa\n'
+            '- bbb\n')
+
     def test_sublist(self):
-        self._test(
+        self._test1(
             List([
                ListItem(
                    inline_elements=[NormalText('aaa')],
@@ -50,15 +85,135 @@ class TestMarkup(unittest.TestCase):
             '  - bbb\n')
 
     def test_list_with_2lines_item(self):
-        self._test(
+        self._test1(
             List([
                 ListItem(inline_elements=[NormalText('aaa\nbbb')])
             ]),
             '- aaa\n'
             '  bbb\n')
 
+    def test_list_with_indented_line(self):
+        self._test1(
+            List([
+                ListItem(inline_elements=[NormalText('aaa\n bbb')])
+            ]),
+            '- aaa\n'
+            '   bbb\n')
+
+    def test_list_with_indented_line2(self):
+        self._test1(
+            List([
+                ListItem(inline_elements=[NormalText(' aaa\nbbb')])
+            ]),
+            '-  aaa\n'
+            '  bbb\n')
+
+    def test_list_with_arrow(self):
+        self._test1(
+            List([
+                ListItem(inline_elements=[NormalText('aaa')]),
+                ListItem(inline_elements=[NormalText('bbb')], symbol='=>'),
+            ]),
+            '- aaa\n'
+            '=> bbb\n')
+
+    def test_list_with_arrow2(self):
+        self._test1(
+            List([
+                ListItem(inline_elements=[NormalText('aaa\nbbb')], symbol='=>'),
+            ]),
+            '=> aaa\n'
+            '   bbb\n')
+
+    def test_list_with_question_mark(self):
+        self._test1(
+            List([
+                ListItem(inline_elements=[NormalText('aaa')]),
+                ListItem(inline_elements=[NormalText('bbb')], symbol='?'),
+            ]),
+            '- aaa\n'
+            '? bbb\n')
+
+    def test_list_with_plus(self):
+        self._test1(
+            List([
+                ListItem(inline_elements=[NormalText('aaa')]),
+                ListItem(inline_elements=[NormalText('bbb')], symbol='+'),
+            ]),
+            '- aaa\n'
+            '+ bbb\n')
+
+    def test_list_with_numbers1(self):
+        self._test1(
+            List([
+                ListItem(inline_elements=[NormalText('aaa')], symbol='1.'),
+                ListItem(inline_elements=[NormalText('bbb')], symbol='2.'),
+            ]),
+            '1. aaa\n'
+            '2. bbb\n')
+
+    def test_list_with_numbers2(self):
+        self._test1(
+            List([
+                ListItem(inline_elements=[NormalText('aaa')], symbol='1.)'),
+                ListItem(inline_elements=[NormalText('bbb')], symbol='2.)'),
+            ]),
+            '1.) aaa\n'
+            '2.) bbb\n')
+
+    def test_list_with_letters1(self):
+        self._test1(
+            List([
+                ListItem(inline_elements=[NormalText('aaa')], symbol='a.'),
+                ListItem(inline_elements=[NormalText('bbb')], symbol='b.'),
+            ]),
+            'a. aaa\n'
+            'b. bbb\n')
+
+    def test_list_with_letters2(self):
+        self._test1(
+            List([
+                ListItem(inline_elements=[NormalText('aaa')], symbol='a.)'),
+                ListItem(inline_elements=[NormalText('bbb')], symbol='b.)'),
+            ]),
+            'a.) aaa\n'
+            'b.) bbb\n')
+
+    def test_two_lists(self):
+        self._test_n(
+            [
+                List([
+                    ListItem(inline_elements=[NormalText('aaa')]),
+                ]),
+                List([
+                    ListItem(inline_elements=[NormalText('bbb')]),
+                ]),
+            ],
+            '- aaa\n'
+            '\n'
+            '- bbb\n')
+
+    def test_list_and_paragraph(self):
+        self._test_n(
+            [
+                Paragraph([NormalText('aaa\nbbb')]),
+                List([
+                    ListItem(inline_elements=[NormalText('ccc')]),
+                    ListItem(inline_elements=[NormalText('ddd')]),
+                ]),
+                Paragraph([NormalText('eee\nfff')]),
+            ],
+            'aaa\n'
+            'bbb\n'
+            '\n'
+            '- ccc\n'
+            '- ddd\n'
+            '\n'
+            'eee\n'
+            'fff\n')
+
     def test_table(self):
-        self._test(
+        self._test1(
             Table(
                 columns=[
                     Column(halign=HAlign.left, text='aaa') ],
@@ -69,24 +224,16 @@ class TestMarkup(unittest.TestCase):
            '|aaa |\n'
            '|bbb|\n')
 
-    def test_paragraph(self):
-        self._test(
-            Paragraph([ NormalText('aaa') ]),
-            'aaa\n')
-
-    def test_two_lines_paragraph(self):
-        self._test(
-            Paragraph([ NormalText('aaa\nbbb') ]),
-            'aaa\n'
-            'bbb\n')
-
     def test_bold(self):
-       self._test(
+       self._test1(
            Paragraph([ NormalText('aaa '), BoldText('bbb'), NormalText(' ccc') ]),
            'aaa *bbb* ccc\n')
                    
-    def _test(self, block_element, markup_str1):
-        page1 = Page(block_elements=[block_element])
+    def _test1(self, block_element, markup_str1):
+        self._test_n([block_element], markup_str1)
+
+    def _test_n(self, block_elements, markup_str1):
+        page1 = Page(block_elements=block_elements)
         markup_str1_normed = markup_str1 #+ '\n'
 
         markup_str2 = write_markup(page1)
@@ -94,4 +241,3 @@ class TestMarkup(unittest.TestCase):
 
         page2 = read_markup(markup_str1)
         self.assertEqual(page2, page1)
-
