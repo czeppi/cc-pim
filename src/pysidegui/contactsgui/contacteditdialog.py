@@ -18,9 +18,15 @@
 import difflib
 from collections import OrderedDict
 
-from PySide.QtCore import Qt
-from PySide.QtGui import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
-                          QLineEdit, QMessageBox, QPushButton, QVBoxLayout)
+import constants
+if constants.GUI == 'pyside':
+    from PySide.QtCore import Qt
+    from PySide.QtGui import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
+                              QLineEdit, QMessageBox, QPushButton, QVBoxLayout)
+elif constants.GUI == 'pyside2':
+    from PySide2.QtCore import Qt
+    from PySide2.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
+                                   QLineEdit, QMessageBox, QPushButton, QVBoxLayout)
 
 from contacts.basetypes import Ref, Fact, VagueDate
 from pysidegui.contactsgui.vaguedatedialog import VagueDateDialog

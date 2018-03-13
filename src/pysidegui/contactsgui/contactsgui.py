@@ -17,7 +17,13 @@
 
 from collections import OrderedDict
 from typing import Optional, Iterator
-from PySide.QtGui import QInputDialog
+
+import constants
+if constants.GUI == 'pyside':
+    from PySide.QtGui import QInputDialog
+elif constants.GUI == 'pyside2':
+    from PySide2.QtWidgets import QInputDialog
+    
 from contacts.repository import Repository
 from contacts.contactmodel import ContactModel, ContactID, ContactTypes
 from pysidegui.htmlview import ContactHtmlCreator

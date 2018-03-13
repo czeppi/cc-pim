@@ -16,7 +16,12 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import defaultdict
-from PySide.QtGui import QTextEdit
+
+import constants
+if constants.GUI == 'pyside':
+    from PySide.QtGui import QTextEdit
+elif constants.GUI == 'pyside2':
+    from PySide2.QtWidgets import QTextEdit
 
 
 class HtmlView(QTextEdit):

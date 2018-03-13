@@ -15,9 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
-from PySide.QtGui import QDialog, QLineEdit, QRegExpValidator
-from PySide.QtCore import QRegExp
-from pysidegui._ui_.ui_vaguedatedialog import Ui_VagueDateDialog
+import constants
+if constants.GUI == 'pyside':
+    from PySide.QtGui import QDialog, QLineEdit, QRegExpValidator
+    from PySide.QtCore import QRegExp
+    from pysidegui._ui_.ui_vaguedatedialog import Ui_VagueDateDialog
+elif constants.GUI == 'pyside2':
+    from PySide2.QtWidgets import QDialog, QLineEdit
+    from PySide2.QtGui import QRegExpValidator
+    from PySide2.QtCore import QRegExp
+    from pysidegui._ui2_.ui_vaguedatedialog import Ui_VagueDateDialog
+    
 from contacts.basetypes import VagueDate
 
 

@@ -15,11 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
-from PySide.QtGui import QLineEdit
-from PySide.QtGui import QCompleter
-from PySide.QtCore import Qt, Signal
+import constants
+if constants.GUI == 'pyside':
+    from PySide.QtGui import QLineEdit
+    from PySide.QtGui import QCompleter
+    from PySide.QtCore import Qt, Signal
+elif constants.GUI == 'pyside2':
+    from PySide2.QtWidgets import QLineEdit
+    from PySide2.QtWidgets import QCompleter
+    from PySide2.QtCore import Qt, Signal
 
-
+    
 class SearchEdit(QLineEdit):
 
     def __init__(self, parent):

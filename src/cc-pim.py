@@ -15,19 +15,24 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
    
-GUI = 'pyside'
+import constants
    
 import sys
 import os.path
 import traceback
 from pathlib import Path
 
-if GUI == 'wx':
+if constants.GUI == 'wx':
     import wx
     import wxgui.mainframe
-elif GUI == 'pyside':
+elif constants.GUI == 'pyside':
     from PySide.QtCore import *
     from PySide.QtGui import *
+    from pysidegui.mainwindow import MainWindow
+elif constants.GUI == 'pyside2':
+    from PySide2.QtCore import *
+    from PySide2.QtGui import *
+    from PySide2.QtWidgets import *
     from pysidegui.mainwindow import MainWindow
     
 from context import Context
@@ -41,9 +46,9 @@ def main():
 
     context = Context(root_dir)
     
-    if GUI == 'wx':
+    if constants.GUI == 'wx':
         start_wx_app(context)
-    elif GUI == 'pyside':
+    elif constants.GUI in ['pyside', 'pyside2']:
         start_pyside_app(context)
 
 
