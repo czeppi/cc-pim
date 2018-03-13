@@ -60,7 +60,8 @@ class _XmlReader:
 
     def _create_paragraph(self, xml_para):
         inline_elements = list(self._iter_inline_elements(xml_para))
-        return Paragraph(inline_elements)
+        preformatted = (xml_para.get('preformatted', default='false').lower() == 'true')
+        return Paragraph(inline_elements, preformatted=preformatted)
 
     def _create_list(self, xml_list):
         items = list(self._iter_list_items(xml_list))
@@ -70,7 +71,11 @@ class _XmlReader:
         for xml_item in xml_list_or_item:
             inline_elements = list(self._iter_inline_elements(xml_item))
             sub_items = list(self._iter_list_items(xml_item))
-            yield ListItem(inline_elements=inline_elements, sub_items=sub_items)
+            symbol = xml_list_or_item.get('symbol', default='-')
+            preformatted = (xml_list_or_item.get('preformatted', default='false').lower() == 'true')
+            yield ListItem(inline_elements=inline_elements,
+                           sub_items=sub_items,
+                           symbol=symbol, preformatted=preformatted)
 
     def _create_table(self, xml_table):
         columns = list(self._iter_columns(xml_table))

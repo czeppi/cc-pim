@@ -58,7 +58,7 @@ class _MarkupCreator:
     def _iter_paragraph_lines(self, paragraph):
         para_text = self._create_inline_elements_str(paragraph.inline_elements)
         for para_line in para_text.split('\n'):
-            yield para_line.strip()
+            yield para_line #.strip()
 
     def _iter_list_lines(self, list_):
         for item in list_.items:

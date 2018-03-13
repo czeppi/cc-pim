@@ -56,7 +56,8 @@ class _XmlCreator:
         self._add_xml_inline_elements(xml_header, header.inline_elements)
 
     def _add_xml_paragraph(self, xml_parent, paragraph):
-        xml_para = ET.SubElement(xml_parent, 'paragraph')
+        preformatted_str = 'true' if paragraph.preformatted else 'false'
+        xml_para = ET.SubElement(xml_parent, 'paragraph', preformatted=preformatted_str)
         self._add_xml_inline_elements(xml_para, paragraph.inline_elements)
 
     def _add_xml_list(self, xml_parent, list_):
@@ -65,7 +66,8 @@ class _XmlCreator:
             self._add_xml_listitem(xml_list, list_item)
 
     def _add_xml_listitem(self, xml_parent, list_item):
-        xml_list_item = ET.SubElement(xml_parent, 'item')
+        preformatted_str = 'true' if list_item.preformatted else 'false'
+        xml_list_item = ET.SubElement(xml_parent, 'item', symbol=list_item.symbol, preformatted=preformatted_str)
         self._add_xml_inline_elements(xml_list_item, list_item.inline_elements)
         for sub_item in list_item.sub_items:
             self._add_xml_listitem(xml_list_item, sub_item)

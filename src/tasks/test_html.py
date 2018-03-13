@@ -30,10 +30,16 @@ class TestHtml(unittest.TestCase):
             '<h1>aaa</h1>'
         )
 
-    def test_paragraph(self):
+    def test_simple_paragraph(self):
         self._test_one_element(
             Paragraph([NormalText('aaa')]),
             '<p>aaa</p>'
+        )
+
+    def test_preformatted_paragraph(self):
+        self._test_one_element(
+            Paragraph([NormalText('  aaa\n  bbb')], preformatted=True),
+            '<pre>  aaa\n  bbb</pre>'
         )
 
     def test_bold(self):
@@ -70,6 +76,12 @@ class TestHtml(unittest.TestCase):
             '<ul><li>aaa</li><li>=&gt; bbb</li></ul>'
         )
 
+    def test_preformatted_list(self):
+        self._test_one_element(
+            List([ ListItem( [NormalText('  aaa\n  bbb')], preformatted=True) ]),
+            '<ul><li><pre>  aaa\n  bbb</pre></li></ul>'
+        )
+
     def test_table(self):
         self._test_one_element(
             Table(columns=[ Column(halign=HAlign.left,  text='A'),
@@ -88,7 +100,7 @@ class TestHtml(unittest.TestCase):
 
     def _test_one_element(self, page_elem1, html_elem_str1: str):
         page1 = Page([page_elem1])
-        html_str1 = '<p>' + html_elem_str1 + '</p>'
+        html_str1 = '<html>' + html_elem_str1 + '</html>'
 
         html_str2 = write_htmlstr(page1)
         self.assertEqual(html_str2, html_str1)

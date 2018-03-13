@@ -32,6 +32,7 @@ class _MarkupParser:
 
     def __init__(self, markup_text):
         self._markup_text = markup_text
+        self._list_items_always_preformatted = True
 
     def parse(self):
         block_elements = list(self._iter_block_elements())
@@ -75,7 +76,8 @@ class _MarkupParser:
         para_text = '\n'.join(lines)
         inline_parser = InlineParser(para_text)
         inline_elements = inline_parser.parse()
-        return Paragraph(inline_elements)
+        preformatted = (len(para_text) > 0 and para_text[0] == ' ')
+        return Paragraph(inline_elements, preformatted=preformatted)
 
     def _skip_empty_line(self):
         cur_line = self._line_iter.cur_line
@@ -124,7 +126,10 @@ class _MarkupParser:
         text = '\n'.join(lines)
         inline_parser = InlineParser(text)
         inline_elements = inline_parser.parse()
-        return ListItem(inline_elements=inline_elements, symbol=list_line0.symbol)
+        preformatted = (len(text) > 0 and text[0] == ' ')
+        if self._list_items_always_preformatted:
+            preformatted = True
+        return ListItem(inline_elements=inline_elements, symbol=list_line0.symbol, preformatted=preformatted)
 
     def _iter_list_item_lines(self, list_line0):
         yield list_line0.text

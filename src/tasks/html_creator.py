@@ -32,7 +32,7 @@ class _HtmlCreator:
         self._page = page
 
     def create(self, markup_str=None) -> ET.Element:
-        html_page = ET.fromstring('<body></body>')
+        html_page = ET.fromstring('<html></html>')
 
         if markup_str is not None:
             html_pre = ET.SubElement(html_page, 'pre')
@@ -57,8 +57,12 @@ class _HtmlCreator:
         self._add_html_inline_elements(html_header, header.inline_elements)
 
     def _add_html_paragraph(self, html_parent, paragraph):
-        html_para = ET.SubElement(html_parent, 'p')
-        self._add_html_inline_elements(html_para, paragraph.inline_elements)
+        if paragraph.preformatted:
+            html_pre = ET.SubElement(html_parent, 'pre')
+            self._add_html_inline_elements(html_pre, paragraph.inline_elements)
+        else:
+            html_para = ET.SubElement(html_parent, 'p')
+            self._add_html_inline_elements(html_para, paragraph.inline_elements)
 
     def _add_html_list(self, html_parent, list_):
         html_list = ET.SubElement(html_parent, 'ul')
@@ -69,14 +73,19 @@ class _HtmlCreator:
         html_list_item = ET.SubElement(html_parent, 'li')
 
         inline_elements = list_item.inline_elements
-        if list_item.symbol == '=>':
+        if list_item.symbol != '-':
             if len(inline_elements) > 0 and isinstance(inline_elements[0], NormalText):
                 inline_elements[0] = NormalText('=> ' + inline_elements[0].text)
             else:
-                inline_elements = [NormalText('=> ')] + inline_elements
-        self._add_html_inline_elements(html_list_item, inline_elements)
+                inline_elements = [NormalText(list_item.symbol + ' ')] + inline_elements
+        if list_item.preformatted:
+            html_cur_item = ET.SubElement(html_list_item, 'pre')
+        else:
+            html_cur_item = html_list_item
+
+        self._add_html_inline_elements(html_cur_item, inline_elements)
         for sub_item in list_item.sub_items:
-            html_list = ET.SubElement(html_list_item, 'ul')
+            html_list = ET.SubElement(html_cur_item, 'ul')
             self._add_html_listitem(html_list, sub_item)
 
     def _add_html_table(self, html_parent, table):

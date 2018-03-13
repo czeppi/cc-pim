@@ -85,6 +85,9 @@ class Width:
 
 class ElementBase:
 
+    def __eq__(self, other):
+        raise Exception('not implemented')
+
     def __ne__(self, other):
         return not self.__eq__(other)
 
@@ -147,32 +150,42 @@ class Header(BlockElement):
         self.inline_elements = inline_elements
         
     def __eq__(self, other):
-        return isinstance(other, Header) and self.level == other.level and self.inline_elements == other.inline_elements
+        return isinstance(other, Header) \
+               and self.level == other.level \
+               and self.inline_elements == other.inline_elements
 
 
 class Paragraph(BlockElement):
 
-    def __init__(self, inline_elements: TList[InlineElement] = []):
+    def __init__(self, inline_elements: TList[InlineElement] = [], preformatted: bool = False):
         assert all(isinstance(x, InlineElement) for x in inline_elements)
         self.inline_elements = inline_elements
+        self.preformatted = preformatted
 
     def __eq__(self, other):
-        return isinstance(other, Paragraph) and self.inline_elements == other.inline_elements
+        return isinstance(other, Paragraph) \
+               and self.inline_elements == other.inline_elements \
+               and self.preformatted == other.preformatted
 
 
 class ListItem(ElementBase):
 
     def __init__(self, inline_elements: TList[InlineElement] = [],
                        sub_items: TList['ListItem'] = [],
-                       symbol = '-'):
+                       symbol: str = '-',
+                       preformatted: bool = False):
         assert  all(isinstance(x, InlineElement) for x in inline_elements) \
             and all(isinstance(x, ListItem) for x in sub_items)
         self.symbol = symbol
         self.inline_elements = inline_elements
         self.sub_items = sub_items
+        self.preformatted = preformatted
 
     def __eq__(self, other):
-        return isinstance(other, ListItem) and self.inline_elements == other.inline_elements and self.sub_items == other.sub_items
+        return isinstance(other, ListItem) \
+               and self.inline_elements == other.inline_elements \
+               and self.sub_items == other.sub_items \
+               and self.preformatted == other.preformatted
 
 
 class List(BlockElement):
