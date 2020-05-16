@@ -75,17 +75,23 @@ class _HtmlCreator:
         inline_elements = list_item.inline_elements
         if list_item.symbol != '-':
             if len(inline_elements) > 0 and isinstance(inline_elements[0], NormalText):
-                inline_elements[0] = NormalText('=> ' + inline_elements[0].text)
+                inline_elements[0] = NormalText(list_item.symbol + ' ' + inline_elements[0].text)
             else:
                 inline_elements = [NormalText(list_item.symbol + ' ')] + inline_elements
-        if list_item.preformatted:
-            html_cur_item = ET.SubElement(html_list_item, 'pre')
-        else:
-            html_cur_item = html_list_item
 
-        self._add_html_inline_elements(html_cur_item, inline_elements)
+        # if list_item.preformatted:
+        #     html_cur_item = ET.SubElement(html_list_item, 'pre')
+        # else:
+        #     html_cur_item = html_list_item
+        # self._add_html_inline_elements(html_cur_item, inline_elements)
+        if list_item.preformatted:
+            self._add_preformatted_html_inline_elements(html_list_item, inline_elements)
+        else:
+            self._add_html_inline_elements(html_list_item, inline_elements)
+
         for sub_item in list_item.sub_items:
-            html_list = ET.SubElement(html_cur_item, 'ul')
+            # html_list = ET.SubElement(html_cur_item, 'ul')
+            html_list = ET.SubElement(html_list_item, 'ul')
             self._add_html_listitem(html_list, sub_item)
 
     def _add_html_table(self, html_parent, table):
@@ -131,6 +137,37 @@ class _HtmlCreator:
                     html_inline_element.tail = next_inline_element.text
                     k += 1
             k += 1
+
+    def _add_preformatted_html_inline_elements(self, html_block_element, inline_elements):
+        html_block_element.text = ''
+
+        for elements_in_line in self._iter_inline_elements_per_line(inline_elements):
+            html_pre = ET.SubElement(html_block_element, 'pre')
+            self._add_html_inline_elements(html_pre, elements_in_line)
+
+    def _iter_inline_elements_per_line(self, inline_elements):
+        elements_in_line = []
+        for inline_element in inline_elements:
+            text = getattr(inline_element, 'text', None)
+            if text is None:
+                elements_in_line.append(inline_element)
+            else:
+                lines = text.split('\n')
+                n = len(lines)
+                if n == 1:
+                    elements_in_line.append(inline_element)
+                elif n > 1:
+                    for line in lines[:-1]:
+                        new_element = inline_element.copy()
+                        new_element.text = line
+                        elements_in_line.append(new_element)
+                        yield elements_in_line
+                        elements_in_line = []
+                    new_element = inline_element.copy()
+                    new_element.text = lines[-1]
+                    elements_in_line.append(new_element)
+        if len(elements_in_line) > 0:
+            yield elements_in_line
 
     def _add_html_inline_element(self, html_block_element, inline_element):
         if isinstance(inline_element, BoldText):

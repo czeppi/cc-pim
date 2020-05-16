@@ -79,7 +79,7 @@ class TestHtml(unittest.TestCase):
     def test_preformatted_list(self):
         self._test_one_element(
             List([ ListItem( [NormalText('  aaa\n  bbb')], preformatted=True) ]),
-            '<ul><li><pre>  aaa\n  bbb</pre></li></ul>'
+            '<ul><li><pre>  aaa</pre><pre>  bbb</pre></li></ul>'
         )
 
     def test_table(self):

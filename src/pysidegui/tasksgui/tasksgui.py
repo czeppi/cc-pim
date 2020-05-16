@@ -102,6 +102,14 @@ class TasksGui(ModelGui):
         markup_str = f'# {header}\n\n{body}'
         page = read_markup(markup_str)
         html_text = write_htmlstr(page, markup_str)
+        # html_text = """
+        # <html>
+        #   <ul>
+        #     <li>aaa</li>
+        #     <li><pre>bbbbb bbbbbb bbbbbbbbb bbbbbbbbbb</pre>\n<pre>cccccc cccccccc cccccccc cccccccc</pre>\n<pre>ddd</pre></li>
+        #     </ul>
+        # </html>
+        # """
         print(markup_str)
         print(html_text)
         return html_text

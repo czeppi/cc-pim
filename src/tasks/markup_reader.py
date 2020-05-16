@@ -32,7 +32,7 @@ class _MarkupParser:
 
     def __init__(self, markup_text):
         self._markup_text = markup_text
-        self._list_items_always_preformatted = True
+        self._list_items_always_preformatted = False # True
 
     def parse(self):
         block_elements = list(self._iter_block_elements())

@@ -18,7 +18,7 @@
 from configparser import RawConfigParser
 from collections import OrderedDict
 
-from tasks.types import *
+from tasks.tasktypes import *
 
 
 class MetaModel:

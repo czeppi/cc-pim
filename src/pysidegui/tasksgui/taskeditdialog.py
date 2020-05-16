@@ -54,7 +54,7 @@ class TaskEditDialog(QDialog):
         title = "New Task" if self._task.is_empty() else "Edit Task"
         self.setWindowTitle(
             QApplication.translate(
-                "TaskEditDialog", title, None, QApplication.UnicodeUTF8))
+                "TaskEditDialog", title, None, -1))
                 
     def _init_splitter(self):
         self.ui.splitter.setStretchFactor(0, 2)

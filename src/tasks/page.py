@@ -105,7 +105,10 @@ class NormalText(InlineElement):
     def __eq__(self, other):
         return isinstance(other, NormalText) and self.text == other.text
 
-        
+    def copy(self):
+        return NormalText(self.text)
+
+
 class BoldText(InlineElement):
 
     def __init__(self, text: str):
@@ -114,6 +117,9 @@ class BoldText(InlineElement):
 
     def __eq__(self, other):
         return isinstance(other, BoldText) and self.text == other.text
+
+    def copy(self):
+        return BoldText(self.text)
 
 
 class Link(InlineElement):
@@ -126,6 +132,9 @@ class Link(InlineElement):
     def __eq__(self, other):
         return isinstance(other, Link) and self.url == other.url and self.text == other.text
 
+    def copy(self):
+        return Link(self.text)
+
 
 class Image(InlineElement):
 
@@ -136,6 +145,9 @@ class Image(InlineElement):
             
     def __eq__(self, other):
         return isinstance(other, Image) and self.path == other.path and self.width == other.width
+
+    def copy(self):
+        return Image(self.path, self.width)
 
 
 class BlockElement(ElementBase):
