@@ -1,0 +1,14 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# declare text files
+*.cmd text
+*.css text
+*.ini text
+*.py text
+*.txt text
+*.ui text
+
+# declare binary files
+*.ico binary
+*.lnk binary
