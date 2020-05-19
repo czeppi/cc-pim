@@ -45,7 +45,11 @@ class _MarkupParser:
                 new_block_element = create_func()
                 if new_block_element is not None:
                     yield new_block_element
+                    while not self._line_iter.stopped and self._line_iter.cur_line.is_empty:
+                        self._line_iter.get_next_line()
                     break
+            else:
+                raise MarkupParseError('invalid line')
 
     def _create_header(self):
         cur_line = self._line_iter.cur_line
@@ -296,10 +300,14 @@ class _Line:
     def create_table_line(self):
         items = self._text.split('|')
         if len(items) > 1:
-            if items[0] != '' or items[-1] != '':
+            if items[0] != '':
                 raise MarkupParseError(self, 'wrong table line')
-            return _TableLine(items[1:-1])
-    
+
+            if items[-1] == '':
+                return _TableLine(items[1:-1])
+            else:  # uncomplete last item!
+                return _TableLine(items[1:])
+
         
 class _HeaderLine:
 

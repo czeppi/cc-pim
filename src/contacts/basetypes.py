@@ -67,7 +67,7 @@ class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
                r"(?P<tilde_year>~)?(?P<year>[0-9]{4})(?P<year_unsure>\?)?"
     rex = re.compile(rex_text + "$")
 
-    def __init__(self, date_as_string, serial=0):
+    def __init__(self, date_as_string: str, serial: int = 0):
         self.serial = serial
         
         m = self.rex.match(date_as_string)

@@ -23,7 +23,7 @@ import re
 from contacts.basetypes import Date, EMail, PhoneNumber, Url, Str, Text, Ref
 
 
-class ContactTypes(Enum):
+class ContactType(Enum):
 
     person = 1
     company = 2
@@ -48,6 +48,10 @@ class Attribute:
     
         
 class Contact:
+
+    contact_type = None
+    attributes = OrderedDict()
+    back_attributes = OrderedDict()
 
     def __init__(self, serial):
         self.serial = serial
@@ -111,16 +115,14 @@ class Contact:
 
 class Person(Contact):
 
-    contact_type = ContactTypes.person
+    contact_type = ContactType.person
     type_name = contact_type.name
-    attributes = OrderedDict()
-    back_attributes = OrderedDict()
     last_serial = 0
 
     @property
     def title(self):
         first_names = [x.value for x in self._facts_map['firstname']]
-        last_names  = [x.value for x in self._facts_map['lastname']]
+        last_names = [x.value for x in self._facts_map['lastname']]
         names_parts = []
         if first_names:
             names_parts.append(first_names[-1])
@@ -133,10 +135,8 @@ class Person(Contact):
 
 class Company(Contact):
 
-    contact_type = ContactTypes.company
+    contact_type = ContactType.company
     type_name = contact_type.name
-    attributes = OrderedDict()
-    back_attributes = OrderedDict()
     last_serial = 0
 
     @property
@@ -150,10 +150,8 @@ class Company(Contact):
 
 class Address(Contact):
 
-    contact_type = ContactTypes.address
+    contact_type = ContactType.address
     type_name = contact_type.name
-    attributes = OrderedDict()
-    back_attributes = OrderedDict()
     last_serial = 0
 
     @property
@@ -185,7 +183,7 @@ class ContactID:
             raise ValueError(id_str)
 
         type_name = match.group('type')
-        contact_type = ContactTypes[type_name]
+        contact_type = ContactType[type_name]
         serial = int(match.group('serial'))
         return ContactID(contact_type, serial)
 
@@ -283,7 +281,8 @@ class ContactModel:
 
     def _init_last_serial_map(self):
         self._last_serial_map = {
-            cls.contact_type: max((contact_id.serial for contact_id in self._data.keys() if contact_id.contact_type == cls.contact_type), default=0)
+            cls.contact_type: max((contact_id.serial for contact_id in self._data.keys()
+                                   if contact_id.contact_type == cls.contact_type), default=0)
             for cls in self.iter_object_classes()
         }
 
@@ -302,7 +301,7 @@ class ContactModel:
             if isinstance(predicate.value_type, Ref):
                 ref = predicate.value_type
                 if ref.target_class.contact_type == obj.contact_type \
-                and int(fact.value) == obj.serial:
+                        and int(fact.value) == obj.serial:
                     yield fact
 
     def update(self):

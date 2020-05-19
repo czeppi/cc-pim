@@ -25,7 +25,7 @@ elif constants.GUI == 'pyside2':
     from PySide2.QtWidgets import QInputDialog
     
 from contacts.repository import Repository
-from contacts.contactmodel import ContactModel, ContactID, ContactTypes
+from contacts.contactmodel import ContactModel, ContactID, ContactType
 from pysidegui.htmlview import ContactHtmlCreator
 from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
 from pysidegui.modelgui import ModelGui
@@ -116,7 +116,7 @@ class ContactsGui(ModelGui):
 
 def _convert_global2contact_id(glob_id: GlobalItemID) -> ContactID:
     type_name = glob_id.type.name
-    contact_type = ContactTypes[type_name]
+    contact_type = ContactType[type_name]
     return ContactID(contact_type, glob_id.serial)
 
 

@@ -96,10 +96,13 @@ class _HtmlCreator:
 
     def _add_html_table(self, html_parent, table):
         html_table = ET.SubElement(html_parent, 'table')
+
         html_thead = ET.SubElement(html_table, 'thead')
-        html_tbody = ET.SubElement(html_table, 'tbody')
+        html_thead_tr = ET.SubElement(html_thead, 'tr')
         for col in table.columns:
-            self._add_html_th(html_thead, col)
+            self._add_html_th(html_thead_tr, col)
+
+        html_tbody = ET.SubElement(html_table, 'tbody')
         for row in table.rows:
             self._add_html_tr(html_tbody, row)
 
