@@ -65,8 +65,12 @@ def start_wx_app(context):
     
 
 def start_pyside_app(context):
+    #with context.user_css.open() as css_fh:
+    #    style_sheet = css_fh.read()
+
     app = QApplication(sys.argv)
     frame = MainWindow(context)
+    #frame.setStyleSheet(style_sheet)
     frame.show()
     sys.exit(app.exec_())
 

@@ -22,6 +22,7 @@ class Context:
 
     def __init__(self, root_dir):
         self._root_dir = root_dir
+        self._etc_dir = root_dir / 'etc'
         self._config = Config()
         
     @property
@@ -40,8 +41,12 @@ class Context:
         
     @property
     def icon_dir(self):
-        return self._root_dir / 'etc' / 'icons'
-    
+        return self._etc_dir / 'icons'
+
+    @property
+    def user_css(self):
+        return self._etc_dir / 'user.css'
+
     @property
     def data_dir(self):
         return Path('d:/cc/app-data/cc-pim')

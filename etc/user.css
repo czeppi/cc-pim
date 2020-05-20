@@ -7,7 +7,9 @@ Stylesheet for use with Docutils.  [Optionally place a more
 detailed description here.]
 */
 
+/*
 @import url(html4css1.css);
+*/
 
 /* Your customizations go here.  For example: */
 
@@ -16,8 +18,23 @@ h1, h2, h3, h4, h5, h6, p.topic-title {
   font-family: sans-serif }
 */
 
-h1.title {
-  text-align: center ;
-  color: #4e9a06 }
+/*
+* { font-family: "Times New Roman", Times, serif;}
+*/
 
+/*
+https://doc.qt.io/qtforpython/overviews/stylesheet-examples.html
+*/
+
+/*
+h1 { text-align: center }
+
+h1.title {
+  text-align: "center" ;
+  color: "#4e9a06" }
+
+h2.title {
+  text-align: "center" ;
+  color: "#4e9a06" }
+*/
 

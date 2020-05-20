@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
+from pyside2uic.properties import QtGui
 
 import constants
 if constants.GUI == 'pyside':
@@ -82,10 +83,9 @@ class TaskEditDialog(QDialog):
     
     def _init_text_edit(self):
         task = self._task
-        char_format = self.ui.body_edit.currentCharFormat()
-        char_format.setFontFixedPitch(True)  # geht nicht
-        char_format.setFontFamily('New Courier')
-        self.ui.body_edit.setCurrentCharFormat(char_format)
+
+        self.ui.body_edit.setFontFamily('Courier')
+        self.ui.body_edit.setFontPointSize(12);
         self.ui.body_edit.setAcceptRichText(False)
         self.ui.body_edit.setText(task.last_revision.body)
     
@@ -93,9 +93,39 @@ class TaskEditDialog(QDialog):
         task = self._task
         #self.ui.preview.setText(task.last_revision.get_html_text())
         html_text = self._get_html_text()
+        #html_text = '\n'.join(self._create_dummy_html_text())
+        #print(html_text)
+        #self.ui.preview.setFontPointSize(20);
+        #self.ui.preview.setStyleSheet(
+        #    'title: { text-align: center }')
+        #    #'font: 12px')
+        self.ui.preview.setStyleSheet(
+            '* {'
+            '    color:  # 222;'
+            '    font-size: 10px;'
+            '    font-weight: normal;'
+            '    margin: 0;'
+            '    padding: 0;'
+            '}'
+            'h1 {'
+            '   color:  # 555;'
+            '   font-size: 12px;'
+            '   text-align: center;'
+            '}'
+        )
         self.ui.preview.setText(html_text)
-        self.ui.preview.setReadOnly(True)
-    
+        self.ui.preview.setReadOnly(False)
+
+    def _create_dummy_html_text(self):
+        yield '<html>'
+        yield '<ul><li>aaa</li><li>bbb</li></ul>'
+        yield '<p>aaa</p>'
+        yield '<table border="1">'
+        yield '<tr><td>A1</td><td>B1</td></tr>'
+        yield '<tr><td>A2</td><td>B2</td></tr>'
+        yield '</table>'
+        yield '</html>'
+
     def _update_preview(self):
         #task = self._task
         #values = task.last_revision.get_values()
