@@ -49,7 +49,7 @@ class Context:
 
     @property
     def data_dir(self):
-        return Path('d:/cc/app-data/cc-pim')
+        return Path('g:/app-data/cc-pim')
 
     @property
     def contacts_db_path(self):

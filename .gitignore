@@ -3,5 +3,5 @@ syntax: glob
 __pycache__
 ui_*.py
 .idea
-#*
+/#*
 /etc/tasks.sqlite3

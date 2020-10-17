@@ -79,5 +79,3 @@ class MainFrame(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             # wx.MessageBox('OK', 'on_menu_help_About')
             pass
-        
-        

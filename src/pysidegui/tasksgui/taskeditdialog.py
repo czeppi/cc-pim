@@ -14,14 +14,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
-from pyside2uic.properties import QtGui
 
 import constants
-if constants.GUI == 'pyside':
-    from PySide.QtGui import QDialog, QApplication
-    from PySide.QtCore import Qt
-    from pysidegui._ui_.ui_taskeditdialog import Ui_TaskEditDialog
-elif constants.GUI == 'pyside2':
+if constants.GUI == 'pyside2':
     from PySide2.QtWidgets import QDialog, QApplication
     from PySide2.QtCore import Qt
     from pysidegui._ui2_.ui_taskeditdialog import Ui_TaskEditDialog
