@@ -19,9 +19,7 @@ from collections import OrderedDict
 from typing import Optional, Iterator
 
 import constants
-if constants.GUI == 'pyside':
-    from PySide.QtGui import QInputDialog
-elif constants.GUI == 'pyside2':
+if constants.GUI == 'pyside2':
     from PySide2.QtWidgets import QInputDialog
     
 from contacts.repository import Repository
@@ -112,6 +110,11 @@ class ContactsGui(ModelGui):
         contact_id = _convert_global2contact_id(glob_item_id)
         contact = self._contact_model.get(contact_id)
         return contact.title
+
+    def get_object_category(self, glob_item_id: GlobalItemID) -> str:
+        contact_id = _convert_global2contact_id(glob_item_id)
+        contact = self._contact_model.get(contact_id)
+        return contact.type_name
 
 
 def _convert_global2contact_id(glob_id: GlobalItemID) -> ContactID:

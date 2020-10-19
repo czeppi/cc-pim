@@ -25,10 +25,6 @@ from pathlib import Path
 if constants.GUI == 'wx':
     import wx
     import wxgui.mainframe
-elif constants.GUI == 'pyside':
-    from PySide.QtCore import *
-    from PySide.QtGui import *
-    from pysidegui.mainwindow import MainWindow
 elif constants.GUI == 'pyside2':
     from PySide2.QtCore import *
     from PySide2.QtGui import *

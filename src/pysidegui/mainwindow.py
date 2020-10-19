@@ -15,29 +15,26 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
-import constants
-if constants.GUI == 'pyside':
-    from PySide.QtCore import Qt
-    from PySide.QtGui import QListWidgetItem
-    from PySide.QtGui import QMainWindow
-    from pysidegui._ui_.ui_mainwindow import Ui_MainWindow
-elif constants.GUI == 'pyside2':
-    from PySide2.QtCore import Qt
-    from PySide2.QtWidgets import QListWidgetItem
-    from PySide2.QtWidgets import QMainWindow
-    from pysidegui._ui2_.ui_mainwindow import Ui_MainWindow
+from PySide2.QtCore import Qt
+from PySide2 import QtGui
+from PySide2.QtWidgets import QListWidgetItem
+from PySide2.QtWidgets import QMainWindow
 
+from context import Context
+from pysidegui._ui2_.ui_mainwindow import Ui_MainWindow
 from pysidegui.contactsgui.contactsgui import ContactsGui
 from pysidegui.tasksgui.tasksgui import TasksGui
 
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, context, parent=None):
+    def __init__(self, context: Context, parent=None):
         super().__init__(parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        
+
+        self._data_icons = self._create_data_icons(context)
+
         self.ui.splitter.setStretchFactor(0, 0)
         self.ui.splitter.setStretchFactor(1, 1)
 
@@ -64,6 +61,10 @@ class MainWindow(QMainWindow):
         self.ui.search_result_list.currentItemChanged.connect(self.on_cur_list_item_changed)
         self.ui.search_result_list.itemActivated.connect(self.on_list_item_activated)
         self.ui.html_view.click_link_observers.append(self.on_html_view_click_link)
+
+    def _create_data_icons(self, context: Context):
+        return {icon_fpath.stem.lower(): QtGui.QIcon(str(icon_fpath))
+                for icon_fpath in context.data_icon_dir.iterdir()}
 
     def on_contacts_mode(self):
         self.ui.action_contacts.setChecked(True)
@@ -163,8 +164,15 @@ class MainWindow(QMainWindow):
         
     def _create_new_list_item(self, obj_id):
         title = self._cur_model_gui.get_object_title(obj_id)
+        category = self._cur_model_gui.get_object_category(obj_id)
         new_item = QListWidgetItem(title)
         new_item.setData(Qt.UserRole, obj_id)
+
+        icon = self._data_icons.get(category.lower(), None)
+        if icon is not None:
+            new_item.setIcon(icon)
+        else:
+            pass
         return new_item
 
     def _select_item(self, obj_id):

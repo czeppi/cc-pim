@@ -138,6 +138,11 @@ class TasksGui(ModelGui):
         task = self._task_model.get_task(task_id)
         return task.get_header()
 
+    def get_object_category(self, glob_item_id: GlobalItemID) -> str:
+        task_id = _convert_global2task_id(glob_item_id)
+        task = self._task_model.get_task(task_id)
+        return task.last_revision.category
+
 
 def _convert_global2task_id(glob_id: GlobalItemID) -> int:
     assert glob_id.type == GlobalItemTypes.task

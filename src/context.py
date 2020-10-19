@@ -40,8 +40,12 @@ class Context:
         # return wx.Bitmap(path)
         
     @property
-    def icon_dir(self):
+    def app_icon_dir(self):
         return self._etc_dir / 'icons'
+
+    @property
+    def data_icon_dir(self):
+        return self.data_dir / 'icons'
 
     @property
     def user_css(self):

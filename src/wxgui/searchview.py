@@ -45,7 +45,7 @@ class SearchView(wx.Panel):
         self._result_list_ctrl  = self._create_result_list_ctrl()
         
     def _create_search_bitmap(self):
-        bmp = wx.Bitmap(str(self._context.icon_dir / 'search.ico'), wx.BITMAP_TYPE_ICO)
+        bmp = wx.Bitmap(str(self._context.app_icon_dir / 'search.ico'), wx.BITMAP_TYPE_ICO)
         return wx.StaticBitmap(self, -1, bmp)
     
     def _create_search_edit_ctrl(self):

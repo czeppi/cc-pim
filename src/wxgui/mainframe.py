@@ -28,7 +28,7 @@ class MainFrame(wx.Frame):
         self._context = context
         cfg = context.config
         wx.Frame.__init__(self, None, -1, cfg.app_title, cfg.frame_pos, cfg.frame_size)
-        icon = wx.Icon( str(self._context.icon_dir / 'info.ico'), wx.BITMAP_TYPE_ICO)
+        icon = wx.Icon(str(self._context.app_icon_dir / 'info.ico'), wx.BITMAP_TYPE_ICO)
         self.SetIcon(icon)
         self._create_menubar()
         self._create_toolbar()
@@ -58,7 +58,7 @@ class MainFrame(wx.Frame):
 
     def _add_toolitem(self, toolbar, icon_name, handler, tooltip=""):
         new_id = wx.NewId()
-        bmp = wx.Bitmap(str(self._context.icon_dir / 'info.ico'), wx.BITMAP_TYPE_ICO)
+        bmp = wx.Bitmap(str(self._context.app_icon_dir / 'info.ico'), wx.BITMAP_TYPE_ICO)
         toolbar.AddTool(new_id, '', bmp, shortHelp=tooltip)        
         self.Bind(wx.EVT_TOOL, handler, id=new_id)
         return new_id
