@@ -143,6 +143,9 @@ class TasksGui(ModelGui):
         task = self._task_model.get_task(task_id)
         return task.last_revision.category
 
+    def iter_categories(self) -> Iterator[str]:
+        yield from self._task_model.get_sorted_categories()
+
 
 def _convert_global2task_id(glob_id: GlobalItemID) -> int:
     assert glob_id.type == GlobalItemTypes.task

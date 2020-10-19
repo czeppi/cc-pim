@@ -33,10 +33,10 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self._data_icons = self._create_data_icons(context)
-
         self.ui.splitter.setStretchFactor(0, 0)
         self.ui.splitter.setStretchFactor(1, 1)
+
+        self._data_icons = self._create_data_icons(context)
 
         self._contacts_gui = ContactsGui(context)
         self._tasks_gui = TasksGui()
@@ -45,6 +45,7 @@ class MainWindow(QMainWindow):
         self._show_obj_id = None
         self._enable_show_details = True
 
+        self._update_category_filter()
         self._update_list()
         self.ui.search_edit.setFocus()
         
@@ -58,18 +59,31 @@ class MainWindow(QMainWindow):
         self.ui.action_save_all.triggered.connect(self.on_save_all)
         self.ui.action_revert_changes.triggered.connect(self.on_revert_changed)
         self.ui.search_edit.textChanged.connect(self.on_search_text_changed)
+        self.ui.category_filter.currentIndexChanged.connect(self.on_category_changed)
         self.ui.search_result_list.currentItemChanged.connect(self.on_cur_list_item_changed)
         self.ui.search_result_list.itemActivated.connect(self.on_list_item_activated)
         self.ui.html_view.click_link_observers.append(self.on_html_view_click_link)
 
-    def _create_data_icons(self, context: Context):
+    @staticmethod
+    def _create_data_icons(context: Context):
         return {icon_fpath.stem.lower(): QtGui.QIcon(str(icon_fpath))
                 for icon_fpath in context.data_icon_dir.iterdir()}
+
+    def _update_category_filter(self):
+        self.ui.category_filter.clear()
+        self.ui.category_filter.addItem('')
+        for category in self._cur_model_gui.iter_categories():
+            icon = self._data_icons.get(category.lower(), None)
+            if icon is not None:
+                self.ui.category_filter.addItem(icon, category)
+            else:
+                self.ui.category_filter.addItem(category)
 
     def on_contacts_mode(self):
         self.ui.action_contacts.setChecked(True)
         self.ui.action_tasks.setChecked(False)
         self._cur_model_gui = self._contacts_gui
+        self._update_category_filter()
         self.ui.search_result_list.setCurrentItem(None)
         self._update_list()
 
@@ -77,6 +91,7 @@ class MainWindow(QMainWindow):
         self.ui.action_contacts.setChecked(False)
         self.ui.action_tasks.setChecked(True)
         self._cur_model_gui = self._tasks_gui
+        self._update_category_filter()
         self.ui.search_result_list.setCurrentItem(None)
         self._update_list()
 
@@ -106,7 +121,10 @@ class MainWindow(QMainWindow):
 
     def on_search_text_changed(self, new_text):
         self._update_list()
-        
+
+    def on_category_changed(self, category_index: int):
+        self._update_list()
+
     def on_cur_list_item_changed(self, item, previous_item):
         self.ui.action_edit_item.setEnabled(item is not None)
 
@@ -139,7 +157,8 @@ class MainWindow(QMainWindow):
 
         self.ui.search_result_list.clear()
         for obj_id in self._iter_sorted_ids_from_keywords():
-            self._add_list_item(obj_id)
+            if self._is_id_in_category_filter(obj_id):
+                self._add_list_item(obj_id)
 
         if select_obj_id is None:
             select_obj_id = old_cur_obj_id
@@ -157,6 +176,14 @@ class MainWindow(QMainWindow):
         keywords_str = self.ui.search_edit.text()
         keywords = [x.strip() for x in keywords_str.split() if x.strip() != '']
         yield from self._cur_model_gui.iter_sorted_ids_from_keywords(keywords)
+
+    def _is_id_in_category_filter(self, obj_id) -> bool:
+        filter_category = self.ui.category_filter.currentText()
+        if filter_category == '':
+            return True  # no filter
+        else:
+            category = self._cur_model_gui.get_object_category(obj_id)
+            return category == filter_category
 
     def _add_list_item(self, obj_id):
         new_item = self._create_new_list_item(obj_id)

@@ -32,6 +32,9 @@
          <widget class="SearchEdit" name="search_edit"/>
         </item>
         <item>
+         <widget class="QComboBox" name="category_filter"/>
+        </item>
+        <item>
          <widget class="QListWidget" name="search_result_list"/>
         </item>
        </layout>
@@ -72,7 +75,7 @@
    <addaction name="action_save_all"/>
    <addaction name="action_revert_changes"/>
   </widget>
-  <action name="action_edit_item">s
+  <action name="action_edit_item">
    <property name="enabled">
     <bool>true</bool>
    </property>
