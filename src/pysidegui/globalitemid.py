@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 from functools import total_ordering
 from enum import Enum
 import re
@@ -22,10 +23,10 @@ import re
 
 class GlobalItemTypes(Enum):
 
-    person = 1
-    company = 2
-    address = 3
-    task = 4
+    PERSON = 1
+    COMPANY = 2
+    ADDRESS = 3
+    TASK = 4
 
 
 @total_ordering
@@ -39,10 +40,10 @@ class GlobalItemID:
         type_name = self._type.name
         return type_name + str(self.serial)  # f'{self._serial:05}'
 
-    def __eq__(self, other):
+    def __eq__(self, other: GlobalItemID):
         return (self._type, self._serial) == (other._type, other._serial)
 
-    def __lt__(self, other):
+    def __lt__(self, other: GlobalItemID):
         return (self._type, self._serial) < (other._type, other._serial)
 
     @property

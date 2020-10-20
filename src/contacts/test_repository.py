@@ -18,6 +18,8 @@
 import unittest
 import os
 import sys
+from typing import Dict
+
 sys.path += [
     os.path.join(os.path.dirname(__file__), '..'),
 ]
@@ -61,7 +63,7 @@ class TestRepo(unittest.TestCase):
         self.assertEqual(fact1.value, 'Mustermann')
 
 
-def _create_person1_attributes():
+def _create_person1_attributes() -> Dict[str, str]:
     return {
         'first_name': 'Max',
         'last_name': 'Mustermann',
@@ -70,14 +72,14 @@ def _create_person1_attributes():
     }
 
 
-def _create_address1_attributes():
+def _create_address1_attributes() -> Dict[str, str]:
     return {
         'street': 'Musterstraße 1',
         'place': '12345 Berlin',
     }
 
 
-def _create_address2_attributes():
+def _create_address2_attributes() -> Dict[str, str]:
     return {
         'street': 'Musterstraße 2',
         'place': '12345 Berlin',

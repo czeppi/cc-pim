@@ -14,35 +14,36 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
+from PySide2.QtWidgets import QMainWindow
 
 from pysidegui.globalitemid import GlobalItemID
-from typing import Optional, Iterator
+from typing import Optional, Iterator, Iterable
 
 
 class ModelGui:
 
-    def new_item(self, frame) -> Optional[GlobalItemID]:
+    def new_item(self, frame: QMainWindow) -> Optional[GlobalItemID]:
         raise Exception('net yet implemented.')
 
     def edit_item(self, glob_item_id: GlobalItemID, frame) -> bool:
         raise Exception('net yet implemented.')
 
-    def save_all(self):
+    def save_all(self) -> None:
         raise Exception('net yet implemented.')
 
-    def revert_change(self):
+    def revert_change(self) -> None:
         raise Exception('net yet implemented.')
 
     def get_html_text(self, glob_item_id: GlobalItemID) -> str:
         raise Exception('net yet implemented.')
 
-    def exists_uncommited_changes(self) -> bool:
+    def exists_uncommitted_changes(self) -> bool:
         raise Exception('net yet implemented.')
 
     def get_id_from_href(self, href_str: str) -> GlobalItemID:
         raise Exception('net yet implemented.')
 
-    def iter_sorted_ids_from_keywords(self, keywords) -> Iterator[GlobalItemID]:
+    def iter_sorted_ids_from_keywords(self, keywords: Iterable[str]) -> Iterator[GlobalItemID]:
         raise Exception('net yet implemented.')
 
     def get_object_title(self, glob_item_id: GlobalItemID) -> str:

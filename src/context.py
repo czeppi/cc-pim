@@ -24,21 +24,21 @@ class Context:
         self._root_dir = root_dir
         self._etc_dir = root_dir / 'etc'
         self._config = Config()
-        
+
     @property
     def config(self):
         return self._config
-    
+
     # def read_icon(self, icon_name):
-        # icon_dir = self._get_icon_dir()
-        # path = os.path.join(icon_dir, icon_name)
-        # return wx.Icon(path, wx.BITMAP_TYPE_ICO)
+    # icon_dir = self._get_icon_dir()
+    # path = os.path.join(icon_dir, icon_name)
+    # return wx.Icon(path, wx.BITMAP_TYPE_ICO)
 
     # def read_bitmap(self, bmp_name):
-        # icon_dir = self._get_icon_dir()
-        # path = os.path.join(icon_dir, bmp_name)
-        # return wx.Bitmap(path)
-        
+    # icon_dir = self._get_icon_dir()
+    # path = os.path.join(icon_dir, bmp_name)
+    # return wx.Bitmap(path)
+
     @property
     def app_icon_dir(self):
         return self._etc_dir / 'icons'
@@ -61,23 +61,23 @@ class Context:
 
 
 class Config:
-    
+
     @property
     def app_title(self):
         return 'CC-PIM'
-        
+
     @property
     def frame_pos(self):
-        return (0,0)
-        
+        return 0, 0
+
     @property
     def frame_size(self):
-        return (1200, 800)
-     
+        return 1200, 800
+
     @property
     def search_width(self):
         return 400
-        
+
     @property
     def margin(self):
         return 5

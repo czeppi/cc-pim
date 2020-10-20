@@ -15,14 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 import re
-import xml.etree.ElementTree as ET
+from re import Match
+from typing import Iterator, Optional, List as TList
+
+from tasks.page import HAlign, BlockElement, InlineElement
+from tasks.page import NormalText, BoldText
 from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell
-from tasks.page import NormalText, BoldText, Link, Image
-from tasks.page import HAlign, Width
 
 
-def read_markup(markup_str: str) -> ET.Element:
+def read_markup(markup_str: str) -> Page:
     parser = _MarkupParser(markup_str)
     page = parser.parse()
     return page
@@ -30,15 +33,15 @@ def read_markup(markup_str: str) -> ET.Element:
 
 class _MarkupParser:
 
-    def __init__(self, markup_text):
+    def __init__(self, markup_text: str):
         self._markup_text = markup_text
-        self._list_items_always_preformatted = False # True
+        self._list_items_always_preformatted = False  # True
 
-    def parse(self):
+    def parse(self) -> Page:
         block_elements = list(self._iter_block_elements())
         return Page(block_elements)
 
-    def _iter_block_elements(self):
+    def _iter_block_elements(self) -> Iterator[BlockElement]:
         self._line_iter = _LineIterator(self._markup_text)
         while not self._line_iter.stopped:
             for create_func in [self._create_header, self._create_list, self._create_table, self._create_paragraph]:
@@ -49,9 +52,9 @@ class _MarkupParser:
                         self._line_iter.get_next_line()
                     break
             else:
-                raise MarkupParseError('invalid line')
+                raise MarkupParseError(self._line_iter.cur_line, 'invalid line')
 
-    def _create_header(self):
+    def _create_header(self) -> Optional[BlockElement]:
         cur_line = self._line_iter.cur_line
         if cur_line is None:
             return None
@@ -66,7 +69,7 @@ class _MarkupParser:
         inline_elements = inline_parser.parse()
         return Header(header_line.level, inline_elements)
 
-    def _create_paragraph(self):
+    def _create_paragraph(self) -> Optional[Paragraph]:
         cur_line = self._line_iter.cur_line
         if cur_line is None or cur_line.is_empty:
             return None
@@ -83,19 +86,19 @@ class _MarkupParser:
         preformatted = (len(para_text) > 0 and para_text[0] == ' ')
         return Paragraph(inline_elements, preformatted=preformatted)
 
-    def _skip_empty_line(self):
+    def _skip_empty_line(self) -> None:
         cur_line = self._line_iter.cur_line
         if cur_line is not None and not cur_line.is_empty:
             raise MarkupParseError(cur_line, 'line is not empty')
         self._line_iter.get_next_line()
         
-    def _create_list(self):
+    def _create_list(self) -> Optional[List]:
         list_items = list(self._iter_list_items_recursive())
-        if (len(list_items) > 0):
+        if len(list_items) > 0:
             self._skip_empty_line()
             return List(list_items)
 
-    def _iter_list_items_recursive(self):
+    def _iter_list_items_recursive(self) -> Iterator[ListItem]:
         prev_list_item = None
         first_indent_width = None
 
@@ -125,7 +128,7 @@ class _MarkupParser:
         if prev_list_item is not None:
             yield prev_list_item
 
-    def _create_list_item(self, list_line0):
+    def _create_list_item(self, list_line0: _ListLine) -> ListItem:
         lines = self._iter_list_item_lines(list_line0)
         text = '\n'.join(lines)
         inline_parser = InlineParser(text)
@@ -150,7 +153,7 @@ class _MarkupParser:
                 raise Exception(line_k, 'wrong indent')
             yield line_k.text[text_indent_len:]
 
-    def _create_table(self):
+    def _create_table(self) -> Optional[Table]:
         columns = None
         rows = []
         for k, table_line in enumerate(self._iter_table_lines()):
@@ -164,7 +167,7 @@ class _MarkupParser:
             self._skip_empty_line()
             return Table(columns=columns, rows=rows)
 
-    def _iter_table_lines(self):
+    def _iter_table_lines(self) -> Iterator[_TableLine]:
         while not self._line_iter.stopped:
             cur_line = self._line_iter.cur_line
             if cur_line is None:
@@ -175,12 +178,13 @@ class _MarkupParser:
             yield table_line
             self._line_iter.get_next_line()
 
-    def _iter_columns(self, table_line):
+    def _iter_columns(self, table_line: _TableLine) -> Iterator[Column]:
         for col_str in table_line.cell_strings:
             halign = self._calc_halign(col_str)
             yield Column(halign, col_str.strip())
 
-    def _calc_halign(self, cell_str):
+    @staticmethod
+    def _calc_halign(cell_str: str) -> HAlign:
         default_halign = HAlign.left
         if cell_str == '':
             return default_halign
@@ -194,15 +198,16 @@ class _MarkupParser:
 
         return default_halign
 
-    def _create_row(self, table_line):
+    def _create_row(self, table_line: _TableLine) -> Row:
         cells = list(self._iter_cells(table_line))
         return Row(cells)
 
-    def _iter_cells(self, table_line):
+    def _iter_cells(self, table_line: _TableLine) -> Iterator[Cell]:
         for cell_str in table_line.cell_strings:
             yield self._create_cell(cell_str)
 
-    def _create_cell(self, cell_str):
+    @staticmethod
+    def _create_cell(cell_str: str) -> Cell:
         inline_parser = InlineParser(cell_str)
         inline_elements = inline_parser.parse()
         return Cell(inline_elements)
@@ -219,14 +224,14 @@ class _LineIterator:
             self._cur_line = _Line(self._k, self._raw_lines[self._k])
         
     @property
-    def cur_line(self):
+    def cur_line(self) -> Optional[_Line]:
         return self._cur_line
         
     @property
-    def stopped(self):
+    def stopped(self) -> bool:
         return self._k >= self._num_lines
         
-    def get_next_line(self):
+    def get_next_line(self) -> Optional[_Line]:
         if self._k + 1 < self._num_lines:
             self._k += 1
             self._cur_line = _Line(self._k, self._raw_lines[self._k])
@@ -240,7 +245,7 @@ class _Line:
 
     _strip_left_rex = re.compile(r"(?P<leading_spaces> *)(?P<tail>.*)")
     _header_rex = re.compile(r"(?P<leading_hashes>#+) (?P<text>.*)")
-    _list_rex = re.compile(r"(?P<leading_spaces> *)(?P<symbol>\-|\+|=>|\?|[0-9]+\.(\)?)|[a-z]\.(\)?)) (?P<text>.*)")
+    _list_rex = re.compile(r"(?P<leading_spaces> *)(?P<symbol>-|\+|=>|\?|[0-9]+\.(\)?)|[a-z]\.(\)?)) (?P<text>.*)")
     _table_rex = re.compile(r"|(.*)")
     _bold_rex = re.compile(r"\*(?P<bold>\w[^*]*\w)\*")
     _link_rex = re.compile(r"\[(.*)(\|.*)]")
@@ -261,43 +266,43 @@ class _Line:
         return str(self)
         
     @property
-    def row(self):
+    def row(self) -> int:
         return self._row
 
     @property
-    def text(self):
+    def text(self) -> str:
         return self._text
 
     @property
-    def indent_len(self):
+    def indent_len(self) -> int:
         return self._indent_len
     
     @property
-    def left_stripped(self):
+    def left_stripped(self) -> str:
         return self._left_stripped
 
     @property
-    def is_empty(self):
+    def is_empty(self) -> bool:
         return self._left_stripped == ''
         
-    def create_header_line(self):
+    def create_header_line(self) -> Optional[_HeaderLine]:
         header_match = self._header_rex.match(self._text)
         if header_match is not None:
             level = len(header_match.group('leading_hashes'))
             text = header_match.group('text')
             return _HeaderLine(level, text)
 
-    def create_paragraph_line(self):
+    def create_paragraph_line(self) -> _ParagraphLine:
         return _ParagraphLine(self._text)
 
-    def create_list_line(self):
+    def create_list_line(self) -> Optional[_ListLine]:
         list_match = self._list_rex.match(self._left_stripped)
         if list_match is not None:
             list_symbol = list_match.group('symbol')
             text = list_match.group('text')
             return _ListLine(self._indent_len, list_symbol, text)
             
-    def create_table_line(self):
+    def create_table_line(self) -> Optional[_TableLine]:
         items = self._text.split('|')
         if len(items) > 1:
             if items[0] != '':
@@ -311,20 +316,20 @@ class _Line:
         
 class _HeaderLine:
 
-    def __init__(self, level, text):
+    def __init__(self, level: int, text: str):
         self.level = level
         self.text = text
 
 
 class _ParagraphLine:
 
-    def __init__(self, text):
+    def __init__(self, text: str):
         self.text = text
 
 
 class _ListLine:
 
-    def __init__(self, indent_len, symbol, text):
+    def __init__(self, indent_len: int, symbol: str, text: str):
         self.indent_len = indent_len
         self.symbol = symbol  # '-' or '=>'
         self.text = text
@@ -332,7 +337,7 @@ class _ListLine:
        
 class _TableLine:
 
-    def __init__(self, cell_strings):
+    def __init__(self, cell_strings: TList[str]):
         self.cell_strings = cell_strings
 
 
@@ -340,11 +345,13 @@ class InlineParser:
 
     rex = re.compile(r'(?P<bold>\*(?P<bold_core>\w[^*]*\w)\*)')
 
-    def __init__(self, text):
+    def __init__(self, text: str):
         self._text = text
         self._inline_elements = []
+        self._prev_end = 0
+        self._cur_xml_child = None
 
-    def parse(self):
+    def parse(self) -> TList[InlineElement]:
         self._prev_end = 0
         self._cur_xml_child = None
         for match in self.rex.finditer(self._text):
@@ -355,17 +362,17 @@ class InlineParser:
         self._process_gap_text(gap_text)
         return self._inline_elements
 
-    def _process_gap(self, match):
+    def _process_gap(self, match: Match) -> None:
         match_begin, match_end = match.span()
         gap_text = self._text[self._prev_end:match_begin]
         self._process_gap_text(gap_text)
         self._prev_end = match_end
 
-    def _process_gap_text(self, gap_text):
+    def _process_gap_text(self, gap_text: str) -> None:
         normal_text = NormalText(gap_text)
         self._inline_elements.append(normal_text)
 
-    def _process_bold(self, match):
+    def _process_bold(self, match: Match) -> bool:
         bold = match.group('bold')
         if bold is None:
             return False
@@ -374,14 +381,16 @@ class InlineParser:
         self._inline_elements.append(bold_text)
         return True
 
-    def _process_link(self, match):
+    @staticmethod
+    def _process_link(match: Match) -> bool:
         bold = match.group('link')
         if bold is None:
             return False
 
         return False  # todo....
 
-    def _process_image(self, match):
+    @staticmethod
+    def _process_image(match: Match) -> bool:
         bold = match.group('image')
         if bold is None:
             return False
@@ -397,4 +406,4 @@ class MarkupParseError(Exception):
         self.err_txt = err_txt
         
     def __str__(self):
-        return f'{self.line.no}: {self.line} - {self.err_txt}'
+        return f'{self.row}: {self.line} - {self.err_txt}'

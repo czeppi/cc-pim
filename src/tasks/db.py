@@ -15,114 +15,116 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
+from __future__ import annotations
 import sqlite3
+from pathlib import Path
+from typing import Dict, ValuesView, Optional
 
-from context import Context
-from tasks.metamodel import MetaModel
+from tasks.context import Context
+from tasks.metamodel import MetaModel, Structure
 
 
 class DB:
 
-    def __init__(self, sqlite_path, meta_model, logging_enabled=False):
+    def __init__(self, sqlite_path: Path, meta_model_: MetaModel, logging_enabled: bool = False):
         self._sqlite_path = sqlite_path
-        self._meta_model = meta_model
+        self._meta_model = meta_model_
         self._logging_enabled = logging_enabled
-        self._init_tables()
+        self._tables = self._create_table_map(meta_model_)
+        self._conn: Optional[sqlite3.Connection] = None
         
-    def _init_tables(self):
-        self._tables = {}
-        for struct in self.meta_model.structures:
+    def _create_table_map(self, meta_model_: MetaModel) -> Dict[str, Table]:
+        tables = {}
+        for struct in meta_model_.structures:
             new_table = Table(struct, self)
-            self._tables[struct.name] = new_table
+            tables[struct.name] = new_table
+        return tables
 
     @property
-    def meta_model(self):
+    def meta_model(self) -> MetaModel:
         return self._meta_model
         
     @property
-    def tables(self):
+    def tables(self) -> ValuesView[Table]:
         return self._tables.values()
         
-    def table(self, table_name):
+    def table(self, table_name: str) -> Table:
         return self._tables[table_name]
         
     @property
-    def conn(self):
+    def conn(self) -> sqlite3.Connection:
         return self._conn
         
-    def create(self):
+    def create(self) -> None:
         self._del_db_if_exists()
         self.open()
         self._create_tables()
         self._conn.commit()
         
-    def _del_db_if_exists(self):
+    def _del_db_if_exists(self) -> None:
         if self._sqlite_path.exists():
             self._sqlite_path.unlink()
             
-    def _create_tables(self):
+    def _create_tables(self) -> None:
         for table in self.tables:
             table.create()
             
-    def open(self):
+    def open(self) -> None:
         sqlite_pathname = str(self._sqlite_path)
         self._conn = sqlite3.connect(sqlite_pathname)
         self._conn.row_factory = sqlite3.Row
         
-    def execute_sql(self, sql_cmd):
+    def execute_sql(self, sql_cmd: str) -> sqlite3.Cursor:
         if self._logging_enabled:
             print(sql_cmd)
         cursor = self._conn.cursor() 
         cursor.execute(sql_cmd)
         return cursor
         
-    def commit(self):
+    def commit(self) -> None:
         self._conn.commit()
         
 
 class Table:
 
-    def __init__(self, struct, db):
+    def __init__(self, struct: Structure, db_: DB):
         self._struct = struct
-        self._db = db
+        self._db = db_
         
     @property
-    def name(self):
+    def name(self) -> str:
         return self._struct.name
         
     @property
     def attributes(self):
         return self._struct.attributes
         
-    def attribute(self, name):
+    def attribute(self, name: str):
         return self._struct.attribute(name)
         
     def create(self):
         fields = [x.name + ' ' + x.type.sqlite3_typename
                   for x in self.attributes]
-        sql_cmd = "create table {} ({})".format(
-            self.name, ', '.join(fields))
+        fields_str = ', '.join(fields)
+        sql_cmd = f"create table {self.name} ({fields_str})"
         self._execute_sql(sql_cmd)
         
     def insert_row(self, row):
-        values = ['"{}"'.format(row.value(x.name)) for x in self.attributes]
-        sql_cmd = 'insert into {} values ({})'.format(
-            self.name, ', '.join(values))
+        values = [f'"{row.value(x.name)}"' for x in self.attributes]
+        values_str = ', '.join(values)
+        sql_cmd = f'insert into {self.name} values ({values_str})'
         self._execute_sql(sql_cmd)
         
-    def update_row(self, id, values):
+    def update_row(self, id_, values):
         row = Row(values, self)
-        value_list = ['{}="{}"'.format(x, row.value(x)) for x in row.value_keys()]
-        sql_cmd = 'update {} set {} where id = "{}"'.format(
-            self.name, ', '.join(value_list), id)
+        value_list = [f'{x}="{row.value(x)}"' for x in row.value_keys()]
+        values_str = ', '.join(value_list)
+        sql_cmd = f'update {self.name} set {values_str} where id = "{id_}"'
         self._execute_sql(sql_cmd)
         self._db.commit()
         
-    def select(self, col_names=[], where_str=''):
-        if not col_names:
-            col_names = '*'
-        sql_cmd = "select {} from {} {}".format(col_names, self.name, where_str)
+    def select(self):
+        sql_cmd = f"select * from {self.name}"
         cursor = self._execute_sql(sql_cmd)
         return cursor.fetchall()
         
@@ -149,5 +151,6 @@ if __name__ == '__main__':
     context = Context()
     meta_model = MetaModel(context.logging_enabled)
     meta_model.read(context.metamodel_pathname)
-    db = DB(context.sqlite3_pathname, meta_model)
+    sqlite3_path = Path(context.sqlite3_pathname)
+    db = DB(sqlite3_path, meta_model)
     db.create()

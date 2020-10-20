@@ -16,12 +16,11 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import defaultdict
+from typing import List, Dict, Any
+from PySide2.QtWidgets import QTextEdit
 
-import constants
-if constants.GUI == 'pyside':
-    from PySide.QtGui import QTextEdit
-elif constants.GUI == 'pyside2':
-    from PySide2.QtWidgets import QTextEdit
+from contacts.basetypes import Fact
+from contacts.contactmodel import ContactModel, Contact
 
 
 class HtmlView(QTextEdit):
@@ -36,7 +35,7 @@ class HtmlView(QTextEdit):
         href_str = self.anchorAt(pos)
         super().mousePressEvent(event)
 
-        #print('mouse-presse-event: pos: {}, anchor: {}'.format(pos, href_str))
+        # print('mouse-presse-event: pos: {}, anchor: {}'.format(pos, href_str))
         if href_str:
             for observer in self.click_link_observers:
                 observer(href_str)
@@ -44,29 +43,30 @@ class HtmlView(QTextEdit):
 
 class ContactHtmlCreator:
 
-    def __init__(self, contact, contact_model):
+    def __init__(self, contact: Contact, contact_model: ContactModel):
         self._contact = contact
         self._contact_model = contact_model
+        self._lines: List[str] = []
 
-    def create_html_text(self):
-        self._lines = []
+    def create_html_text(self) -> str:
+        self._lines.clear()
         self._add_header()
         self._add_title()
         self._add_table()
         self._add_footer()
         return '\n'.join(self._lines)
 
-    def _add_header(self):
+    def _add_header(self) -> None:
         self._add('<html>')
         self._add('<head>')
-        #self._add('  <style> table, td, th { border: 1px solid black; } </style>')
+        # self._add('  <style> table, td, th { border: 1px solid black; } </style>')
         self._add('</head>')
         self._add('<body>')
 
-    def _add_title(self):
-        self._add('<h1 align="center">{}</h1>'.format(self._contact.title))
+    def _add_title(self) -> None:
+        self._add(f'<h1 align="center">{self._contact.title}</h1>')
 
-    def _add_table(self):
+    def _add_table(self) -> None:
         self._add('<table align="center" cellspacing="10" cellpadding="1">')
         for attr in self._contact.iter_attributes():
             for fact in self._contact.get_facts(attr.name):
@@ -83,7 +83,7 @@ class ContactHtmlCreator:
                     self._add_row(attr.name, val, fact, subject)
         self._add('</table)>')
 
-    def _create_back_facts(self):
+    def _create_back_facts(self) -> Dict[str, List[Fact]]:
         back_facts = defaultdict(list)  # attr_name -> [fact]
         for fact in self._contact_model.iter_back_facts(self._contact):
             predicate = self._contact_model.predicates[fact.predicate_serial]
@@ -91,13 +91,13 @@ class ContactHtmlCreator:
             back_facts[ref.target_attributename].append(fact)
         return back_facts
 
-    def _add_row(self, attr_name, val, fact, href_obj):
+    def _add_row(self, attr_name: str, val: Any, fact: Fact, href_obj):
         self._add('  <tr>')
-        self._add('    <td>{}:</td>'.format(attr_name))
+        self._add(f'    <td>{attr_name}:</td>')
         if href_obj:
-            self._add('    <td><a href="{}">{}</a></td>'.format(str(href_obj.id), val))
+            self._add(f'    <td><a href="{href_obj.id}">{val}</a></td>')
         else:
-            self._add('    <td><b>{}</b></td>'.format(val))
+            self._add(f'    <td><b>{val}</b></td>')
         self._add('  </tr>')
 
     def _add_footer(self):

@@ -15,23 +15,27 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
-from configparser import RawConfigParser
+from __future__ import annotations
 from collections import OrderedDict
+from configparser import RawConfigParser
+from typing import Dict, ValuesView, Any
 
-from tasks.tasktypes import *
+from tasks.context import Context
+from tasks.tasktypes import Date, ID, Int, Ref, String, XmlString  # necessary for MetaModel._process_section()
 
 
 class MetaModel:
 
     def __init__(self, logging_enabled=False):
         self._logging_enabled = logging_enabled
-        
+        self._structures: Dict[str, Structure] = OrderedDict()
+
     @property
     def structures(self):
         return self._structures.values()
         
     def read(self, config_path):
-        self._structures = OrderedDict()
+        self._structures.clear()
         config = RawConfigParser()
         config.optionxform = lambda x: x  # necessary, for prevent letters to convert in small letters
         config.read(str(config_path))
@@ -46,7 +50,7 @@ class MetaModel:
         
         for key, value in section.items():
             if self._logging_enabled:
-                print('{}: {}'.format(key, value))
+                print(f'{key}: {value}')
             new_attr = Attribute(key, eval(value))
             new_struct.add_attribute(new_attr)
         return new_struct
@@ -54,37 +58,37 @@ class MetaModel:
 
 class Structure:
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         self._name = name
-        self._attributes = OrderedDict()
+        self._attributes: Dict[str, Attribute] = OrderedDict()
         
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
         
     @property
-    def attributes(self):
+    def attributes(self) -> ValuesView[Attribute]:
         return self._attributes.values()
         
-    def attribute(self, name):
+    def attribute(self, name: str) -> Attribute:
         return self._attributes[name]
         
-    def add_attribute(self, attribute):
+    def add_attribute(self, attribute: Attribute) -> None:
         self._attributes[attribute.name] = attribute
 
 
 class Attribute:
 
-    def __init__(self, name, type):
+    def __init__(self, name: str, type_: Any):
         self._name = name
-        self._type = type
+        self._type = type_
         
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
     
     @property
-    def type(self):
+    def type(self) -> Any:
         return self._type
     
 

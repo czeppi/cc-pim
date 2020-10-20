@@ -15,22 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
-import constants
-if constants.GUI == 'pyside':
-    from PySide.QtGui import QDialog, QLineEdit, QRegExpValidator
-    from PySide.QtCore import QRegExp
-    from pysidegui._ui_.ui_vaguedatedialog import Ui_VagueDateDialog
-elif constants.GUI == 'pyside2':
-    from PySide2.QtWidgets import QDialog, QLineEdit
-    from PySide2.QtGui import QRegExpValidator
-    from PySide2.QtCore import QRegExp
-    from pysidegui._ui2_.ui_vaguedatedialog import Ui_VagueDateDialog
-    
+from PySide2.QtCore import QRegExp
+from PySide2.QtGui import QRegExpValidator
+from PySide2.QtWidgets import QDialog, QWidget
+
 from contacts.basetypes import VagueDate
+from pysidegui._ui2_.ui_vaguedatedialog import Ui_VagueDateDialog
 
 
 class VagueDateDialog(QDialog):
-    def __init__(self, parent, vague_date):
+    def __init__(self, parent: QWidget, vague_date: VagueDate):
         super().__init__(parent)
         self.ui = Ui_VagueDateDialog()
         self.ui.setupUi(self)
@@ -39,21 +33,21 @@ class VagueDateDialog(QDialog):
         self._init_title()
         self._init_date_edit()
         
-    def _init_title(self):
+    def _init_title(self) -> None:
         if self._vague_date is None:
             self.setWindowTitle('New Vague Date')
         else:
-            self.setWindowTitle('Edit Vague Date #{}'.format(self._vague_date.serial))
+            self.setWindowTitle(f'Edit Vague Date #{self._vague_date.serial}')
                 
-    def _init_date_edit(self):
+    def _init_date_edit(self) -> None:
         if self._vague_date is not None:
             self.ui.lineEdit.setText(str(self._vague_date))
         rex = QRegExp(VagueDate.dialog_rex)
-        validator = QRegExpValidator(rex) #, 0)
+        validator = QRegExpValidator(rex)
         self.ui.lineEdit.setValidator(validator)
 
-        #self.ui.lineEdit.setText('')
-        #self.ui.lineEdit.setReadOnly(True)
+        # self.ui.lineEdit.setText('')
+        # self.ui.lineEdit.setReadOnly(True)
     
     @property
     def text(self):

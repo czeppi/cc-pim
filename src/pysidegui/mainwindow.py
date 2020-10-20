@@ -15,21 +15,24 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
-from PySide2.QtCore import Qt
+from typing import Dict, Optional, Iterator
+
 from PySide2 import QtGui
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QListWidgetItem
 from PySide2.QtWidgets import QMainWindow
 
 from context import Context
 from pysidegui._ui2_.ui_mainwindow import Ui_MainWindow
 from pysidegui.contactsgui.contactsgui import ContactsGui
+from pysidegui.globalitemid import GlobalItemID
 from pysidegui.tasksgui.tasksgui import TasksGui
 
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, context: Context, parent=None):
-        super().__init__(parent)
+    def __init__(self, context: Context):
+        super().__init__(None)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
@@ -65,11 +68,11 @@ class MainWindow(QMainWindow):
         self.ui.html_view.click_link_observers.append(self.on_html_view_click_link)
 
     @staticmethod
-    def _create_data_icons(context: Context):
+    def _create_data_icons(context: Context) -> Dict[str, QtGui.QIcon]:
         return {icon_fpath.stem.lower(): QtGui.QIcon(str(icon_fpath))
                 for icon_fpath in context.data_icon_dir.iterdir()}
 
-    def _update_category_filter(self):
+    def _update_category_filter(self) -> None:
         self.ui.category_filter.clear()
         self.ui.category_filter.addItem('')
         for category in self._cur_model_gui.iter_categories():
@@ -109,7 +112,7 @@ class MainWindow(QMainWindow):
         self._show_obj_id = item.data(Qt.UserRole)
         self._edit_show_item()
 
-    def _edit_show_item(self):
+    def _edit_show_item(self) -> None:
         obj_id = self._show_obj_id
         if obj_id is None:
             return
@@ -119,7 +122,7 @@ class MainWindow(QMainWindow):
             self._update_list()
             self._update_html_view(obj_id)
 
-    def on_search_text_changed(self, new_text):
+    def on_search_text_changed(self, new_text: str):
         self._update_list()
 
     def on_category_changed(self, category_index: int):
@@ -132,7 +135,7 @@ class MainWindow(QMainWindow):
             obj_id = None if item is None else item.data(Qt.UserRole)
             self._update_html_view(obj_id)
 
-    def on_html_view_click_link(self, href_str):
+    def on_html_view_click_link(self, href_str: str):
         obj_id = self._cur_model_gui.get_id_from_href(href_str)
         self._update_html_view(obj_id)
 
@@ -147,13 +150,13 @@ class MainWindow(QMainWindow):
             self._update_html_view(obj_id=None)
 
     def _update_icons(self):
-        exists_uncommited_changes = self._cur_model_gui.exists_uncommited_changes()
-        self.ui.action_save_all.setEnabled(exists_uncommited_changes)
-        self.ui.action_revert_changes.setEnabled(exists_uncommited_changes)
+        exists_uncommitted_changes = self._cur_model_gui.exists_uncommitted_changes()
+        self.ui.action_save_all.setEnabled(exists_uncommitted_changes)
+        self.ui.action_revert_changes.setEnabled(exists_uncommitted_changes)
 
-    def _update_list(self, select_obj_id=None):
+    def _update_list(self, select_obj_id: Optional[GlobalItemID] = None) -> None:
         self._enable_show_details = False
-        old_cur_obj_id = self._get_cur_list_obj_id()
+        old_cur_obj_id = self._get_cur_list_item_obj_id()
 
         self.ui.search_result_list.clear()
         for obj_id in self._iter_sorted_ids_from_keywords():
@@ -167,17 +170,17 @@ class MainWindow(QMainWindow):
 
         self._enable_show_details = True
 
-    def _get_cur_list_obj_id(self):
+    def _get_cur_list_item_obj_id(self) -> GlobalItemID:
         old_cur_list_item = self.ui.search_result_list.currentItem()
         if old_cur_list_item:
             return old_cur_list_item.data(Qt.UserRole)
 
-    def _iter_sorted_ids_from_keywords(self):
+    def _iter_sorted_ids_from_keywords(self) -> Iterator[GlobalItemID]:
         keywords_str = self.ui.search_edit.text()
         keywords = [x.strip() for x in keywords_str.split() if x.strip() != '']
         yield from self._cur_model_gui.iter_sorted_ids_from_keywords(keywords)
 
-    def _is_id_in_category_filter(self, obj_id) -> bool:
+    def _is_id_in_category_filter(self, obj_id: GlobalItemID) -> bool:
         filter_category = self.ui.category_filter.currentText()
         if filter_category == '':
             return True  # no filter
@@ -185,11 +188,11 @@ class MainWindow(QMainWindow):
             category = self._cur_model_gui.get_object_category(obj_id)
             return category == filter_category
 
-    def _add_list_item(self, obj_id):
+    def _add_list_item(self, obj_id: GlobalItemID) -> None:
         new_item = self._create_new_list_item(obj_id)
         self.ui.search_result_list.addItem(new_item)
         
-    def _create_new_list_item(self, obj_id):
+    def _create_new_list_item(self, obj_id: GlobalItemID) -> QListWidgetItem:
         title = self._cur_model_gui.get_object_title(obj_id)
         category = self._cur_model_gui.get_object_category(obj_id)
         new_item = QListWidgetItem(title)
@@ -202,7 +205,7 @@ class MainWindow(QMainWindow):
             pass
         return new_item
 
-    def _select_item(self, obj_id):
+    def _select_item(self, obj_id: GlobalItemID) -> None:
         list_ctrl = self.ui.search_result_list
         for i in range(list_ctrl.count()):
             item = list_ctrl.item(i)
@@ -210,7 +213,7 @@ class MainWindow(QMainWindow):
                 list_ctrl.setCurrentItem(item)
                 break
 
-    def _update_html_view(self, obj_id):
+    def _update_html_view(self, obj_id: Optional[GlobalItemID]) -> None:
         self._show_obj_id = obj_id
         if obj_id:
             html_text = self._cur_model_gui.get_html_text(obj_id)

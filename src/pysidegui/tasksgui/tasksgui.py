@@ -16,11 +16,15 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 from pathlib import Path
-from typing import Optional, Iterator
+from typing import Optional, Iterator, Iterable
+
+from PySide2.QtWidgets import QMainWindow
+
+from contacts.contactmodel import ContactID
 from pysidegui.modelgui import ModelGui
 from pysidegui.tasksgui.taskeditdialog import TaskEditDialog
 from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
-from tasks.taskmodel import TaskModel, KeywordExtractor
+from tasks.taskmodel import TaskModel, KeywordExtractor, Task
 from tasks.context import Context
 from tasks.metamodel import MetaModel
 from tasks.db import DB
@@ -36,9 +40,9 @@ class TasksGui(ModelGui):
         metamodel_path = Path(context.metamodel_pathname)
         meta_model = MetaModel(context.logging_enabled)
         meta_model.read(metamodel_path)
+        sqlite3_path = Path(context.sqlite3_pathname)
 
-        db = DB(context.sqlite3_pathname, meta_model,
-            logging_enabled=context.logging_enabled)
+        db = DB(sqlite3_path, meta_model, logging_enabled=context.logging_enabled)
 
         keyword_extractor = KeywordExtractor(context.no_keywords_pathname)
 
@@ -51,11 +55,11 @@ class TasksGui(ModelGui):
         self._task_model.read()
 
         keywords = self._task_model.calc_keywords()
-        #self.ui.title_edit.init_completer(keywords)  # todo
+        # self.ui.title_edit.init_completer(keywords)  # todo
 
-    def new_item(self, frame) -> Optional[GlobalItemID]:
+    def new_item(self, frame: QMainWindow) -> Optional[GlobalItemID]:
         new_task = self._task_model.create_new_task()
-        dlg = TaskEditDialog(self, task=new_task, task_model=self._task_model)
+        dlg = TaskEditDialog(frame, task=new_task, task_model=self._task_model)
         if dlg.exec() == dlg.Accepted:
             dlg_values = dlg.get_values()  # { attr-name -> new-value }
             new_task_rev = new_task.create_new_revision(**dlg_values)
@@ -76,27 +80,27 @@ class TasksGui(ModelGui):
 
         new_task_rev = task.create_new_revision(**dlg_values)
         self._task_model.add_task_revision(new_task_rev)
-        #html_text = task.last_revision.get_html_text()
-        #self.ui.html_edit.setText(html_text)
+        # html_text = task.last_revision.get_html_text()
+        # self.ui.html_edit.setText(html_text)
         return True
 
-    def save_all(self):
-        #comment, ok = QInputDialog.getText(None, 'Commit', 'please enter a comment')
-        #if not ok:
-        #    return False
+    def save_all(self) -> bool:
+        # comment, ok = QInputDialog.getText(None, 'Commit', 'please enter a comment')
+        # if not ok:
+        #     return False
 
-        #self._contact_model.commit(comment, self._contact_repo)
+        # self._contact_model.commit(comment, self._contact_repo)
         return True
 
-    def revert_change(self):
-        #date_changes, fact_changes = self._contact_repo.aggregate_revisions()
-        #self._contact_model = ContactModel(date_changes, fact_changes)
+    def revert_change(self) -> bool:
+        # date_changes, fact_changes = self._contact_repo.aggregate_revisions()
+        # self._contact_model = ContactModel(date_changes, fact_changes)
         return True
 
     def get_html_text(self, glob_item_id: GlobalItemID) -> str:
         task_id = _convert_global2task_id(glob_item_id)
         task = self._task_model.get_task(task_id)
-        #html_text = task.last_revision.get_html_text()
+        # html_text = task.last_revision.get_html_text()
         header = task.get_header()
         body = task.last_revision.body
         markup_str = f'# {header}\n\n{body}'
@@ -106,7 +110,10 @@ class TasksGui(ModelGui):
         # <html>
         #   <ul>
         #     <li>aaa</li>
-        #     <li><pre>bbbbb bbbbbb bbbbbbbbb bbbbbbbbbb</pre>\n<pre>cccccc cccccccc cccccccc cccccccc</pre>\n<pre>ddd</pre></li>
+        #     <li><pre>bbbbb bbbbbb bbbbbbbbb bbbbbbbbbb</pre>\n
+        #         <pre>cccccc cccccccc cccccccc cccccccc</pre>\n
+        #         <pre>ddd</pre>
+        #     </li>
         #     </ul>
         # </html>
         # """
@@ -114,8 +121,8 @@ class TasksGui(ModelGui):
         print(html_text)
         return html_text
 
-    def exists_uncommited_changes(self) -> bool:
-        #return self._contact_model.exists_uncommited_changes()
+    def exists_uncommitted_changes(self) -> bool:
+        # return self._contact_model.exists_uncommitted_changes()
         return False  # todo
 
     def get_id_from_href(self, href_str: str) -> GlobalItemID:
@@ -128,7 +135,7 @@ class TasksGui(ModelGui):
         for task in sorted_tasks:
             yield _convert_task2global_id(task.id)
 
-    def _iter_filtered_tasks(self, keywords):
+    def _iter_filtered_tasks(self, keywords: Iterable[str]) -> Iterator[Task]:
         for task in self._task_model.tasks:
             if task.last_revision.contains_all_keyword(keywords):
                 yield task
@@ -148,9 +155,9 @@ class TasksGui(ModelGui):
 
 
 def _convert_global2task_id(glob_id: GlobalItemID) -> int:
-    assert glob_id.type == GlobalItemTypes.task
+    assert glob_id.type == GlobalItemTypes.TASK
     return glob_id.serial
 
 
 def _convert_task2global_id(task_id: int) -> GlobalItemID:
-    return GlobalItemID(GlobalItemTypes.task, task_id)
+    return GlobalItemID(GlobalItemTypes.TASK, task_id)

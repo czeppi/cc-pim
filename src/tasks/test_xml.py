@@ -16,11 +16,12 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+
+from tasks.page import HAlign, BlockElement
+from tasks.page import NormalText, BoldText
+from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell
 from tasks.xml_reader import read_from_xmlstr
 from tasks.xml_write import write_xmlstr
-from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell
-from tasks.page import NormalText, BoldText, Link, Image
-from tasks.page import HAlign, Width
 
 
 class TestXml(unittest.TestCase):
@@ -42,6 +43,7 @@ class TestXml(unittest.TestCase):
             Paragraph([NormalText('aaa')], preformatted=True),
             '<paragraph preformatted="true">aaa</paragraph>'
         )
+
     def test_bold(self):
         self._test_one_element(
             Paragraph([NormalText('aaa'), BoldText('bbb'), NormalText('ccc')]),
@@ -50,35 +52,35 @@ class TestXml(unittest.TestCase):
 
     def test_simple_list(self):
         self._test_one_element(
-            List([ ListItem([ NormalText('aaa') ]) ]),
+            List([ListItem([NormalText('aaa')])]),
             '<list><item>aaa</item></list>'
         )
 
     def test_preformatted_list_item(self):
         self._test_one_element(
-            List([ ListItem([NormalText('aaa')], preformatted=True) ]),
+            List([ListItem([NormalText('aaa')], preformatted=True)]),
             '<list><item preformatted="true">aaa</item></list>'
         )
 
     def test_list_with_non_default_symbol(self):
         self._test_one_element(
-            List([ ListItem([ NormalText('aaa') ], symbol='a.') ]),
+            List([ListItem([NormalText('aaa')], symbol='a.')]),
             '<list><item symbol="a.">aaa</item></list>'
         )
 
     def test_table(self):
         self._test_one_element(
-            Table(columns=[ Column(halign=HAlign.left,  text='A'),
-                            Column(halign=HAlign.right, text='B') ],
-                  rows=[ Row([ Cell([NormalText('aaa')]),
-                               Cell([NormalText('bbb')]) ]) ]),
+            Table(columns=[Column(halign=HAlign.left, text='A'),
+                           Column(halign=HAlign.right, text='B')],
+                  rows=[Row([Cell([NormalText('aaa')]),
+                             Cell([NormalText('bbb')])])]),
             '<table>' +
-              '<column halign="left">A</column>' + '<column halign="right">B</column>'
-              '<row>' + '<cell>aaa</cell>' +  '<cell>bbb</cell>' + '</row>'
-            '</table>'
+            '<column halign="left">A</column>' + '<column halign="right">B</column>'
+                                                 '<row>' + '<cell>aaa</cell>' + '<cell>bbb</cell>' + '</row>'
+                                                                                                     '</table>'
         )
 
-    def _test_one_element(self, page_elem1, xml_elem_str1: str):
+    def _test_one_element(self, page_elem1: BlockElement, xml_elem_str1: str):
         page1 = Page([page_elem1])
         xml_str1 = '<page>' + xml_elem_str1 + '</page>'
 
@@ -86,7 +88,7 @@ class TestXml(unittest.TestCase):
         self.assertEqual(page2, page1)
 
         xml_str2 = write_xmlstr(page1)
-        #self.assertEqual(xml_str2, xml_str1)  # too difficult, to get exact the same string
+        # self.assertEqual(xml_str2, xml_str1)  # too difficult, to get exact the same string
 
         page3 = read_from_xmlstr(xml_str2)
         self.assertEqual(page3, page1)

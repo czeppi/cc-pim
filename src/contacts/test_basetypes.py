@@ -18,6 +18,8 @@
 import unittest
 import os
 import sys
+from typing import Iterator
+
 sys.path += [
     os.path.join(os.path.dirname(__file__), '..'),
 ]
@@ -32,18 +34,18 @@ class TestVagueDate(unittest.TestCase):
             self.assertTrue(str(vague_date) == x)
 
     @staticmethod
-    def _iter_valid_vague_dates():
+    def _iter_valid_vague_dates() -> Iterator[str]:
         yield '30.04.2016'
         yield '~30.04.2016'
         yield '30.04.~2016'
         yield '~30.04.~2016'
 
-    def test_invalid_dates(self):
+    def test_invalid_dates(self) -> None:
         for x in self._iter_invalid_vague_dates():
             self.assertRaises(Exception, VagueDate.__init__, x)
         
     @staticmethod
-    def _iter_invalid_vague_dates():
+    def _iter_invalid_vague_dates() -> Iterator[str]:
         yield '01.04.2016'
         yield '30.4.2016'
         yield '30.04.16'
@@ -54,4 +56,3 @@ class TestVagueDate(unittest.TestCase):
         
 if __name__ == '__main__':
     unittest.main()
-        

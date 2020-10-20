@@ -15,24 +15,27 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 from collections import OrderedDict, defaultdict
 from enum import Enum
 from functools import total_ordering
 import re
+from typing import Any, Dict, Iterator, Optional, List, Iterable, Tuple
 
-from contacts.basetypes import Date, EMail, PhoneNumber, Url, Str, Text, Ref
+from contacts.basetypes import Date, EMail, PhoneNumber, Url, Str, Text, Ref, Fact, VagueDate
+from contacts.repository import Repository
 
 
 class ContactType(Enum):
 
-    person = 1
-    company = 2
-    address = 3
+    PERSON = 1
+    COMPANY = 2
+    ADDRESS = 3
 
 
 class Predicate:
 
-    def __init__(self, serial, subject_class, name, value_type):
+    def __init__(self, serial: int, subject_class: Contact, name: str, value_type: Any):
         self.serial = serial
         self.subject_class = subject_class
         self.name = name
@@ -41,7 +44,7 @@ class Predicate:
         
 class Attribute:
 
-    def __init__(self, name, value_type, predicate_serial):
+    def __init__(self, name: str, value_type: Any, predicate_serial: int):
         self.name = name
         self.value_type = value_type
         self.predicate_serial = predicate_serial
@@ -50,62 +53,67 @@ class Attribute:
 class Contact:
 
     contact_type = None
-    attributes = OrderedDict()
-    back_attributes = OrderedDict()
+    type_name = None
+    attributes: Dict[str, Attribute] = OrderedDict()
+    back_attributes: Dict[str, Attribute] = OrderedDict()
 
-    def __init__(self, serial):
+    def __init__(self, serial: int):
         self.serial = serial
-        self._facts_map = defaultdict(list)  # attr-name -> list of facts
-        self._back_facts_map = defaultdict(list)
-        
+        self._facts_map: Dict[str, List[Fact]] = defaultdict(list)  # attr-name -> list of facts
+        self._back_facts_map: Dict[str, List[Fact]] = defaultdict(list)
+
+    @property
+    def title(self) -> str:
+        raise NotImplemented()
+
     @classmethod
-    def iter_attributes(cls):
+    def iter_attributes(cls) -> Iterator[Attribute]:
         yield from cls.attributes.values()
         
     @classmethod
-    def iter_back_attributes(cls):
+    def iter_back_attributes(cls) -> Iterator[Attribute]:
         yield from cls.back_attributes.values()
 
     @classmethod
-    def get_attribute(cls, attr_name):
+    def get_attribute(cls, attr_name: str) -> Attribute:
         if attr_name in cls.attributes:
             return cls.attributes[attr_name]
         else:
             return cls.back_attributes[attr_name]
     
     @classmethod
-    def find_attribute(cls, attr_name):
+    def find_attribute(cls, attr_name: str) -> Optional[Attribute]:
         attr = cls.attributes.get(attr_name, None)
         if attr is None:
             attr = cls.back_attributes.get(attr_name, None)
         return attr
 
     @property
-    def id(self):
+    def id(self) -> ContactID:
         return ContactID(self.contact_type, self.serial)
 
-    def add_fact(self, attr_name, fact):
+    def add_fact(self, attr_name: str, fact: Fact) -> None:
         self._facts_map[attr_name].append(fact)
 
-    def get_facts(self, attr_name):
+    def get_facts(self, attr_name: str) -> List[Fact]:
         return self._facts_map.get(attr_name, [])
 
-    def get_fact(self, fact_serial):
+    def get_fact(self, fact_serial: int) -> Optional[Fact]:
         for facts in self._facts_map.values():
             for fact in facts:
                 if fact.serial == fact_serial:
                     return fact
 
-    def contains_keyword(self, keyword):
+    def contains_keyword(self, keyword: str) -> bool:
         lower_keyword = keyword.lower()
         return any(lower_keyword in str(fact.value).lower()
                    for fact_list in self._facts_map.values()
                    for fact in fact_list)
 
-    def contains_all_keywords(self, keywords):
+    def contains_all_keywords(self, keywords: Iterable[str]) -> bool:
         return all(self.contains_keyword(x) for x in keywords)
 
-    def copy(self):
+    def copy(self) -> Contact:
         new_contact = _create_contact(self.contact_type, self.serial)
         for attr_name, fact_list in self._facts_map.items():
             for fact in fact_list:
@@ -115,12 +123,12 @@ class Contact:
 
 class Person(Contact):
 
-    contact_type = ContactType.person
+    contact_type = ContactType.PERSON
     type_name = contact_type.name
     last_serial = 0
 
     @property
-    def title(self):
+    def title(self) -> str:
         first_names = [x.value for x in self._facts_map['firstname']]
         last_names = [x.value for x in self._facts_map['lastname']]
         names_parts = []
@@ -135,12 +143,12 @@ class Person(Contact):
 
 class Company(Contact):
 
-    contact_type = ContactType.company
+    contact_type = ContactType.COMPANY
     type_name = contact_type.name
     last_serial = 0
 
     @property
-    def title(self):
+    def title(self) -> str:
         names = [x.value for x in self._facts_map['name']]
         if names:
             return names[-1]
@@ -150,12 +158,12 @@ class Company(Contact):
 
 class Address(Contact):
 
-    contact_type = ContactType.address
+    contact_type = ContactType.ADDRESS
     type_name = contact_type.name
     last_serial = 0
 
     @property
-    def title(self):
+    def title(self) -> str:
         parts = []
         parts += [x.value for x in self._facts_map['street']]
         parts += [x.value for x in self._facts_map['city']]
@@ -163,7 +171,7 @@ class Address(Contact):
         return ', '.join(parts)
 
 
-def _create_contact(contact_type, obj_serial):
+def _create_contact(contact_type: ContactType, obj_serial: int) -> Contact:
     cls_map = {
         Person.contact_type:  Person,
         Company.contact_type: Company,
@@ -174,11 +182,11 @@ def _create_contact(contact_type, obj_serial):
 
 @total_ordering
 class ContactID:
-    _rex = re.compile(r"(?P<type>[a-zA-Z]+)(?P<serial>[0-9]+)")
+    _REX = re.compile(r"(?P<type>[a-zA-Z]+)(?P<serial>[0-9]+)")
 
     @classmethod
-    def create_from_string(cls, id_str):
-        match = cls._rex.match(id_str)
+    def create_from_string(cls, id_str: str) -> ContactID:
+        match = cls._REX.match(id_str)
         if not match:
             raise ValueError(id_str)
 
@@ -187,7 +195,7 @@ class ContactID:
         serial = int(match.group('serial'))
         return ContactID(contact_type, serial)
 
-    def __init__(self, contact_type, serial):
+    def __init__(self, contact_type: ContactType, serial: int):
         self.contact_type = contact_type
         self.serial = serial
 
@@ -204,7 +212,7 @@ class ContactID:
         return hash((self.contact_type, self.serial))
 
 
-def _iter_predicates_data():
+def _iter_predicates_data() -> Iterator[Tuple[int, Contact, str, Any]]:
     yield  1, Person,  'lastname',         Str
     yield  2, Person,  'firstname',        Str
     yield  3, Person,  'nickname',         Str
@@ -250,24 +258,24 @@ class ContactModel:
                 Attribute(ref.target_attributename, subject_class, serial)
 
     @staticmethod
-    def iter_object_classes():
+    def iter_object_classes() -> Iterator[Contact]:
         yield Person
         yield Company
         yield Address
         
-    def __init__(self, date_changes, fact_changes):
+    def __init__(self, date_changes: Dict[int, VagueDate], fact_changes: Dict[int, Fact]):
         self._date_changes = date_changes
         self._fact_changes = fact_changes
-        self._uncommited_date_changes = {}
-        self._uncommited_fact_changes = {}
+        self._uncommitted_date_changes: Dict[int, VagueDate] = {}
+        self._uncommitted_fact_changes: Dict[int, Fact] = {}
         self._revision_number = None
         self._init_data()
         self._init_last_serial_map()
-        self._init_last_fact_serial()
-        self._init_last_date_serial()
+        self._last_fact_serial = self._calc_last_fact_serial()
+        self._last_date_serial = self._init_last_date_serial()
 
-    def _init_data(self):
-        self._data = {}  # ContactID -> ContactObject
+    def _init_data(self) -> None:
+        self._data: Dict[ContactID, Contact] = {}  # ContactID -> ContactObject
         for fact in self._fact_changes.values():
             predicate = self.predicates[fact.predicate_serial]
             contact_type = predicate.subject_class.contact_type
@@ -279,23 +287,23 @@ class ContactModel:
                 self._data[contact_id] = obj
             obj.add_fact(predicate.name, fact)
 
-    def _init_last_serial_map(self):
+    def _init_last_serial_map(self) -> None:
         self._last_serial_map = {
             cls.contact_type: max((contact_id.serial for contact_id in self._data.keys()
                                    if contact_id.contact_type == cls.contact_type), default=0)
             for cls in self.iter_object_classes()
         }
 
-    def _init_last_fact_serial(self):
-        self._last_fact_serial = max((fact.serial for fact in self._fact_changes.values()), default=0)
+    def _calc_last_fact_serial(self) -> int:
+        return max((fact.serial for fact in self._fact_changes.values()), default=0)
 
-    def _init_last_date_serial(self):
-        self._last_date_serial = max((date.serial for date in self._date_changes.values()), default=0)
+    def _init_last_date_serial(self) -> int:
+        return max((date.serial for date in self._date_changes.values()), default=0)
 
-    def iter_objects(self):
+    def iter_objects(self) -> Iterator[Contact]:
         yield from self._data.values()
 
-    def iter_back_facts(self, obj):
+    def iter_back_facts(self, obj: Contact) -> Iterator[Fact]:
         for fact in self._fact_changes.values():
             predicate = self.predicates[fact.predicate_serial]
             if isinstance(predicate.value_type, Ref):
@@ -304,25 +312,25 @@ class ContactModel:
                         and int(fact.value) == obj.serial:
                     yield fact
 
-    def update(self):
+    def update(self) -> None:
         pass
 
-    def iter_dates(self):
+    def iter_dates(self) -> Iterator[VagueDate]:
         yield from self._date_changes.values()
 
-    def get_date(self, date_serial):
+    def get_date(self, date_serial: int) -> VagueDate:
         return self._date_changes[date_serial]
 
-    def contains(self, contact_id):
+    def contains(self, contact_id: ContactID) -> bool:
         return contact_id in self._data
         
-    def get(self, contact_id):
+    def get(self, contact_id: ContactID) -> Contact:
         return self._data[contact_id]
 
     def find(self, search_parameters):
         pass
 
-    def get_fact_value(self, fact):
+    def get_fact_value(self, fact: Fact) -> str:
         predicate = self.predicates[fact.predicate_serial]
         if isinstance(predicate.value_type, Ref):
             ref = predicate.value_type
@@ -336,13 +344,13 @@ class ContactModel:
         else:
             return fact.value
 
-    def get_fact_subject(self, fact):
+    def get_fact_subject(self, fact: Fact) -> Optional[Contact]:
         predicate = self.predicates[fact.predicate_serial]
         contact_type = predicate.subject_class.contact_type
         contact_id = ContactID(contact_type, fact.subject_serial)
         return self._data.get(contact_id, None)
 
-    def get_fact_object(self, fact):
+    def get_fact_object(self, fact: Fact) -> Optional[Contact]:
         predicate = self.predicates[fact.predicate_serial]
         if isinstance(predicate.value_type, Ref):
             ref = predicate.value_type
@@ -351,36 +359,36 @@ class ContactModel:
             if serial != 0:
                 return self.get(ContactID(contact_type, serial))
 
-    def add_changes(self, date_changes, fact_changes):
+    def add_changes(self, date_changes: Dict[int, VagueDate], fact_changes: Dict[int, Fact]):
         self._date_changes.update(date_changes)
         self._fact_changes.update(fact_changes)
-        self._uncommited_date_changes.update(date_changes)
-        self._uncommited_fact_changes.update(fact_changes)
+        self._uncommitted_date_changes.update(date_changes)
+        self._uncommitted_fact_changes.update(fact_changes)
         self._init_data()
 
-    def exists_uncommited_changes(self):
-        return len(self._uncommited_date_changes) > 0 or len(self._uncommited_fact_changes) > 0
+    def exists_uncommitted_changes(self) -> bool:
+        return len(self._uncommitted_date_changes) > 0 or len(self._uncommitted_fact_changes) > 0
 
-    def commit(self, comment, repo):
+    def commit(self, comment: str, repo: Repository) -> None:
         repo.commit(comment,
-                    date_changes=self._uncommited_date_changes,
-                    fact_changes=self._uncommited_fact_changes)
-        self._uncommited_date_changes.clear()
-        self._uncommited_fact_changes.clear()
+                    date_changes=self._uncommitted_date_changes,
+                    fact_changes=self._uncommitted_fact_changes)
+        self._uncommitted_date_changes.clear()
+        self._uncommitted_fact_changes.clear()
 
-    def create_contact(self, contact_type):
+    def create_contact(self, contact_type: ContactType) -> Contact:
         assert contact_type in self._last_serial_map
         new_serial = self._last_serial_map[contact_type] + 1
         self._last_serial_map[contact_type] = new_serial
         new_contact = _create_contact(contact_type, new_serial)
         return new_contact
 
-    def create_fact_serial(self):
+    def create_fact_serial(self) -> int:
         new_serial = self._last_fact_serial + 1
         self._last_fact_serial = new_serial
         return new_serial
 
-    def create_date_serial(self):
+    def create_date_serial(self) -> int:
         new_serial = self._last_date_serial + 1
         self._last_date_serial = new_serial
         return new_serial

@@ -15,26 +15,23 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 import difflib
 from collections import OrderedDict
+from typing import Dict, Callable, Optional
 
-import constants
-if constants.GUI == 'pyside':
-    from PySide.QtCore import Qt
-    from PySide.QtGui import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
-                              QLineEdit, QMessageBox, QPushButton, QVBoxLayout)
-elif constants.GUI == 'pyside2':
-    from PySide2.QtCore import Qt
-    from PySide2.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel, QLayout,
-                                   QLineEdit, QMessageBox, QPushButton, QVBoxLayout)
+from PySide2.QtCore import Qt
+from PySide2.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel,
+                               QLayout, QLineEdit, QMessageBox, QPushButton, QVBoxLayout, QWidget)
 
 from contacts.basetypes import Ref, Fact, VagueDate
+from contacts.contactmodel import Contact, ContactModel, Attribute
 from pysidegui.contactsgui.vaguedatedialog import VagueDateDialog
 
 
 class ContactEditDialog(QDialog):
 
-    def __init__(self, parent, contact, contacts_model):
+    def __init__(self, parent, contact: Contact, contacts_model: ContactModel):
         super().__init__(parent, f=Qt.WindowMaximizeButtonHint)
 
         self._contact_is_new = not contacts_model.contains(contact.id)
@@ -43,8 +40,8 @@ class ContactEditDialog(QDialog):
         else:
             self._contact = contact.copy()
         self._contacts_model = contacts_model
-        self._date_changes = {}  # date_serial -> VagureDate
-        self._fact_changes = {}  # fact_serial -> Fact
+        self._date_changes: Dict[int, VagueDate] = {}  # date_serial -> VagueDate
+        self._fact_changes: Dict[int, Fact] = {}  # fact_serial -> Fact
 
         self.setWindowModality(Qt.ApplicationModal)
         self.resize(1200, 600)
@@ -61,49 +58,50 @@ class ContactEditDialog(QDialog):
             self._fill_grid_new()
         else:
             self._fill_grid_edit()
-        #self._left_widget.setLayout(self._left_layout)
+        # self._left_widget.setLayout(self._left_layout)
         self._fill_main_layout()
 
-        self._button_box.accepted.connect(self.accept)
-        self._button_box.rejected.connect(self.reject)
+        self._button_box.accepted().connect(self.accept)
+        self._button_box.rejected().connect(self.reject)
 
-    def _init_title(self):
+    def _init_title(self) -> None:
         type_lower_name = self._contact.type_name
         type_name = type_lower_name[0].upper() + type_lower_name[1:]
         prefix = 'New' if self._contact_is_new else 'Edit'
         title = prefix + ' ' + type_name
         self.setWindowTitle(title)
 
-    def _create_main_vertical_layout(self):
+    def _create_main_vertical_layout(self) -> QLayout:
         layout = QVBoxLayout(self)
         layout.setSizeConstraint(QLayout.SetDefaultConstraint)
         return layout
 
-    def _create_grid_layout(self, parent):
-        grid_layout = QGridLayout()
+    @staticmethod
+    def _create_grid_layout(parent: QWidget) -> QGridLayout:
+        grid_layout = QGridLayout(parent)
         return grid_layout
 
-    def _create_add_fact_button(self, parent):
+    def _create_add_fact_button(self, parent: QWidget) -> QPushButton:
         button = QPushButton('add', parent)
-        button.clicked.connect(self.on_add_fact_button_clicked)
+        button.clicked().connect(self.on_add_fact_button_clicked)
         return button
 
-    def _fill_main_layout(self):
+    def _fill_main_layout(self) -> None:
         self._main_vertical_layout.addLayout(self._grid_layout)
         self._main_vertical_layout.addWidget(self._add_fact_button)
         self._main_vertical_layout.addStretch()
         self._main_vertical_layout.addWidget(self._button_box)
 
-    def _fill_grid_edit(self):
+    def _fill_grid_edit(self) -> None:
         for attr in self._contact.iter_attributes():
             for fact in self._contact.get_facts(attr.name):
                 self._add_row_to_grid(attr, fact)
 
-    def _fill_grid_new(self):
+    def _fill_grid_new(self) -> None:
         for attr in self._contact.iter_attributes():
             self._add_row_to_grid(attr, fact=None)
 
-    def _add_row_to_grid(self, attr, fact):
+    def _add_row_to_grid(self, attr: Attribute, fact: Optional[Fact]) -> None:
         parent = self
         new_row = self._grid_layout.rowCount()
         attr_label = QLabel(parent)
@@ -153,7 +151,7 @@ class ContactEditDialog(QDialog):
         row_widgets.remove_button = remove_button
         self._grid_layout.addWidget(remove_button, new_row, 9, 1, 1)
 
-    def _create_val_combo(self, row):
+    def _create_val_combo(self, row: RowWidgets) -> QComboBox:
         combo = QComboBox(row.parent)
 
         # completer = QCompleter(word_list, self)
@@ -171,14 +169,14 @@ class ContactEditDialog(QDialog):
             combo.addItem(title, contact.serial)
         cur_index = combo.findData(current_data)
         combo.setCurrentIndex(cur_index)
-        combo.currentIndexChanged.connect(self.on_val_combo_index_changed)
+        combo.currentIndexChanged().connect(self.on_val_combo_index_changed)
         combo.row = row
         return combo
 
-    def _create_ref_map(self, attr):
+    def _create_ref_map(self, attr: Attribute) -> Dict[str, Contact]:
         ref = attr.value_type
         ref_contact_type = ref.target_class.contact_type
-        ref_map = {}  # title -> obj
+        ref_map: Dict[str, Contact] = {}  # title -> obj
         for obj in self._contacts_model.iter_objects():
             if obj.contact_type == ref_contact_type:
                 obj_title = obj.title
@@ -186,43 +184,43 @@ class ContactEditDialog(QDialog):
                     ref_map[obj_title] = obj
         return ref_map
 
-    def _create_val_edit(self, row):
+    def _create_val_edit(self, row: RowWidgets) -> QLineEdit:
         val_edit = QLineEdit(row.parent)
         val = '' if row.fact is None else self._contacts_model.get_fact_value(row.fact)
         val_edit.setText(val)
-        val_edit.textChanged.connect(self.on_text_changed)
+        val_edit.textChanged().connect(self.on_text_changed)
         val_edit.row = row
         return val_edit
 
-    def _create_note_edit(self, row):
+    def _create_note_edit(self, row: RowWidgets) -> QLineEdit:
         note_edit = QLineEdit(row.parent)
         text = '' if row.fact is None else row.fact.note
         note_edit.setText(text)
-        note_edit.textChanged.connect(self.on_note_changed)
+        note_edit.textChanged().connect(self.on_note_changed)
         note_edit.row = row
         return note_edit
 
-    def _create_valid_checkbox(self, row):
+    def _create_valid_checkbox(self, row: RowWidgets) -> QCheckBox:
         valid_checkbox = QCheckBox(row.parent)
         is_checked = True if row.fact is None else row.fact.is_valid
         valid_checkbox.setChecked(is_checked)
-        valid_checkbox.stateChanged.connect(self.on_valid_changed)
+        valid_checkbox.stateChanged().connect(self.on_valid_changed)
         valid_checkbox.row = row
         return valid_checkbox
 
-    def _create_from_combo(self, row):
+    def _create_from_combo(self, row: RowWidgets) -> QComboBox:
         cur_serial = 0
-        if row.fact is not None: # and row.fact.date_begin_serial is not None:
+        if row.fact is not None:  # and row.fact.date_begin_serial is not None:
             cur_serial = row.fact.date_begin_serial
         return self._create_from_until_combo(row, cur_serial, self.on_from_combo_index_changed)
 
-    def _create_until_combo(self, row):
+    def _create_until_combo(self, row: RowWidgets) -> QComboBox:
         cur_serial = 0
-        if row.fact is not None: # and row.fact.date_end_serial is not None:
+        if row.fact is not None:  # and row.fact.date_end_serial is not None:
             cur_serial = row.fact.date_end_serial
         return self._create_from_until_combo(row, cur_serial, self.on_until_combo_index_changed)
 
-    def _create_from_until_combo(self, row, cur_serial, on_func):
+    def _create_from_until_combo(self, row: RowWidgets, cur_serial: int, on_func: Callable) -> QComboBox:
         combo = QComboBox(row.parent)
         combo.setMinimumWidth(100)
 
@@ -235,31 +233,32 @@ class ContactEditDialog(QDialog):
 
         cur_index = combo.findData(cur_serial)
         combo.setCurrentIndex(cur_index)
-        combo.currentIndexChanged.connect(on_func)
+        combo.currentIndexChanged().connect(on_func)
         combo.row = row
         return combo
 
-    def _create_from_button(self, row):
+    def _create_from_button(self, row: RowWidgets) -> QPushButton:
         return self._create_from_until_button(row, self.on_from_button_clicked)
 
-    def _create_until_button(self, row):
+    def _create_until_button(self, row: RowWidgets) -> QPushButton:
         return self._create_from_until_button(row, self.on_until_button_clicked)
 
-    def _create_from_until_button(self, row, on_func):
+    @staticmethod
+    def _create_from_until_button(row: RowWidgets, on_func: Callable) -> QPushButton:
         button = QPushButton('*', row.parent)
         button.setFixedWidth(20)
-        button.clicked.connect(on_func)
+        button.clicked().connect(on_func)
         button.row = row
         return button
 
-    def _create_remove_button(self, row):
+    def _create_remove_button(self, row: RowWidgets) -> QPushButton:
         remove_button = QPushButton('x', row.parent)
         remove_button.setFixedWidth(40)
-        remove_button.clicked.connect(self.on_remove_button_clicked)
+        remove_button.clicked().connect(self.on_remove_button_clicked)
         remove_button.row = row
         return remove_button
 
-    def _create_button_box(self):
+    def _create_button_box(self) -> QDialogButtonBox:
         button_box = QDialogButtonBox(self)
         button_box.setOrientation(Qt.Horizontal)
         button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
@@ -273,7 +272,7 @@ class ContactEditDialog(QDialog):
             fact.value = text
             self._fact_changes[fact.serial] = fact
 
-    def _get_or_create_fact(self, widget):
+    def _get_or_create_fact(self, widget: QWidget) -> Fact:
         row = widget.row
         if row.fact is None:
             fact_serial = self._contacts_model.create_fact_serial()
@@ -339,7 +338,7 @@ class ContactEditDialog(QDialog):
             fact.date_begin_serial = vague_date.serial
             self._fact_changes[fact.serial] = fact
 
-    def _input_vague_date(self, date_serial):
+    def _input_vague_date(self, date_serial: int) -> Optional[VagueDate]:
         if date_serial is None or date_serial == 0:
             date = None
         elif date_serial in self._date_changes:
@@ -353,23 +352,24 @@ class ContactEditDialog(QDialog):
                     date_serial = self._contacts_model.create_date_serial()
                 return VagueDate(dlg.text, serial=date_serial)
             except ValueError as err:
-                msgBox = QMessageBox()
-                msgBox.setText(str(err))
-                msgBox.exec_()
+                msg_box = QMessageBox()
+                msg_box.setText(str(err))
+                msg_box.exec_()
 
-    def _add_date_to_all_date_combos(self, new_date):
+    def _add_date_to_all_date_combos(self, new_date: VagueDate) -> None:
         item_text = self._create_vague_date_combo_text(new_date)
         for date_combo in self._date_combos:
             date_combo.addItem(item_text, userData=new_date.serial)
 
-    def _update_all_date_combos(self, changed_date):
+    def _update_all_date_combos(self, changed_date: VagueDate) -> None:
         item_text = self._create_vague_date_combo_text(changed_date)
         for date_combo in self._date_combos:
             cur_index = date_combo.findData(changed_date.serial)
             date_combo.setItemText(cur_index, item_text)
 
-    def _create_vague_date_combo_text(self, vague_date):
-        return '#{}: {}'.format(vague_date.serial, vague_date)
+    @staticmethod
+    def _create_vague_date_combo_text(vague_date: VagueDate) -> str:
+        return f'#{vague_date.serial}: {vague_date}'
 
     def on_until_combo_index_changed(self):
         until_combo = self.sender()
@@ -403,16 +403,18 @@ class ContactEditDialog(QDialog):
             self._fact_changes[fact.serial] = fact
 
     def on_remove_button_clicked(self):
-        remove_button = self.sender()
+        # remove_button = self.sender()
+        raise NotImplemented()  # todo: implement
 
     def on_add_fact_button_clicked(self):
         attr_map = OrderedDict((x.name, x) for x in self._contact.iter_attributes())
-        attr_name, ok = QInputDialog.getItem(self, 'add fact', 'select an attribute', list(attr_map.keys()), editable=False)
+        attr_name, ok = QInputDialog.getItem(
+            self, 'add fact', 'select an attribute', list(attr_map.keys()), editable=False)
         if ok:
             attr = attr_map[attr_name]
             self._add_row_to_grid(attr, fact=None)
 
-    def check_contact_with_message_box(self):
+    def check_contact_with_message_box(self) -> bool:
         other_titles = list(self._iter_all_other_titles())
         if self._contact.title in  other_titles:
             msg_box = QMessageBox()
@@ -445,17 +447,17 @@ class ContactEditDialog(QDialog):
                 yield contact.title
 
     @property
-    def fact_changes(self):
+    def fact_changes(self) -> Dict[int, Fact]:
         return self._fact_changes
 
     @property
-    def date_changes(self):
+    def date_changes(self) -> Dict[int, VagueDate]:
         return self._date_changes
 
 
 class RowWidgets:
 
-    def __init__(self, attr, fact, parent):
+    def __init__(self, attr: Attribute, fact: Optional[Fact], parent: QWidget):
         self.attr = attr
         self.fact = fact
         self.parent = parent
@@ -476,5 +478,3 @@ class RowWidgets:
     #         self.note_edit.fact = fact
     #     if self.valid_checkbox is not None:
     #         self.valid_checkbox.fact = fact
-
-

@@ -18,7 +18,7 @@
 
 class BaseType:
 
-    def convert_to_db(self, value):
+    def convert_to_db(self, value: str) -> str:
         return value
 
 
@@ -29,7 +29,7 @@ class Int(BaseType):
 class String(BaseType):
     sqlite3_typename = 'text'  # !! Not 'string', otherwise '0123' will converted to '123' !!
         
-    def convert_to_db(self, value):
+    def convert_to_db(self, value: str) -> str:
         return value.replace('"', '""')
         
 
@@ -44,7 +44,7 @@ class UserID(BaseType):
 class Ref(BaseType):
     sqlite3_typename = 'integer'  # ??
 
-    def __init__(self, table_name, id_attribute_name):
+    def __init__(self, table_name: str, id_attribute_name: str):
         BaseType.__init__(self)
         self._table_name = table_name
         self._id_attribute_name = id_attribute_name
@@ -57,7 +57,7 @@ class Date(BaseType):
 class StringList(BaseType):
     sqlite3_typename = 'text'
     
-    def convert_to_db(self, value):
+    def convert_to_db(self, value: str) -> str:
         return value.replace('"', '""')  # besser ','.join(value)
     
 

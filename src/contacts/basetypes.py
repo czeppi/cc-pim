@@ -15,8 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 import re
 import datetime
+from re import Match
+from typing import Tuple, Optional
 
 
 class Name:
@@ -60,7 +63,8 @@ class Ref:
 
 class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
 
-    dialog_rex = r"(((~)?(01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31)(\?)?\.)?" \
+    dialog_rex = r"(((~)?(01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|" \
+                 r"21|22|23|24|25|26|27|28|29|30|31)(\?)?\.)?" \
                  r"(~)?(01|02|03|04|05|06|07|08|09|10|11|12)(\?)?\.)?(~)?((19|20)[0-9]{2})(\?)?"
     rex_text = r"(((?P<tilde_day>~)?(?P<day>[0-9]{2})(?P<day_unsure>\?)?\.)?" \
                r"(?P<tilde_month>~)?(?P<month>[0-9]{2})(?P<month_unsure>\?)?\.)?" \
@@ -75,7 +79,7 @@ class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
             if re.compile(self.dialog_rex):
                 raise ValueError('too short')
             else:
-                raise ValueError("dont't match regular expression")
+                raise ValueError("don't match regular expression")
 
         self.day,   self.is_day_exact,   self.is_day_sure   = self._get_value_exact_and_sure(m, 'day')
         self.month, self.is_month_exact, self.is_month_sure = self._get_value_exact_and_sure(m, 'month')
@@ -83,14 +87,15 @@ class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
 
         self._check_date()
 
-    def _get_value_exact_and_sure(self, m, part_name):
+    @staticmethod
+    def _get_value_exact_and_sure(m: Match, part_name: str) -> Tuple[Optional[int], Optional[bool], Optional[bool]]:
         val_str = m.group(part_name)
         if val_str:
             return int(val_str), (m.group('tilde_' + part_name) != '~'), (m.group(part_name + '_unsure') != '?')
         else:
             return None, None, None
 
-    def _check_date(self):
+    def _check_date(self) -> None:
         day = self.day
         if day is None:
             day = 1
@@ -99,7 +104,7 @@ class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
             month = 1
         datetime.date(self.year, month, day)  # raise a ValueError, if invalid
 
-    def _check_invariant(self):
+    def _check_invariant(self) -> None:
         d, m, y = self.day, self.month, self.year
         
         assert d is None or isinstance(d, int)
@@ -128,18 +133,18 @@ class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
         if self.day:
             if not self.is_day_exact:
                 s += '~'
-            s += '{:02}.'.format(self.day)
+            s += f'{self.day:02}.'
             if not self.is_day_sure:
                 s += '?'
         if self.month:
             if not self.is_month_exact:
                 s += '~'
-            s += '{:02}.'.format(self.month)
+            s += f'{self.month:02}.'
             if not self.is_month_sure:
                 s += '?'
         if not self.is_year_exact:
             s += '~'
-        s += '{:04}'.format(self.year)
+        s += f'{self.year:04}'
         if not self.is_year_sure:
             s += '?'
         return s
@@ -147,7 +152,7 @@ class VagueDate:  # oder InexactDate, InaccurateDate, ImproperDate
 
 class SearchParameter:
 
-    def __init__(self, text, upper_lower_sensitive=False, whole_word=False, regex=False):
+    def __init__(self, text: str, upper_lower_sensitive: bool = False, whole_word: bool = False, regex: bool = False):
         self.text = text
         self.upper_lower_sensitive = upper_lower_sensitive
         self.whole_word = whole_word
@@ -156,8 +161,11 @@ class SearchParameter:
 
 class Fact:
 
-    def __init__(self, serial, predicate_serial, subject_serial, value,
-                 note=None, date_begin_serial=None, date_end_serial=None, is_valid=True):
+    def __init__(self, serial: int, predicate_serial: int, subject_serial: int, value: Optional[str],
+                 note: Optional[str] = None,
+                 date_begin_serial: Optional[int] = None,
+                 date_end_serial: Optional[int] = None,
+                 is_valid: bool = True):
         self.serial = serial
         self.predicate_serial = predicate_serial
         self.subject_serial = subject_serial
@@ -167,7 +175,7 @@ class Fact:
         self.date_end_serial = date_end_serial
         self.is_valid = is_valid
 
-    def copy(self):
+    def copy(self) -> Fact:
         return Fact(
             serial=self.serial,
             predicate_serial=self.predicate_serial,

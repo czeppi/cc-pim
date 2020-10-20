@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 from enum import Enum
 from pathlib import Path
-from typing import List as TList
-
+from typing import List as TList, Any, Optional
 
 """
 example:
@@ -53,10 +53,10 @@ class ReadOnlyList:
     def __init__(self, items):
         self._items = items
 
-    def __eq__(self, other):
-        return self._items == other._items
+    def __eq__(self, other: Any):
+        return isinstance(other, ReadOnlyList) and self._items == other._items
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any):
         return not self.__eq__(other)
 
     def __iter__(self):
@@ -67,69 +67,72 @@ class ReadOnlyList:
 
 
 class HAlign(Enum):
-    
     left = 1
     right = 2
     centre = 3
-    
-    
+
+
 class Width:
 
     def __init__(self, value, relative=True):
         self.value = value
         self.is_relative = relative
-        
-    def __eq__(self, other):
+
+    def __eq__(self, other: Any):
         return isinstance(other, Width) and self.value == other.value and self.is_relative == other.is_relevant
 
 
 class ElementBase:
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         raise Exception('not implemented')
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any):
         return not self.__eq__(other)
 
 
 class InlineElement(ElementBase):
-    pass
-
-    
-class NormalText(InlineElement):
 
     def __init__(self, text: str):
         assert isinstance(text, str)
         self.text = text
 
-    def __eq__(self, other):
+    def copy(self) -> InlineElement:
+        raise NotImplemented()
+
+
+class NormalText(InlineElement):
+
+    def __init__(self, text: str):
+        super().__init__(text)
+
+    def __eq__(self, other: Any):
         return isinstance(other, NormalText) and self.text == other.text
 
-    def copy(self):
+    def copy(self) -> NormalText:
         return NormalText(self.text)
 
 
 class BoldText(InlineElement):
 
     def __init__(self, text: str):
-        assert isinstance(text, str)
-        self.text = text
+        super().__init__(text)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         return isinstance(other, BoldText) and self.text == other.text
 
-    def copy(self):
+    def copy(self) -> BoldText:
         return BoldText(self.text)
 
 
 class Link(InlineElement):
 
     def __init__(self, url: str, text: str = None):
+        super().__init__(text)
         assert isinstance(url, str) and isinstance(text, str)
         self.url = url
-        self.text = text
-    
-    def __eq__(self, other):
+
+    def __eq__(self, other: Any):
         return isinstance(other, Link) and self.url == other.url and self.text == other.text
 
     def copy(self):
@@ -139,11 +142,12 @@ class Link(InlineElement):
 class Image(InlineElement):
 
     def __init__(self, path: Path, width: Width):
+        super().__init__('')
         assert isinstance(path, Path) and isinstance(width, Width)
         self.path = path
         self.width = width
-            
-    def __eq__(self, other):
+
+    def __eq__(self, other: Any):
         return isinstance(other, Image) and self.path == other.path and self.width == other.width
 
     def copy(self):
@@ -153,15 +157,17 @@ class Image(InlineElement):
 class BlockElement(ElementBase):
     pass
 
-        
+
 class Header(BlockElement):
 
-    def __init__(self, level: int, inline_elements: TList[InlineElement] = []):
+    def __init__(self, level: int, inline_elements: Optional[TList[InlineElement]] = None):
+        if inline_elements is None:
+            inline_elements = []
         assert isinstance(level, int) and all(isinstance(x, InlineElement) for x in inline_elements)
         self.level = level
-        self.inline_elements = inline_elements
-        
-    def __eq__(self, other):
+        self.inline_elements: TList[InlineElement] = inline_elements
+
+    def __eq__(self, other: Any):
         return isinstance(other, Header) \
                and self.level == other.level \
                and self.inline_elements == other.inline_elements
@@ -169,12 +175,14 @@ class Header(BlockElement):
 
 class Paragraph(BlockElement):
 
-    def __init__(self, inline_elements: TList[InlineElement] = [], preformatted: bool = False):
+    def __init__(self, inline_elements: Optional[TList[InlineElement]] = None, preformatted: bool = False):
+        if inline_elements is None:
+            inline_elements = []
         assert all(isinstance(x, InlineElement) for x in inline_elements)
-        self.inline_elements = inline_elements
+        self.inline_elements: TList[InlineElement] = inline_elements
         self.preformatted = preformatted
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         return isinstance(other, Paragraph) \
                and self.inline_elements == other.inline_elements \
                and self.preformatted == other.preformatted
@@ -182,18 +190,22 @@ class Paragraph(BlockElement):
 
 class ListItem(ElementBase):
 
-    def __init__(self, inline_elements: TList[InlineElement] = [],
-                       sub_items: TList['ListItem'] = [],
-                       symbol: str = '-',
-                       preformatted: bool = False):
-        assert  all(isinstance(x, InlineElement) for x in inline_elements) \
-            and all(isinstance(x, ListItem) for x in sub_items)
+    def __init__(self, inline_elements: Optional[TList[InlineElement]] = None,
+                 sub_items: Optional[TList[ListItem]] = None,
+                 symbol: str = '-',
+                 preformatted: bool = False):
+        if inline_elements is None:
+            inline_elements = []
+        if sub_items is None:
+            sub_items = []
+        assert all(isinstance(x, InlineElement) for x in inline_elements) \
+               and all(isinstance(x, ListItem) for x in sub_items)
         self.symbol = symbol
-        self.inline_elements = inline_elements
-        self.sub_items = sub_items
+        self.inline_elements: TList[InlineElement] = inline_elements
+        self.sub_items: TList[ListItem] = sub_items
         self.preformatted = preformatted
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         return isinstance(other, ListItem) \
                and self.inline_elements == other.inline_elements \
                and self.sub_items == other.sub_items \
@@ -202,11 +214,13 @@ class ListItem(ElementBase):
 
 class List(BlockElement):
 
-    def __init__(self, items: TList[ListItem] = []):
+    def __init__(self, items: Optional[TList[ListItem]] = None):
+        if items is None:
+            items = []
         assert all(isinstance(x, ListItem) for x in items)
         self.items = items
-        
-    def __eq__(self, other):
+
+    def __eq__(self, other: Any):
         return isinstance(other, List) and self.items == other.items
 
 
@@ -217,48 +231,53 @@ class Column(ElementBase):
         self.halign = halign
         self.text = text
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         return isinstance(other, Column) and self.halign == other.halign and self.text == other.text
 
 
 class Cell(ElementBase):
 
-    def __init__(self, inline_elements: TList[InlineElement] = []):
+    def __init__(self, inline_elements: Optional[TList[InlineElement]] = None):
+        if inline_elements is None:
+            inline_elements = []
         assert all(isinstance(x, InlineElement) for x in inline_elements)
         self.inline_elements = inline_elements
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         return isinstance(other, Cell) and self.inline_elements == other.inline_elements
 
 
 class Row(ElementBase):
 
-    def __init__(self, cells: TList[Cell] = []):
+    def __init__(self, cells: Optional[TList[Cell]] = None):
+        if cells is None:
+            cells = []
         assert all(isinstance(x, Cell) for x in cells)
         self.cells = cells
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         return isinstance(other, Row) and self.cells == other.cells
 
 
 class Table(BlockElement):
 
     def __init__(self, columns: TList[Column], rows: TList[Row]):
-        assert  all(isinstance(x, Column) for x in columns) \
-            and all(isinstance(x, Row) for x in rows)
+        assert all(isinstance(x, Column) for x in columns) \
+               and all(isinstance(x, Row) for x in rows)
         self.columns = columns
         self.rows = rows
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         return isinstance(other, Table) and self.columns == other.columns and self.rows == other.rows
 
 
 class Page(ElementBase):
 
-    def __init__(self, block_elements: TList[BlockElement] = []):
+    def __init__(self, block_elements: Optional[TList[BlockElement]] = None):
+        if block_elements is None:
+            block_elements = []
         assert all(isinstance(x, BlockElement) for x in block_elements)
         self.block_elements = block_elements
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         return isinstance(other, Page) and self.block_elements == other.block_elements
-
