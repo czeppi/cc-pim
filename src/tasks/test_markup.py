@@ -53,16 +53,21 @@ class TestMarkup(unittest.TestCase):
             '\n'
             'bbb\n')
 
-    def test_preformatted_paragraph(self):
+    def test_preformatted_paragraph1(self):
         self._test1(
             Paragraph([NormalText('  aaa')], preformatted=True),
             '  aaa\n')
 
-    # def test_paragraph_with_indented_line(self):
-    #     self._test(
-    #         Paragraph([ NormalText('aaa\n bbb') ]),
-    #         'aaa\n'
-    #         ' bbb\n')
+    def test_preformatted_paragraph2(self):
+        self._test1(
+            Paragraph([NormalText('aaa ')], preformatted=True),
+            'aaa \n')
+
+    def test_paragraph_with_indented_line(self):
+        self._test1(
+            Paragraph([NormalText('aaa\n bbb')], preformatted=True),
+            'aaa\n'
+            ' bbb\n')
 
     def test_list_with_one_item(self):
         self._test1(
@@ -101,12 +106,12 @@ class TestMarkup(unittest.TestCase):
     def test_list_with_indented_line(self):
         self._test1(
             List([
-                ListItem(inline_elements=[NormalText('aaa\n bbb')])
+                ListItem(inline_elements=[NormalText('aaa\n bbb')], preformatted=True)
             ]),
             '- aaa\n'
             '   bbb\n')
 
-    def test_list_with_preformatted_lines(self):
+    def test_list_with_preformatted_lines1(self):
         self._test1(
             List([
                 ListItem(inline_elements=[NormalText('  aaa\n  bbb')], preformatted=True)
@@ -115,6 +120,14 @@ class TestMarkup(unittest.TestCase):
             '    bbb\n')
 
     def test_list_with_preformatted_lines2(self):
+        self._test1(
+            List([
+                ListItem(inline_elements=[NormalText('aaa \nbbb')], preformatted=True)
+            ]),
+            '- aaa \n'
+            '  bbb\n')
+
+    def test_list_with_preformatted_lines3(self):
         self._test1(
             List([
                 ListItem(inline_elements=[NormalText('aaa')], preformatted=False),

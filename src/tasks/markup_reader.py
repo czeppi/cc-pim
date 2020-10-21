@@ -80,10 +80,10 @@ class _MarkupParser:
             cur_line = self._line_iter.get_next_line()
         self._skip_empty_line()
 
+        preformatted = self._are_lines_preformatted(lines)
         para_text = '\n'.join(lines)
         inline_parser = InlineParser(para_text)
         inline_elements = inline_parser.parse()
-        preformatted = (len(para_text) > 0 and para_text[0] == ' ')
         return Paragraph(inline_elements, preformatted=preformatted)
 
     def _skip_empty_line(self) -> None:
@@ -91,7 +91,11 @@ class _MarkupParser:
         if cur_line is not None and not cur_line.is_empty:
             raise MarkupParseError(cur_line, 'line is not empty')
         self._line_iter.get_next_line()
-        
+
+    @staticmethod
+    def _are_lines_preformatted(lines: List[str]) -> bool:
+        return any(len(line) > 0 and (line[0] == ' ' or line[-1] == ' ') for line in lines)
+
     def _create_list(self) -> Optional[List]:
         list_items = list(self._iter_list_items_recursive())
         if len(list_items) > 0:
@@ -129,13 +133,13 @@ class _MarkupParser:
             yield prev_list_item
 
     def _create_list_item(self, list_line0: _ListLine) -> ListItem:
-        lines = self._iter_list_item_lines(list_line0)
+        lines = list(self._iter_list_item_lines(list_line0))
+        preformatted = self._are_lines_preformatted(lines)
+        if self._list_items_always_preformatted:
+            preformatted = True
         text = '\n'.join(lines)
         inline_parser = InlineParser(text)
         inline_elements = inline_parser.parse()
-        preformatted = (len(text) > 0 and text[0] == ' ')
-        if self._list_items_always_preformatted:
-            preformatted = True
         return ListItem(inline_elements=inline_elements, symbol=list_line0.symbol, preformatted=preformatted)
 
     def _iter_list_item_lines(self, list_line0):
@@ -310,7 +314,7 @@ class _Line:
 
             if items[-1] == '':
                 return _TableLine(items[1:-1])
-            else:  # uncomplete last item!
+            else:  # incomplete last item!
                 return _TableLine(items[1:])
 
         
