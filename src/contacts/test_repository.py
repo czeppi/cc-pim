@@ -16,13 +16,8 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import os
-import sys
 from typing import Dict
 
-sys.path += [
-    os.path.join(os.path.dirname(__file__), '..'),
-]
 from contacts.repository import Repository, Revision
 from contacts.basetypes import Fact
 

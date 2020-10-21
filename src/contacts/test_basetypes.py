@@ -20,9 +20,6 @@ import os
 import sys
 from typing import Iterator
 
-sys.path += [
-    os.path.join(os.path.dirname(__file__), '..'),
-]
 from contacts.basetypes import VagueDate
 
 

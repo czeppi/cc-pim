@@ -54,7 +54,7 @@ class ContactsGui(ModelGui):
 
     def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow) -> bool:
         contact_id = _convert_global2contact_id(glob_item_id)
-        contact = self._contact_model.get(contact_id)
+        contact = self._contact_model.get_contact(contact_id)
         dlg = ContactEditDialog(frame, contact, self._contact_model)
         if dlg.exec() != dlg.Accepted:
             return False
@@ -82,7 +82,7 @@ class ContactsGui(ModelGui):
 
     def get_html_text(self, glob_item_id: GlobalItemID) -> str:
         contact_id = _convert_global2contact_id(glob_item_id)
-        contact = self._contact_model.get(contact_id)
+        contact = self._contact_model.get_contact(contact_id)
         html_text = ContactHtmlCreator(contact, self._contact_model).create_html_text()
         return html_text
 
@@ -106,12 +106,12 @@ class ContactsGui(ModelGui):
 
     def get_object_title(self, glob_item_id: GlobalItemID) -> str:
         contact_id = _convert_global2contact_id(glob_item_id)
-        contact = self._contact_model.get(contact_id)
+        contact = self._contact_model.get_contact(contact_id)
         return contact.title
 
     def get_object_category(self, glob_item_id: GlobalItemID) -> str:
         contact_id = _convert_global2contact_id(glob_item_id)
-        contact = self._contact_model.get(contact_id)
+        contact = self._contact_model.get_contact(contact_id)
         return contact.type_name
 
     @staticmethod

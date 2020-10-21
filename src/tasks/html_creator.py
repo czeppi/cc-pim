@@ -109,7 +109,7 @@ class _HtmlCreator:
 
     @staticmethod
     def _add_html_th(html_parent, column: Column) -> None:
-        html_th = ET.SubElement(html_parent, 'th', align=str(column.halign.name))
+        html_th = ET.SubElement(html_parent, 'th', align=column.halign.name.lower())
         html_th.text = column.text
 
     def _add_html_tr(self, html_parent, row: Row) -> None:

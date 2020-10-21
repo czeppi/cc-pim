@@ -185,16 +185,16 @@ class _MarkupParser:
 
     @staticmethod
     def _calc_halign(cell_str: str) -> HAlign:
-        default_halign = HAlign.left
+        default_halign = HAlign.LEFT
         if cell_str == '':
             return default_halign
 
         if cell_str[0] != ' ' and cell_str[-1] == ' ':
-            return HAlign.left
+            return HAlign.LEFT
         elif cell_str[0] == ' ' and cell_str[-1] != ' ':
-            return HAlign.right
+            return HAlign.RIGHT
         elif cell_str[0] == ' ' and cell_str[-1] == ' ':
-            return HAlign.centre
+            return HAlign.CENTRE
 
         return default_halign
 

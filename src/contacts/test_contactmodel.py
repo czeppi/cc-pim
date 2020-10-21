@@ -16,36 +16,33 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import os
-import sys
-sys.path += [
-    os.path.join(os.path.dirname(__file__), '..'),
-]
-from contacts.contactmodel import Person, Attribute
+
+from contacts.basetypes import Fact
+from contacts.contactmodel import Person, Attribute, ContactModel, ContactType
 from contacts.repository import Repository
 
 
 class TestContactModel(unittest.TestCase):
 
-    def setUp(self):
-        self._repo = Repository()
-
     def test_add_person(self):
-        n = self._repo.count_persons()
-        new_id = self._repo.add_person(_create_person1_attributes())
-        self.assertTrue(self._repo.count_persons() == n + 1)
+        model = ContactModel(date_changes={}, fact_changes={})
+        new_person = model.create_contact(ContactType.PERSON)
+        fact_serial = model.create_fact_serial()
 
-    def test_find_persons(self):
-        n = 0
-        for person in self._repo.find_persons(text='Lutz'):
-            self.assertTrue(isinstance(person, Person))
-            n += 1
-        self.assertTrue(n > 0)
+        predicate_serial = 1  # last name
+        predicate = model.predicates[predicate_serial]
+        new_fact = Fact(fact_serial,
+                        predicate_serial=predicate_serial,
+                        subject_serial=new_person.serial,
+                        value='Mustermann')
+        model.add_changes(fact_changes={new_fact.serial: new_fact}, date_changes={})
 
-    def test_get_person(self):
-        person_serial = self._repo.add_person(_create_person1_attributes())
-        person = self._repo.find_person(person_serial)
-        self.assertTrue(isinstance(person, Person))
+        found_person = model.get_contact(new_person.id)
+        found_facts = found_person.get_facts(predicate.name)
+        self.assertEqual(len(found_facts), 1)
+
+        found_fact = found_facts[0]
+        self.assertEqual(found_fact.value, 'Mustermann')
 
 
 class TestPerson(unittest.TestCase):
@@ -53,7 +50,7 @@ class TestPerson(unittest.TestCase):
     def test_iter_attribute(self):
         n = 0
         for attr in Person.iter_attributes():
-            self.assertTrue( isinstance(attr, Attribute) )
+            self.assertTrue(isinstance(attr, Attribute))
             n += 1
         self.assertTrue(n > 0)
 
@@ -111,6 +108,6 @@ def _create_address2_attributes():
         'place': '12345 Berlin',
     }
 
-        
+
 if __name__ == '__main__':
     unittest.main()

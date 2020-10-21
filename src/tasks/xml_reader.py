@@ -55,42 +55,42 @@ class _XmlReader:
         elif tag == 'table':
             return self._create_table(xml_element)
 
-    def _create_header(self, xml_header) -> Header:
-        level = int(xml_header.get('level'))
+    def _create_header(self, xml_header: ET.Element) -> Header:
+        level = int(xml_header.attrib['level'])
         inline_elements = list(self._iter_inline_elements(xml_header))
         return Header(level=level, inline_elements=inline_elements)
 
-    def _create_paragraph(self, xml_para) -> Paragraph:
+    def _create_paragraph(self, xml_para: ET.Element) -> Paragraph:
         inline_elements = list(self._iter_inline_elements(xml_para))
-        preformatted = (xml_para.get('preformatted', default='false').lower() == 'true')
+        preformatted = (xml_para.attrib.get('preformatted', 'false').lower() == 'true')
         return Paragraph(inline_elements, preformatted=preformatted)
 
-    def _create_list(self, xml_list):
+    def _create_list(self, xml_list: ET.Element):
         items = list(self._iter_list_items(xml_list))
         return List(items)
 
-    def _iter_list_items(self, xml_list_or_item) -> Iterator[ListItem]:
+    def _iter_list_items(self, xml_list_or_item: ET.Element) -> Iterator[ListItem]:
         for xml_item in xml_list_or_item:
             inline_elements = list(self._iter_inline_elements(xml_item))
             sub_items = list(self._iter_list_items(xml_item))
-            symbol = xml_list_or_item.get('symbol', default='-')
-            preformatted = (xml_list_or_item.get('preformatted', default='false').lower() == 'true')
+            symbol = xml_list_or_item.attrib.get('symbol', '-')
+            preformatted = (xml_item.attrib.get('preformatted', 'false').lower() == 'true')
             yield ListItem(inline_elements=inline_elements,
                            sub_items=sub_items,
                            symbol=symbol, preformatted=preformatted)
 
-    def _create_table(self, xml_table) -> Table:
+    def _create_table(self, xml_table: ET.Element) -> Table:
         columns = list(self._iter_columns(xml_table))
         rows = list(self._iter_rows(xml_table))
         return Table(columns=columns, rows=rows)
 
     @staticmethod
-    def _iter_columns(xml_table) -> Iterator[Column]:
+    def _iter_columns(xml_table: ET.Element) -> Iterator[Column]:
         for xml_col in filter(lambda x: x.tag == 'column', xml_table):
-            halign = HAlign[xml_col.get('halign')]
+            halign = HAlign[xml_col.attrib['halign'].upper()]
             yield Column(halign=halign, text=xml_col.text)
 
-    def _iter_rows(self, xml_table) -> Iterator[Row]:
+    def _iter_rows(self, xml_table: ET.Element) -> Iterator[Row]:
         for xml_row in filter(lambda x: x.tag == 'row', xml_table):
             cells = list(self._iter_cells(xml_row))
             yield Row(cells)
@@ -123,15 +123,15 @@ class _XmlReader:
 
     @staticmethod
     def _create_link(xml_link) -> Link:
-        path = xml_link.get('path')
+        path = xml_link.attrib['path']
         return Link(url=path, text=xml_link.text)
 
     @staticmethod
     def _create_image(xml_image) -> Image:
-        path = xml_image.get('path')
-        width_str = xml_image.get('width')
+        path = xml_image.attrib['path']
+        width_str = xml_image.attrib['width']
         if width_str[-1] == '%':
-            width = Width(int(width_str[:-1]), relative=True)
+            width = Width(int(width_str[:-1]), is_relative=True)
         else:
-            width = Width(int(width_str), relative=False)
+            width = Width(int(width_str), is_relative=False)
         return Image(path=path, width=width)

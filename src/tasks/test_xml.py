@@ -70,14 +70,15 @@ class TestXml(unittest.TestCase):
 
     def test_table(self):
         self._test_one_element(
-            Table(columns=[Column(halign=HAlign.left, text='A'),
-                           Column(halign=HAlign.right, text='B')],
+            Table(columns=[Column(halign=HAlign.LEFT, text='A'),
+                           Column(halign=HAlign.RIGHT, text='B')],
                   rows=[Row([Cell([NormalText('aaa')]),
                              Cell([NormalText('bbb')])])]),
-            '<table>' +
-            '<column halign="left">A</column>' + '<column halign="right">B</column>'
-                                                 '<row>' + '<cell>aaa</cell>' + '<cell>bbb</cell>' + '</row>'
-                                                                                                     '</table>'
+            '<table>'
+            '<column halign="left">A</column>' 
+            '<column halign="right">B</column>'
+            '<row><cell>aaa</cell><cell>bbb</cell></row>'
+            '</table>'
         )
 
     def _test_one_element(self, page_elem1: BlockElement, xml_elem_str1: str):

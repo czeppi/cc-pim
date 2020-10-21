@@ -51,8 +51,7 @@
         new_values = person_dialog.get_values()
     - commit changes
         contacts.commit(person, new_values)
-        => evtl. merge_dialog bei Konflikten
-
+        => merge_dialog, if conflicts occurs?
 """
 
 from __future__ import annotations

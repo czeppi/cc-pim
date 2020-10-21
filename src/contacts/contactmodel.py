@@ -269,27 +269,29 @@ class ContactModel:
         self._uncommitted_date_changes: Dict[int, VagueDate] = {}
         self._uncommitted_fact_changes: Dict[int, Fact] = {}
         self._revision_number = None
-        self._init_data()
+
+        self._contacts: Dict[ContactID, Contact] = {}
+        self._init_contacts()
         self._init_last_serial_map()
         self._last_fact_serial = self._calc_last_fact_serial()
         self._last_date_serial = self._init_last_date_serial()
 
-    def _init_data(self) -> None:
-        self._data: Dict[ContactID, Contact] = {}  # ContactID -> ContactObject
+    def _init_contacts(self) -> None:
+        self._contacts.clear()
         for fact in self._fact_changes.values():
             predicate = self.predicates[fact.predicate_serial]
             contact_type = predicate.subject_class.contact_type
             obj_serial = fact.subject_serial
             contact_id = ContactID(contact_type, obj_serial)
-            obj = self._data.get(contact_id, None)
+            obj = self._contacts.get(contact_id, None)
             if obj is None:
                 obj = _create_contact(contact_type, obj_serial)
-                self._data[contact_id] = obj
+                self._contacts[contact_id] = obj
             obj.add_fact(predicate.name, fact)
 
     def _init_last_serial_map(self) -> None:
         self._last_serial_map = {
-            cls.contact_type: max((contact_id.serial for contact_id in self._data.keys()
+            cls.contact_type: max((contact_id.serial for contact_id in self._contacts.keys()
                                    if contact_id.contact_type == cls.contact_type), default=0)
             for cls in self.iter_object_classes()
         }
@@ -301,7 +303,7 @@ class ContactModel:
         return max((date.serial for date in self._date_changes.values()), default=0)
 
     def iter_objects(self) -> Iterator[Contact]:
-        yield from self._data.values()
+        yield from self._contacts.values()
 
     def iter_back_facts(self, obj: Contact) -> Iterator[Fact]:
         for fact in self._fact_changes.values():
@@ -322,10 +324,10 @@ class ContactModel:
         return self._date_changes[date_serial]
 
     def contains(self, contact_id: ContactID) -> bool:
-        return contact_id in self._data
+        return contact_id in self._contacts
         
-    def get(self, contact_id: ContactID) -> Contact:
-        return self._data[contact_id]
+    def get_contact(self, contact_id: ContactID) -> Contact:
+        return self._contacts[contact_id]
 
     def find(self, search_parameters):
         pass
@@ -339,7 +341,7 @@ class ContactModel:
             if serial == 0:
                 return ''
             else:
-                obj = self.get(ContactID(contact_type, serial))
+                obj = self.get_contact(ContactID(contact_type, serial))
                 return obj.title
         else:
             return fact.value
@@ -348,7 +350,7 @@ class ContactModel:
         predicate = self.predicates[fact.predicate_serial]
         contact_type = predicate.subject_class.contact_type
         contact_id = ContactID(contact_type, fact.subject_serial)
-        return self._data.get(contact_id, None)
+        return self._contacts.get(contact_id, None)
 
     def get_fact_object(self, fact: Fact) -> Optional[Contact]:
         predicate = self.predicates[fact.predicate_serial]
@@ -357,14 +359,14 @@ class ContactModel:
             contact_type = ref.target_class.contact_type
             serial = int(fact.value)
             if serial != 0:
-                return self.get(ContactID(contact_type, serial))
+                return self.get_contact(ContactID(contact_type, serial))
 
     def add_changes(self, date_changes: Dict[int, VagueDate], fact_changes: Dict[int, Fact]):
         self._date_changes.update(date_changes)
         self._fact_changes.update(fact_changes)
         self._uncommitted_date_changes.update(date_changes)
         self._uncommitted_fact_changes.update(fact_changes)
-        self._init_data()
+        self._init_contacts()
 
     def exists_uncommitted_changes(self) -> bool:
         return len(self._uncommitted_date_changes) > 0 or len(self._uncommitted_fact_changes) > 0

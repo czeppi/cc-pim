@@ -118,7 +118,7 @@ class TestMarkup(unittest.TestCase):
         self._test1(
             List([
                 ListItem(inline_elements=[NormalText('aaa')], preformatted=False),
-                ListItem(inline_elements=[NormalText('bbb\nccc\nddd')], preformatted=True)
+                ListItem(inline_elements=[NormalText('bbb\nccc\nddd')], preformatted=False)
             ]),
             '- aaa\n'
             '- bbb\n'
@@ -233,7 +233,7 @@ class TestMarkup(unittest.TestCase):
         self._test1(
             Table(
                 columns=[
-                    Column(halign=HAlign.left, text='aaa')],
+                    Column(halign=HAlign.LEFT, text='aaa')],
                 rows=[
                     Row([Cell([NormalText('bbb')])])
                 ]

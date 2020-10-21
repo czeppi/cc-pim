@@ -16,6 +16,8 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
+
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import List as TList, Any, Optional
@@ -25,8 +27,8 @@ example:
 
 
 Page([
-    Header(level=1, inline_elements=[NormalText('Ein Titel')]),
-    Paragraph([NormalText('Dies ist '), BoldElement('ein'), NormalText(' Absatz.')],
+    Header(level=1, inline_elements=[NormalText('A Title')]),
+    Paragraph([NormalText('Dies ist '), BoldElement('ein'), NormalText(' paragraph.')],
     List([
         ListItem(inline_elements=[NormalText('a')],
                  sub_items = [
@@ -67,19 +69,15 @@ class ReadOnlyList:
 
 
 class HAlign(Enum):
-    left = 1
-    right = 2
-    centre = 3
+    LEFT = 1
+    RIGHT = 2
+    CENTRE = 3
 
 
+@dataclass
 class Width:
-
-    def __init__(self, value, relative=True):
-        self.value = value
-        self.is_relative = relative
-
-    def __eq__(self, other: Any):
-        return isinstance(other, Width) and self.value == other.value and self.is_relative == other.is_relevant
+    value: int
+    is_relative: bool = True
 
 
 class ElementBase:
@@ -90,15 +88,15 @@ class ElementBase:
     def __ne__(self, other: Any):
         return not self.__eq__(other)
 
+    def copy(self) -> InlineElement:
+        raise NotImplemented()
+
 
 class InlineElement(ElementBase):
 
     def __init__(self, text: str):
         assert isinstance(text, str)
         self.text = text
-
-    def copy(self) -> InlineElement:
-        raise NotImplemented()
 
 
 class NormalText(InlineElement):

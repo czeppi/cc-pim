@@ -81,9 +81,9 @@ class _MarkupCreator:
 
     @staticmethod
     def _create_col_str(col):
-        if col.halign == HAlign.left:
+        if col.halign == HAlign.LEFT:
             return col.text + ' '
-        elif col.halign == HAlign.right:
+        elif col.halign == HAlign.RIGHT:
             return ' ' + col.text
         elif col.halign == HAlign.center:
             return ' ' + col.text + ' '
