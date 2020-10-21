@@ -73,7 +73,7 @@ class _XmlReader:
         for xml_item in xml_list_or_item:
             inline_elements = list(self._iter_inline_elements(xml_item))
             sub_items = list(self._iter_list_items(xml_item))
-            symbol = xml_list_or_item.attrib.get('symbol', '-')
+            symbol = xml_item.attrib.get('symbol', '-')
             preformatted = (xml_item.attrib.get('preformatted', 'false').lower() == 'true')
             yield ListItem(inline_elements=inline_elements,
                            sub_items=sub_items,

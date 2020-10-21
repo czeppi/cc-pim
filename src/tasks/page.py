@@ -17,10 +17,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List as TList, Any, Optional
+from typing import List as TList
 
 """
 example:
@@ -50,24 +50,6 @@ Page([
 """
 
 
-class ReadOnlyList:
-
-    def __init__(self, items):
-        self._items = items
-
-    def __eq__(self, other: Any):
-        return isinstance(other, ReadOnlyList) and self._items == other._items
-
-    def __ne__(self, other: Any):
-        return not self.__eq__(other)
-
-    def __iter__(self):
-        yield from self._items
-
-    def __len__(self):
-        return len(self._items)
-
-
 class HAlign(Enum):
     LEFT = 1
     RIGHT = 2
@@ -80,202 +62,101 @@ class Width:
     is_relative: bool = True
 
 
+@dataclass
 class ElementBase:
-
-    def __eq__(self, other: Any):
-        raise Exception('not implemented')
-
-    def __ne__(self, other: Any):
-        return not self.__eq__(other)
 
     def copy(self) -> InlineElement:
         raise NotImplemented()
 
 
+@dataclass
 class InlineElement(ElementBase):
-
-    def __init__(self, text: str):
-        assert isinstance(text, str)
-        self.text = text
+    text: str
 
 
+@dataclass
 class NormalText(InlineElement):
-
-    def __init__(self, text: str):
-        super().__init__(text)
-
-    def __eq__(self, other: Any):
-        return isinstance(other, NormalText) and self.text == other.text
 
     def copy(self) -> NormalText:
         return NormalText(self.text)
 
 
+@dataclass
 class BoldText(InlineElement):
-
-    def __init__(self, text: str):
-        super().__init__(text)
-
-    def __eq__(self, other: Any):
-        return isinstance(other, BoldText) and self.text == other.text
 
     def copy(self) -> BoldText:
         return BoldText(self.text)
 
 
+@dataclass
 class Link(InlineElement):
-
-    def __init__(self, url: str, text: str = None):
-        super().__init__(text)
-        assert isinstance(url, str) and isinstance(text, str)
-        self.url = url
-
-    def __eq__(self, other: Any):
-        return isinstance(other, Link) and self.url == other.url and self.text == other.text
+    url: str
 
     def copy(self):
-        return Link(self.text)
+        return Link(text=self.text, url=self.url)
 
 
+@dataclass
 class Image(InlineElement):
-
-    def __init__(self, path: Path, width: Width):
-        super().__init__('')
-        assert isinstance(path, Path) and isinstance(width, Width)
-        self.path = path
-        self.width = width
-
-    def __eq__(self, other: Any):
-        return isinstance(other, Image) and self.path == other.path and self.width == other.width
+    path: Path
+    width: Width
 
     def copy(self):
-        return Image(self.path, self.width)
+        return Image(path=self.path, width=self.width, text=self.text)
 
 
+@dataclass
 class BlockElement(ElementBase):
     pass
 
 
+@dataclass
 class Header(BlockElement):
-
-    def __init__(self, level: int, inline_elements: Optional[TList[InlineElement]] = None):
-        if inline_elements is None:
-            inline_elements = []
-        assert isinstance(level, int) and all(isinstance(x, InlineElement) for x in inline_elements)
-        self.level = level
-        self.inline_elements: TList[InlineElement] = inline_elements
-
-    def __eq__(self, other: Any):
-        return isinstance(other, Header) \
-               and self.level == other.level \
-               and self.inline_elements == other.inline_elements
+    level: int
+    inline_elements: TList[InlineElement] = field(default_factory=list)
 
 
+@dataclass
 class Paragraph(BlockElement):
-
-    def __init__(self, inline_elements: Optional[TList[InlineElement]] = None, preformatted: bool = False):
-        if inline_elements is None:
-            inline_elements = []
-        assert all(isinstance(x, InlineElement) for x in inline_elements)
-        self.inline_elements: TList[InlineElement] = inline_elements
-        self.preformatted = preformatted
-
-    def __eq__(self, other: Any):
-        return isinstance(other, Paragraph) \
-               and self.inline_elements == other.inline_elements \
-               and self.preformatted == other.preformatted
+    inline_elements: TList[InlineElement] = field(default_factory=list)
+    preformatted: bool = False
 
 
+@dataclass
 class ListItem(ElementBase):
-
-    def __init__(self, inline_elements: Optional[TList[InlineElement]] = None,
-                 sub_items: Optional[TList[ListItem]] = None,
-                 symbol: str = '-',
-                 preformatted: bool = False):
-        if inline_elements is None:
-            inline_elements = []
-        if sub_items is None:
-            sub_items = []
-        assert all(isinstance(x, InlineElement) for x in inline_elements) \
-               and all(isinstance(x, ListItem) for x in sub_items)
-        self.symbol = symbol
-        self.inline_elements: TList[InlineElement] = inline_elements
-        self.sub_items: TList[ListItem] = sub_items
-        self.preformatted = preformatted
-
-    def __eq__(self, other: Any):
-        return isinstance(other, ListItem) \
-               and self.inline_elements == other.inline_elements \
-               and self.sub_items == other.sub_items \
-               and self.preformatted == other.preformatted
+    inline_elements: TList[InlineElement] = field(default_factory=list)
+    sub_items: TList[ListItem] = field(default_factory=list)
+    symbol: str = '-'
+    preformatted: bool = False
 
 
+@dataclass
 class List(BlockElement):
-
-    def __init__(self, items: Optional[TList[ListItem]] = None):
-        if items is None:
-            items = []
-        assert all(isinstance(x, ListItem) for x in items)
-        self.items = items
-
-    def __eq__(self, other: Any):
-        return isinstance(other, List) and self.items == other.items
+    items: TList[ListItem] = field(default_factory=list)
 
 
+@dataclass
 class Column(ElementBase):
-
-    def __init__(self, halign: HAlign, text: str):
-        assert isinstance(halign, HAlign) and isinstance(text, str)
-        self.halign = halign
-        self.text = text
-
-    def __eq__(self, other: Any):
-        return isinstance(other, Column) and self.halign == other.halign and self.text == other.text
+    halign: HAlign
+    text: str
 
 
+@dataclass
 class Cell(ElementBase):
-
-    def __init__(self, inline_elements: Optional[TList[InlineElement]] = None):
-        if inline_elements is None:
-            inline_elements = []
-        assert all(isinstance(x, InlineElement) for x in inline_elements)
-        self.inline_elements = inline_elements
-
-    def __eq__(self, other: Any):
-        return isinstance(other, Cell) and self.inline_elements == other.inline_elements
+    inline_elements: TList[InlineElement] = field(default_factory=list)
 
 
+@dataclass
 class Row(ElementBase):
-
-    def __init__(self, cells: Optional[TList[Cell]] = None):
-        if cells is None:
-            cells = []
-        assert all(isinstance(x, Cell) for x in cells)
-        self.cells = cells
-
-    def __eq__(self, other: Any):
-        return isinstance(other, Row) and self.cells == other.cells
+    cells: TList[Cell] = field(default_factory=list)
 
 
+@dataclass
 class Table(BlockElement):
-
-    def __init__(self, columns: TList[Column], rows: TList[Row]):
-        assert all(isinstance(x, Column) for x in columns) \
-               and all(isinstance(x, Row) for x in rows)
-        self.columns = columns
-        self.rows = rows
-
-    def __eq__(self, other: Any):
-        return isinstance(other, Table) and self.columns == other.columns and self.rows == other.rows
+    columns: TList[Column]
+    rows: TList[Row]
 
 
+@dataclass
 class Page(ElementBase):
-
-    def __init__(self, block_elements: Optional[TList[BlockElement]] = None):
-        if block_elements is None:
-            block_elements = []
-        assert all(isinstance(x, BlockElement) for x in block_elements)
-        self.block_elements = block_elements
-
-    def __eq__(self, other: Any):
-        return isinstance(other, Page) and self.block_elements == other.block_elements
+    block_elements: TList[BlockElement] = field(default_factory=list)
