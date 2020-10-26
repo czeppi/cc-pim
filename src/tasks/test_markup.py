@@ -103,6 +103,19 @@ class TestMarkup(unittest.TestCase):
             '- aaa\n'
             '  bbb\n')
 
+    def test_list_with_2lines_item_and_subitem(self):
+        self._test1(
+            List([
+                ListItem(
+                    inline_elements=[NormalText('aaa\nbbb')],
+                    sub_items=[
+                        ListItem([NormalText('ccc')])
+                    ])
+            ]),
+            '- aaa\n'
+            '  bbb\n'
+            '  - ccc\n')
+
     def test_list_with_indented_line(self):
         self._test1(
             List([
@@ -138,22 +151,22 @@ class TestMarkup(unittest.TestCase):
             '  ccc\n'
             '  ddd\n')
 
-    def test_list_with_arrow(self):
-        self._test1(
-            List([
-                ListItem(inline_elements=[NormalText('aaa')]),
-                ListItem(inline_elements=[NormalText('bbb')], symbol='=>'),
-            ]),
-            '- aaa\n'
-            '=> bbb\n')
-
-    def test_list_with_arrow2(self):
-        self._test1(
-            List([
-                ListItem(inline_elements=[NormalText('aaa\nbbb')], symbol='=>'),
-            ]),
-            '=> aaa\n'
-            '   bbb\n')
+    # def test_list_with_arrow(self):
+    #     self._test1(
+    #         List([
+    #             ListItem(inline_elements=[NormalText('aaa')]),
+    #             ListItem(inline_elements=[NormalText('bbb')], symbol='=>'),
+    #         ]),
+    #         '- aaa\n'
+    #         '=> bbb\n')
+    #
+    # def test_list_with_arrow2(self):
+    #     self._test1(
+    #         List([
+    #             ListItem(inline_elements=[NormalText('aaa\nbbb')], symbol='=>'),
+    #         ]),
+    #         '=> aaa\n'
+    #         '   bbb\n')
 
     def test_list_with_question_mark(self):
         self._test1(
@@ -254,10 +267,32 @@ class TestMarkup(unittest.TestCase):
             '|aaa |\n'
             '|bbb|\n')
 
-    def test_bold(self):
+    def test_bold_simple(self):
         self._test1(
             Paragraph([NormalText('aaa '), BoldText('bbb'), NormalText(' ccc')]),
             'aaa *bbb* ccc\n')
+
+    def test_bold_twice(self):
+        self._test1(
+            Paragraph([NormalText('aaa '), BoldText('bbb'),
+                       NormalText(' ccc '), BoldText('ddd'), NormalText(' eee')]),
+            'aaa *bbb* ccc *ddd* eee\n')
+
+    def test_no_bold1(self):
+        self._test1(
+            Paragraph([NormalText('aaa *.* ccc')]),
+            'aaa *.* ccc\n')
+
+    def test_no_bold2(self):
+        self._test1(
+            Paragraph([NormalText('aaa *bbb ccc')]),
+            'aaa *bbb ccc\n')
+
+    def test_no_bold3(self):
+        self._test1(
+            Paragraph([NormalText('aaa *bb\nbb* ccc')]),
+            'aaa *bb\n'
+            'bb* ccc\n')
 
     def _test1(self, block_element: BlockElement, markup_str1: str):
         self._test_n([block_element], markup_str1)

@@ -68,6 +68,22 @@ class TestXml(unittest.TestCase):
             '<list><item symbol="a.">aaa</item></list>'
         )
 
+    def test_list_with_sublist(self):
+        self._test_one_element(
+            List([
+                ListItem(
+                    inline_elements=[NormalText('aaa'), BoldText('bbb'), NormalText('ccc')],
+                    sub_items=[
+                        ListItem([NormalText('ddd')])
+                    ]
+                )
+            ]),
+            '<list>'
+            '<item>aaa<bold>bbb</bold>ccc'
+            '<item>ddd</item>'
+            '</item>'
+            '</list>'
+        )
     def test_table(self):
         self._test_one_element(
             Table(columns=[Column(halign=HAlign.LEFT, text='A'),

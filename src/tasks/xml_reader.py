@@ -16,7 +16,7 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 import xml.etree.ElementTree as ET
-from typing import Iterator
+from typing import Iterator, Optional
 
 from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell, BlockElement, InlineElement
 from tasks.page import NormalText, BoldText, Link, Image
@@ -71,13 +71,14 @@ class _XmlReader:
 
     def _iter_list_items(self, xml_list_or_item: ET.Element) -> Iterator[ListItem]:
         for xml_item in xml_list_or_item:
-            inline_elements = list(self._iter_inline_elements(xml_item))
-            sub_items = list(self._iter_list_items(xml_item))
-            symbol = xml_item.attrib.get('symbol', '-')
-            preformatted = (xml_item.attrib.get('preformatted', 'false').lower() == 'true')
-            yield ListItem(inline_elements=inline_elements,
-                           sub_items=sub_items,
-                           symbol=symbol, preformatted=preformatted)
+            if xml_item.tag == 'item':
+                inline_elements = list(self._iter_inline_elements(xml_item))
+                sub_items = list(self._iter_list_items(xml_item))
+                symbol = xml_item.attrib.get('symbol', '-')
+                preformatted = (xml_item.attrib.get('preformatted', 'false').lower() == 'true')
+                yield ListItem(inline_elements=inline_elements,
+                               sub_items=sub_items,
+                               symbol=symbol, preformatted=preformatted)
 
     def _create_table(self, xml_table: ET.Element) -> Table:
         columns = list(self._iter_columns(xml_table))
@@ -101,14 +102,17 @@ class _XmlReader:
             yield Cell(inline_elements=inline_elements)
 
     def _iter_inline_elements(self, xml_element) -> Iterator[InlineElement]:
+        """ <a>a.text<b>b.text</b>b.tail</a>"""
         if xml_element.text:
             yield NormalText(xml_element.text)
         for xml_child in xml_element:
-            yield self._create_inline_element(xml_child)
-            if xml_child.tail:
-                yield NormalText(xml_child.tail)
+            inline_elem = self._create_inline_element(xml_child)
+            if inline_elem is not None:
+                yield inline_elem
+                if xml_child.tail:
+                    yield NormalText(xml_child.tail)
 
-    def _create_inline_element(self, xml_elem) -> InlineElement:
+    def _create_inline_element(self, xml_elem) -> Optional[InlineElement]:
         tag = xml_elem.tag
         if tag == 'bold':
             return self._create_bold_text(xml_elem)

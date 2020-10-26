@@ -71,8 +71,8 @@ class _MarkupCreator:
         symbol_ws = ' ' * len(symbol)
         for k, item_line in enumerate(item_text.split('\n')):
             yield indent_len * ' ' + (symbol if k == 0 else symbol_ws) + ' ' + item_line
-            for sub_item in list_item.sub_items:
-                yield from self._iter_list_item_lines(sub_item, indent_len + len(symbol) + 1)
+        for sub_item in list_item.sub_items:
+            yield from self._iter_list_item_lines(sub_item, indent_len + len(symbol) + 1)
 
     def _iter_table_lines(self, table: Table) -> Iterator[str]:
         yield '|' + '|'.join(self._create_col_str(col) for col in table.columns) + '|'

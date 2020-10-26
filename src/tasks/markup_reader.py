@@ -82,7 +82,7 @@ class _MarkupParser:
 
         preformatted = self._are_lines_preformatted(lines)
         para_text = '\n'.join(lines)
-        inline_parser = InlineParser(para_text)
+        inline_parser = InlineParser(para_text, preformatted)
         inline_elements = inline_parser.parse()
         return Paragraph(inline_elements, preformatted=preformatted)
 
@@ -138,7 +138,7 @@ class _MarkupParser:
         if self._list_items_always_preformatted:
             preformatted = True
         text = '\n'.join(lines)
-        inline_parser = InlineParser(text)
+        inline_parser = InlineParser(text, preformatted)
         inline_elements = inline_parser.parse()
         return ListItem(inline_elements=inline_elements, symbol=list_line0.symbol, preformatted=preformatted)
 
@@ -247,18 +247,15 @@ class _LineIterator:
             
 class _Line:
 
-    _strip_left_rex = re.compile(r"(?P<leading_spaces> *)(?P<tail>.*)")
-    _header_rex = re.compile(r"(?P<leading_hashes>#+) (?P<text>.*)")
-    _list_rex = re.compile(r"(?P<leading_spaces> *)(?P<symbol>-|\+|=>|\?|[0-9]+\.(\)?)|[a-z]\.(\)?)) (?P<text>.*)")
-    _table_rex = re.compile(r"|(.*)")
-    _bold_rex = re.compile(r"\*(?P<bold>\w[^*]*\w)\*")
-    _link_rex = re.compile(r"\[(.*)(\|.*)]")
-    _image_rex = re.compile(r"")
-    
+    _STRIP_LEFT_REX = re.compile(r"(?P<leading_spaces> *)(?P<tail>.*)")
+    _HEADER_REX = re.compile(r"(?P<leading_hashes>#+) (?P<text>.*)")
+    _LIST_REX = re.compile(r"(?P<leading_spaces> *)(?P<symbol>-|\+|\?|[0-9]+\.(\)?)|[a-z]\.(\)?)) (?P<text>.*)")
+    _TABLE_REX = re.compile(r"|(.*)")
+
     def __init__(self, row: int, text: str):
         self._row = row
         self._text = text
-        m = self._strip_left_rex.match(text)
+        m = self._STRIP_LEFT_REX.match(text)
         assert m is not None
         self._indent_len = len(m.group('leading_spaces'))
         self._left_stripped = m.group('tail')
@@ -290,7 +287,7 @@ class _Line:
         return self._left_stripped == ''
         
     def create_header_line(self) -> Optional[_HeaderLine]:
-        header_match = self._header_rex.match(self._text)
+        header_match = self._HEADER_REX.match(self._text)
         if header_match is not None:
             level = len(header_match.group('leading_hashes'))
             text = header_match.group('text')
@@ -300,7 +297,7 @@ class _Line:
         return _ParagraphLine(self._text)
 
     def create_list_line(self) -> Optional[_ListLine]:
-        list_match = self._list_rex.match(self._left_stripped)
+        list_match = self._LIST_REX.match(self._left_stripped)
         if list_match is not None:
             list_symbol = list_match.group('symbol')
             text = list_match.group('text')
@@ -347,21 +344,31 @@ class _TableLine:
 
 class InlineParser:
 
-    rex = re.compile(r'(?P<bold>\*(?P<bold_core>\w[^*]*\w)\*)')
+    _BOLD_REX = re.compile(r'(?P<bold>\*(?P<bold_core>\w[^*\n]*\w)\*)')
+    _LINK_REX = re.compile(r"\[(.*)(\|.*)]")
+    _IMAGE_REX = re.compile(r"")
 
-    def __init__(self, text: str):
+    def __init__(self, text: str, preformatted: bool = False):
         self._text = text
+        self._preformatted = preformatted
         self._inline_elements = []
         self._prev_end = 0
         self._cur_xml_child = None
 
     def parse(self) -> TList[InlineElement]:
+        if self._preformatted:
+            return [NormalText(self._text)]
+
         self._prev_end = 0
         self._cur_xml_child = None
-        for match in self.rex.finditer(self._text):
+
+        for match in self._BOLD_REX.finditer(self._text):
             self._process_gap(match)
-            any(func(match)
-                for func in [self._process_bold, self._process_link, self._process_image])
+            for process_func in [self._process_bold, self._process_link, self._process_image]:
+                processed = process_func(match)
+                if processed:
+                    break
+
         gap_text = self._text[self._prev_end:]
         self._process_gap_text(gap_text)
         return self._inline_elements
