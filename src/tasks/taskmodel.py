@@ -19,7 +19,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from functools import total_ordering
-from typing import Optional, Dict, List, Iterable, Any, Iterator
+from typing import Optional, Dict, List, Iterable, Any, Iterator, Set
 
 from tasks.db import Row, DB
 from tasks.xml_reader import read_from_xmlstr
@@ -97,7 +97,7 @@ class TaskModel:
     def calc_keywords(self) -> List[str]:
         keywords = set()
         for task in self._tasks.values():
-            keywords |= set(task.last_revision.keywords)
+            keywords |= task.last_revision.keywords
         return sorted(keywords)
 
     def search_tasks(self, with_keywords: Optional[List[str]] = None) -> List[Task]:
@@ -233,6 +233,7 @@ class TaskRevision:
         self._body = body
         self._page = read_from_xmlstr(body, contains_page_element=False)
         self._model = model
+        self._keywords: Set[str] = self._extract_keywords()
 
     def get_values(self):
         return {
@@ -291,12 +292,15 @@ class TaskRevision:
 
     @property
     def keywords(self):
+        return self._keywords
+
+    def _extract_keywords(self) -> Set[str]:
         title_keywords = set(self._model.extract_keywords(self._title))
         body_keywords = set(self._model.extract_keywords(self._body))
-        return sorted(title_keywords | body_keywords)
+        return title_keywords | body_keywords
 
     def contains_all_keyword(self, keywords: Iterable[str]) -> bool:
-        return set(keywords) <= set(self.keywords)
+        return set(keywords) <= self.keywords
 
     def get_header(self) -> str:
         # return '{}: {}'.format(self._date, self._title)
