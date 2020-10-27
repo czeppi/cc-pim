@@ -66,11 +66,11 @@ class TasksGui(ModelGui):
             dlg_values = dlg.get_values()  # { attr-name -> new-value }
             new_task_rev = new_task.create_new_revision(**dlg_values)
             self._task_model.add_task_revision(new_task_rev)
-            return _convert_task2global_id(new_task_rev.task_id)
+            return _convert_task2global_id(new_task_rev.task_serial)
 
     def edit_item(self, glob_item_id: GlobalItemID, frame) -> bool:
-        task_id = _convert_global2task_id(glob_item_id)
-        task = self._task_model.get_task(task_id)
+        task_serial = _convert_global2task_serial(glob_item_id)
+        task = self._task_model.get_task(task_serial)
 
         dlg = TaskEditDialog(frame, task, task_model=self._task_model)
         if dlg.exec() != dlg.Accepted:
@@ -100,8 +100,8 @@ class TasksGui(ModelGui):
         return True
 
     def get_html_text(self, glob_item_id: GlobalItemID) -> str:
-        task_id = _convert_global2task_id(glob_item_id)
-        task = self._task_model.get_task(task_id)
+        task_serial = _convert_global2task_serial(glob_item_id)
+        task = self._task_model.get_task(task_serial)
         title = task.get_header()
         page = task.last_revision.page
         html_text = write_htmlstr(title, page)
@@ -127,23 +127,23 @@ class TasksGui(ModelGui):
                 yield task
 
     def get_object_title(self, glob_item_id: GlobalItemID) -> str:
-        task_id = _convert_global2task_id(glob_item_id)
-        task = self._task_model.get_task(task_id)
+        task_serial = _convert_global2task_serial(glob_item_id)
+        task = self._task_model.get_task(task_serial)
         return task.get_header()
 
     def get_object_category(self, glob_item_id: GlobalItemID) -> str:
-        task_id = _convert_global2task_id(glob_item_id)
-        task = self._task_model.get_task(task_id)
+        task_serial = _convert_global2task_serial(glob_item_id)
+        task = self._task_model.get_task(task_serial)
         return task.last_revision.category
 
     def iter_categories(self) -> Iterator[str]:
         yield from self._task_model.get_sorted_categories()
 
 
-def _convert_global2task_id(glob_id: GlobalItemID) -> int:
+def _convert_global2task_serial(glob_id: GlobalItemID) -> int:
     assert glob_id.type == GlobalItemTypes.TASK
     return glob_id.serial
 
 
-def _convert_task2global_id(task_id: int) -> GlobalItemID:
-    return GlobalItemID(GlobalItemTypes.TASK, task_id)
+def _convert_task2global_id(task_serial: int) -> GlobalItemID:
+    return GlobalItemID(GlobalItemTypes.TASK, task_serial)

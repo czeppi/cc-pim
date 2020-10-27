@@ -45,21 +45,21 @@ class TaskModel:
         self._tasks_revisions.clear()
         default_rev = TaskRevision.create_default(model=self)
         self._tasks_revisions[0] = default_rev
-        task_id2revisions: Dict[int, List[TaskRevision]] = {}
+        task_serial2revisions: Dict[int, List[TaskRevision]] = {}
         for row in self._tasks_revisions_table.select():
             task_rev = TaskRevision(model=self, **row)
             self._tasks_revisions[task_rev.id] = task_rev
-            task_id = task_rev.task_id
-            if task_id not in task_id2revisions:
-                task_id2revisions[task_id] = [default_rev]
-            task_id2revisions[task_id].append(task_rev)
-        self._tasks = {id_: Task(id_, revs, self) for id_, revs in task_id2revisions.items()}
+            task_serial = task_rev.task_serial
+            if task_serial not in task_serial2revisions:
+                task_serial2revisions[task_serial] = [default_rev]
+            task_serial2revisions[task_serial].append(task_rev)
+        self._tasks = {serial: Task(serial, revs, self) for serial, revs in task_serial2revisions.items()}
 
-    def create_new_task(self, task_id: Optional[int] = None) -> Task:
-        if task_id is None:
-            task_id = self._get_next_task_id()
+    def create_new_task(self, task_serial: Optional[int] = None) -> Task:
+        if task_serial is None:
+            task_serial = self._get_next_task_id()
         default_rev = self._tasks_revisions[0]
-        return Task(task_id, revisions=[default_rev], model=self)
+        return Task(task_serial, revisions=[default_rev], model=self)
 
     def _get_next_task_id(self) -> int:
         return max(self._tasks.keys()) + 1
@@ -68,13 +68,13 @@ class TaskModel:
         if task_rev.id == 0:
             raise Exception()
 
-        task_id = task_rev.task_id
-        if task_id == '':
+        task_serial = task_rev.task_serial
+        if task_serial == '':
             raise Exception(str(task_rev.id))
 
-        if task_id not in self._tasks:
-            self._tasks[task_id] = self.create_new_task(task_id)
-        self._tasks[task_id].add_revision(task_rev)
+        if task_serial not in self._tasks:
+            self._tasks[task_serial] = self.create_new_task(task_serial)
+        self._tasks[task_serial].add_revision(task_rev)
         self._tasks_revisions[task_rev.id] = task_rev
 
         self._write_task_revision(task_rev)
@@ -110,8 +110,8 @@ class TaskModel:
                 result_tasks.append(task)
         return result_tasks
 
-    def get_task(self, task_id: int) -> Task:
-        return self._tasks[task_id]
+    def get_task(self, task_serial: int) -> Task:
+        return self._tasks[task_serial]
 
     def get_task_revision(self, task_rev_id: int) -> TaskRevision:
         return self._tasks_revisions[task_rev_id]
@@ -146,8 +146,8 @@ class TaskID:  # todo: use it
 
 class Task:
 
-    def __init__(self, id_: int, revisions: List[TaskRevision], model: TaskModel):
-        self._id = id_
+    def __init__(self, serial: int, revisions: List[TaskRevision], model: TaskModel):
+        self._serial = serial
         self._revisions = {x.id: x for x in revisions}
         self._model = model
         self._first_revision = self._get_first_revision()
@@ -156,7 +156,7 @@ class Task:
     def _get_first_revision(self) -> TaskRevision:
         first_revisions = set(x for x in self._revisions.values() if x.prev_id == 0)
         if len(first_revisions) != 1:
-            raise Exception(self._id)
+            raise Exception(self._serial)
         return first_revisions.pop()
 
     def _get_last_revision(self) -> TaskRevision:
@@ -164,13 +164,13 @@ class Task:
         referenced_rev_ids = set(x.prev_id for x in self._revisions.values())
         last_rev_id_list = list(all_rev_ids - referenced_rev_ids)
         if len(last_rev_id_list) != 1:
-            raise Exception(f'{self._id}, {all_rev_ids} - {referenced_rev_ids} => {last_rev_id_list}')
+            raise Exception(f'{self._serial}, {all_rev_ids} - {referenced_rev_ids} => {last_rev_id_list}')
         last_rev_id = last_rev_id_list[0]
         return self._revisions[last_rev_id]
 
     @property
     def id(self):
-        return self._id
+        return self._serial
 
     @property
     def first_revision(self):
@@ -195,7 +195,7 @@ class Task:
         return TaskRevision(
             id=self._model.get_next_task_revision_id(),
             prev_id=self._last_revision.id,
-            task_id=self._id,
+            task_serial=self._serial,
             date=datetime.today().strftime('%y%m%d'),
             category=category,
             title=title,
@@ -215,18 +215,18 @@ class TaskRevision:
         return TaskRevision(
             id=0,
             prev_id=None,
-            task_id=0,
+            task_serial=0,
             date='',
             category='',
             title='',
             body='',
             model=model)
 
-    def __init__(self, id: int, prev_id: Optional[int], task_id: int,
+    def __init__(self, id: int, prev_id: Optional[int], task_serial: int,
                  date: str, category: str, title: str, body: str, model: TaskModel):
         self._id = id
         self._prev_id = prev_id
-        self._task_id = task_id
+        self._task_serial = task_serial
         self._date = date
         self._category = category
         self._title = title
@@ -238,7 +238,7 @@ class TaskRevision:
         return {
             'id': self._id,
             'prev_id': self._prev_id,
-            'task_id': self._task_id,
+            'task_serial': self._task_serial,
             'date': self._date,
             'category': self._category,
             'title': self._title,
@@ -259,12 +259,12 @@ class TaskRevision:
         return self._model.get_task_revision(self._prev_id)
 
     @property
-    def task_id(self):
-        return self._task_id
+    def task_serial(self):
+        return self._task_serial
 
     @property
     def task(self):
-        return self._model.get_task(self._task_id)
+        return self._model.get_task(self._task_serial)
 
     @property
     def date(self) -> str:
