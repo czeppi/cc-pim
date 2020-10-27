@@ -23,7 +23,9 @@ from tasks.page import NormalText, BoldText, Link, Image
 from tasks.page import HAlign, Width
 
 
-def read_from_xmlstr(xml_str: str) -> Page:
+def read_from_xmlstr(xml_str: str, contains_page_element: bool = True) -> Page:
+    if not contains_page_element:
+        xml_str = '<page>' + xml_str + '</page>'
     xml_root = ET.fromstring(xml_str)
     return _XmlReader(xml_root).read()
 

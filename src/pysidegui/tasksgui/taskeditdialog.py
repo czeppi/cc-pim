@@ -22,7 +22,9 @@ from PySide2.QtWidgets import QDialog, QApplication, QWidget
 from pysidegui._ui2_.ui_taskeditdialog import Ui_TaskEditDialog
 from tasks.html_creator import write_htmlstr
 from tasks.markup_reader import read_markup
+from tasks.markup_writer import write_markup
 from tasks.taskmodel import Task, TaskModel
+from tasks.xml_reader import read_from_xmlstr
 
 
 class TaskEditDialog(QDialog):
@@ -81,7 +83,10 @@ class TaskEditDialog(QDialog):
         self.ui.body_edit.setFontFamily('Courier')
         self.ui.body_edit.setFontPointSize(12)
         self.ui.body_edit.setAcceptRichText(False)
-        self.ui.body_edit.setText(task.last_revision.body)
+
+        page = task.last_revision.page
+        markup = write_markup(page)
+        self.ui.body_edit.setText(markup)
     
     def _init_preview(self) -> None:
         task = self._task
@@ -135,9 +140,9 @@ class TaskEditDialog(QDialog):
         body = self.ui.body_edit.toPlainText()
         # category = self.ui.cat_combo.currentText()
 
-        markup_str = f'# {title}\n\n{body}'
+        markup_str = body
         page = read_markup(markup_str)
-        html_text = write_htmlstr(page)
+        html_text = write_htmlstr(title, page)
         print(html_text)
         return html_text
 

@@ -28,7 +28,7 @@ class Context:
         "Programmierung",
     ]
     metamodel_pathname = '../etc/tasks.ini'
-    sqlite3_pathname = '../etc/tasks.sqlite3'
+    sqlite3_pathname = 'g:/app-data/cc-pim/tasks.sqlite3'
     no_keywords_pathname = '../etc/no-keywords.txt'
     template_pathname = '../etc/template.txt'     # todo: deprecated?
     user_css_pathname = '../etc/user.css'    # todo: deprecated?

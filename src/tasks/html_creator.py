@@ -22,14 +22,15 @@ from tasks.page import NormalText, BoldText
 from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell, BlockElement, InlineElement
 
 
-def write_htmlstr(page: Page, markup_str: Optional[str] = None) -> str:
-    html_root = _HtmlCreator(page).create(markup_str)
+def write_htmlstr(title: str, page: Page, markup_str: Optional[str] = None) -> str:
+    html_root = _HtmlCreator(title, page).create(markup_str)
     return ET.tostring(html_root, encoding='unicode')
 
 
 class _HtmlCreator:
 
-    def __init__(self, page: Page):
+    def __init__(self, title: str, page: Page):
+        self._title = title
         self._page = page
 
     def create(self, markup_str: Optional[str] = None) -> ET.XML:
@@ -38,6 +39,9 @@ class _HtmlCreator:
         if markup_str is not None:
             html_pre = ET.SubElement(html_page, 'pre')
             html_pre.text = markup_str
+
+        if self._title:
+            self._add_html_header(html_page, Header(level=0, inline_elements=[NormalText(self._title)]))
 
         for block_element in self._page.block_elements:
             self._add_html_block_element(html_page, block_element)
@@ -54,7 +58,7 @@ class _HtmlCreator:
             self._add_html_table(html_page, block_element)
 
     def _add_html_header(self, html_parent, header: Header) -> None:
-        html_header = ET.SubElement(html_parent, f'h{header.level}')
+        html_header = ET.SubElement(html_parent, f'h{header.level + 1}')
         self._add_html_inline_elements(html_header, header.inline_elements)
 
     def _add_html_paragraph(self, html_parent, paragraph: Paragraph) -> None:

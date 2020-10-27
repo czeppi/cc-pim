@@ -22,6 +22,7 @@ from functools import total_ordering
 from typing import Optional, Dict, List, Iterable, Any, Iterator
 
 from tasks.db import Row, DB
+from tasks.xml_reader import read_from_xmlstr
 
 
 class TaskModel:
@@ -230,6 +231,7 @@ class TaskRevision:
         self._category = category
         self._title = title
         self._body = body
+        self._page = read_from_xmlstr(body, contains_page_element=False)
         self._model = model
 
     def get_values(self):
@@ -278,6 +280,10 @@ class TaskRevision:
     @property
     def body(self):
         return self._body
+
+    @property
+    def page(self):
+        return self._page
 
     @property
     def category(self):

@@ -35,7 +35,7 @@ class SearchEdit(QLineEdit):
         self.completer.setWidget(self)
         self.completer.setCompletionMode(QCompleter.PopupCompletion)
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
-        self.completer.activated().connect(self.on_insert_completion)
+        self.completer.activated.connect(self.on_insert_completion)
 
     def completer(self) -> QCompleter:
         return self.completer

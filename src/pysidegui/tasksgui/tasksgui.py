@@ -24,12 +24,14 @@ from contacts.contactmodel import ContactID
 from pysidegui.modelgui import ModelGui
 from pysidegui.tasksgui.taskeditdialog import TaskEditDialog
 from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
+from tasks.page import Header, NormalText
 from tasks.taskmodel import TaskModel, KeywordExtractor, Task
 from tasks.context import Context
 from tasks.metamodel import MetaModel
 from tasks.db import DB
 from tasks.html_creator import write_htmlstr
 from tasks.markup_reader import read_markup
+from tasks.xml_reader import read_from_xmlstr
 
 
 class TasksGui(ModelGui):
@@ -100,25 +102,9 @@ class TasksGui(ModelGui):
     def get_html_text(self, glob_item_id: GlobalItemID) -> str:
         task_id = _convert_global2task_id(glob_item_id)
         task = self._task_model.get_task(task_id)
-        # html_text = task.last_revision.get_html_text()
-        header = task.get_header()
-        body = task.last_revision.body
-        markup_str = f'# {header}\n\n{body}'
-        page = read_markup(markup_str)
-        html_text = write_htmlstr(page, markup_str)
-        # html_text = """
-        # <html>
-        #   <ul>
-        #     <li>aaa</li>
-        #     <li><pre>bbbbb bbbbbb bbbbbbbbb bbbbbbbbbb</pre>\n
-        #         <pre>cccccc cccccccc cccccccc cccccccc</pre>\n
-        #         <pre>ddd</pre>
-        #     </li>
-        #     </ul>
-        # </html>
-        # """
-        print(markup_str)
-        print(html_text)
+        title = task.get_header()
+        page = task.last_revision.page
+        html_text = write_htmlstr(title, page)
         return html_text
 
     def exists_uncommitted_changes(self) -> bool:

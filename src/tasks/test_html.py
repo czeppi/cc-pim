@@ -28,7 +28,7 @@ class TestHtml(unittest.TestCase):
     def test_header(self):
         self._test_one_element(
             Header(level=1, inline_elements=[NormalText('aaa')]),
-            '<h1>aaa</h1>'
+            '<h2>aaa</h2>'
         )
 
     def test_simple_paragraph(self):
@@ -102,5 +102,5 @@ class TestHtml(unittest.TestCase):
     def _test_one_element(self, page_elem1: BlockElement, html_elem_str1: str):
         page1 = Page([page_elem1])
         html_str1 = '<html>' + html_elem_str1 + '</html>'
-        html_str2 = write_htmlstr(page1)
+        html_str2 = write_htmlstr('', page1)
         self.assertEqual(html_str1, html_str2)

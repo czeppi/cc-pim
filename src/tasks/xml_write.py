@@ -22,9 +22,15 @@ from tasks.page import NormalText, BoldText, ListItem, Column, Row, Cell, Inline
 from tasks.page import Page, Header, Paragraph, List, Table
 
 
-def write_xmlstr(page: Page) -> str:
+def write_xmlstr(page: Page, with_page_element: bool = True) -> str:
     xml_root = _XmlCreator(page).create()
-    return ET.tostring(xml_root, encoding='unicode')
+    s = ET.tostring(xml_root, encoding='unicode')
+    assert s.startswith('<page>')
+    assert s.endswith('</page>')
+    if with_page_element:
+        return s
+    else:
+        return s[6:-7]  # remove <page> and </page>
 
 
 def create_xmlroot(page: Page) -> ET.Element:
