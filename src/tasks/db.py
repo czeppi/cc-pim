@@ -17,10 +17,11 @@
 
 from __future__ import annotations
 import sqlite3
+import sys
 from pathlib import Path
 from typing import Dict, ValuesView, Optional
 
-from tasks.context import Context
+from context import Context, Config
 from tasks.metamodel import MetaModel, Structure
 
 
@@ -77,7 +78,7 @@ class DB:
     def execute_sql(self, sql_cmd: str) -> sqlite3.Cursor:
         if self._logging_enabled:
             print(sql_cmd)
-        cursor = self._conn.cursor() 
+        cursor = self._conn.cursor()
         cursor.execute(sql_cmd)
         return cursor
         
@@ -148,9 +149,12 @@ class Row:
         
     
 if __name__ == '__main__':
-    context = Context()
-    meta_model = MetaModel(context.logging_enabled)
-    meta_model.read(context.metamodel_pathname)
-    sqlite3_path = Path(context.sqlite3_pathname)
-    db = DB(sqlite3_path, meta_model)
+    start_dir = Path(sys.argv[0]).resolve().parent
+    root_dir = start_dir.parent
+    context = Context(root_dir, Config())
+
+    meta_model = MetaModel(context.config.logging_enabled)
+    meta_model.read(context.tasks_metamodel_path)
+
+    db = DB(context.tasks_db_path, meta_model)
     db.create()

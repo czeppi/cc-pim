@@ -21,39 +21,29 @@ from typing import Optional, Iterator, Iterable
 from PySide2.QtWidgets import QMainWindow
 
 from contacts.contactmodel import ContactID
+from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
 from pysidegui.modelgui import ModelGui
 from pysidegui.tasksgui.taskeditdialog import TaskEditDialog
-from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
-from tasks.page import Header, NormalText
-from tasks.taskmodel import TaskModel, KeywordExtractor, Task
-from tasks.context import Context
-from tasks.metamodel import MetaModel
+from context import Context
 from tasks.db import DB
 from tasks.html_creator import write_htmlstr
-from tasks.markup_reader import read_markup
-from tasks.xml_reader import read_from_xmlstr
+from tasks.metamodel import MetaModel
+from tasks.taskmodel import TaskModel, KeywordExtractor, Task
 
 
 class TasksGui(ModelGui):
 
-    def __init__(self):
-        context = Context()
-
-        metamodel_path = Path(context.metamodel_pathname)
-        meta_model = MetaModel(context.logging_enabled)
+    def __init__(self, context: Context):
+        metamodel_path = context.tasks_metamodel_path
+        meta_model = MetaModel(context.config.logging_enabled)
         meta_model.read(metamodel_path)
-        sqlite3_path = Path(context.sqlite3_pathname)
+        sqlite3_path = context.tasks_db_path
 
-        db = DB(sqlite3_path, meta_model, logging_enabled=context.logging_enabled)
+        db = DB(sqlite3_path, meta_model, logging_enabled=context.config.logging_enabled)
 
-        keyword_extractor = KeywordExtractor(context.no_keywords_pathname)
+        keyword_extractor = KeywordExtractor(context.no_keywords_path)
 
-        overrides = {
-            'template':        context.template_pathname,
-            'stylesheet_path': context.user_css_pathname,
-        }
-
-        self._task_model = TaskModel(db, keyword_extractor=keyword_extractor, overrides=overrides)
+        self._task_model = TaskModel(db, keyword_extractor=keyword_extractor)
         self._task_model.read()
 
         keywords = self._task_model.calc_keywords()
@@ -117,9 +107,9 @@ class TasksGui(ModelGui):
 
     def iter_sorted_ids_from_keywords(self, keywords) -> Iterator[GlobalItemID]:
         filtered_tasks = self._iter_filtered_tasks(keywords)
-        sorted_tasks = sorted(filtered_tasks, key=lambda x: x.id, reverse=True)
+        sorted_tasks = sorted(filtered_tasks, key=lambda x: x.serial, reverse=True)
         for task in sorted_tasks:
-            yield _convert_task2global_id(task.id)
+            yield _convert_task2global_id(task.serial)
 
     def _iter_filtered_tasks(self, keywords: Iterable[str]) -> Iterator[Task]:
         for task in self._task_model.tasks:

@@ -18,7 +18,7 @@
 from __future__ import annotations
 import re
 from datetime import datetime
-from functools import total_ordering
+from pathlib import Path
 from typing import Optional, Dict, List, Iterable, Any, Iterator, Set
 
 from tasks.db import Row, DB
@@ -27,13 +27,12 @@ from tasks.xml_reader import read_from_xmlstr
 
 class TaskModel:
 
-    def __init__(self, db: DB, keyword_extractor: KeywordExtractor, overrides: Dict[str, str]):
+    def __init__(self, db: DB, keyword_extractor: KeywordExtractor):
         self._db = db
         self._tasks_revisions_table = self._db.table('tasks_revisions')
         self._keyword_extractor = keyword_extractor
-        self._overrides = overrides
         self._tasks: Dict[int, Task] = {}
-        self._tasks_revisions: Dict[int, TaskRevision] = {}
+        self._default_rev = TaskRevision.create_default(model=self)
 
     @property
     def tasks(self):
@@ -42,40 +41,29 @@ class TaskModel:
     def read(self):
         self._db.open()
         self._tasks.clear()
-        self._tasks_revisions.clear()
-        default_rev = TaskRevision.create_default(model=self)
-        self._tasks_revisions[0] = default_rev
         task_serial2revisions: Dict[int, List[TaskRevision]] = {}
         for row in self._tasks_revisions_table.select():
             task_rev = TaskRevision(model=self, **row)
-            self._tasks_revisions[task_rev.id] = task_rev
             task_serial = task_rev.task_serial
             if task_serial not in task_serial2revisions:
-                task_serial2revisions[task_serial] = [default_rev]
+                task_serial2revisions[task_serial] = [self._default_rev]
             task_serial2revisions[task_serial].append(task_rev)
-        self._tasks = {serial: Task(serial, revs, self) for serial, revs in task_serial2revisions.items()}
+        self._tasks = {serial: Task(serial, sorted(revs, key=lambda x: x.rev_no), self)
+                       for serial, revs in task_serial2revisions.items()}
 
     def create_new_task(self, task_serial: Optional[int] = None) -> Task:
         if task_serial is None:
             task_serial = self._get_next_task_id()
-        default_rev = self._tasks_revisions[0]
-        return Task(task_serial, revisions=[default_rev], model=self)
+        return Task(task_serial, revisions=[self._default_rev], model=self)
 
     def _get_next_task_id(self) -> int:
         return max(self._tasks.keys()) + 1
 
     def add_task_revision(self, task_rev: TaskRevision) -> None:
-        if task_rev.id == 0:
-            raise Exception()
-
         task_serial = task_rev.task_serial
-        if task_serial == '':
-            raise Exception(str(task_rev.id))
-
         if task_serial not in self._tasks:
             self._tasks[task_serial] = self.create_new_task(task_serial)
         self._tasks[task_serial].add_revision(task_rev)
-        self._tasks_revisions[task_rev.id] = task_rev
 
         self._write_task_revision(task_rev)
 
@@ -113,89 +101,51 @@ class TaskModel:
     def get_task(self, task_serial: int) -> Task:
         return self._tasks[task_serial]
 
-    def get_task_revision(self, task_rev_id: int) -> TaskRevision:
-        return self._tasks_revisions[task_rev_id]
-
-    def get_next_task_revision_id(self) -> int:
-        max_id = max(self._tasks_revisions.keys())
-        return max_id + 1
-
     def extract_keywords(self, text: str) -> List[str]:
         return self._keyword_extractor.get_keywords(text)
-
-
-@total_ordering
-class TaskID:  # todo: use it
-
-    def __init__(self, serial: int):
-        self._serial = serial
-
-    def __str__(self):
-        return f'{self._serial:05}'
-
-    def __eq__(self, other):
-        return self._serial == other.serial
-
-    def __lt__(self, other):
-        return self._serial < other.serial
-
-    @property
-    def serial(self):
-        return self._serial
 
 
 class Task:
 
     def __init__(self, serial: int, revisions: List[TaskRevision], model: TaskModel):
+        assert len(revisions) > 0
+        for i, rev in enumerate(revisions):
+            assert rev.rev_no == i
+
         self._serial = serial
-        self._revisions = {x.id: x for x in revisions}
+        self._revisions = revisions
         self._model = model
-        self._first_revision = self._get_first_revision()
-        self._last_revision = self._get_last_revision()
-
-    def _get_first_revision(self) -> TaskRevision:
-        first_revisions = set(x for x in self._revisions.values() if x.prev_id == 0)
-        if len(first_revisions) != 1:
-            raise Exception(self._serial)
-        return first_revisions.pop()
-
-    def _get_last_revision(self) -> TaskRevision:
-        all_rev_ids = set(self._revisions.keys())
-        referenced_rev_ids = set(x.prev_id for x in self._revisions.values())
-        last_rev_id_list = list(all_rev_ids - referenced_rev_ids)
-        if len(last_rev_id_list) != 1:
-            raise Exception(f'{self._serial}, {all_rev_ids} - {referenced_rev_ids} => {last_rev_id_list}')
-        last_rev_id = last_rev_id_list[0]
-        return self._revisions[last_rev_id]
 
     @property
-    def id(self):
+    def serial(self):
         return self._serial
 
     @property
-    def first_revision(self):
-        return self._first_revision
-
-    @property
     def last_revision(self):
-        return self._last_revision
+        return self._revisions[-1]
 
     @property
     def revisions_list(self):
-        return self._revisions.values()
+        return self._revisions
+
+    def get_revision(self, rev_no: int) -> TaskRevision:
+        return self._revisions[rev_no]
 
     def is_empty(self) -> bool:
-        rev_ids = self._revisions.keys()
-        return rev_ids == [] or rev_ids == [0]
+        n = len(self._revisions)
+        return n == 0 or n == 1 and self._revisions[0].rev_no == 0
 
     def get_header(self) -> str:
-        return f'{self._first_revision.date}: {self._last_revision.title}'
+        n = len(self._revisions)
+        rev_1st = self._revisions[1] if n >= 2 else self._revisions[0]
+        rev_last = self._revisions[-1]
+        return f'{rev_1st.date}: {rev_last.title}'
 
     def create_new_revision(self, title: str, body: str, category: str) -> TaskRevision:
+        new_rev_no = len(self._revisions)
         return TaskRevision(
-            id=self._model.get_next_task_revision_id(),
-            prev_id=self._last_revision.id,
             task_serial=self._serial,
+            rev_no=new_rev_no,
             date=datetime.today().strftime('%y%m%d'),
             category=category,
             title=title,
@@ -204,8 +154,8 @@ class Task:
         )
 
     def add_revision(self, task_rev: TaskRevision) -> None:
-        self._revisions[task_rev.id] = task_rev
-        self._last_revision = task_rev
+        assert len(self._revisions) == task_rev.rev_no
+        self._revisions.append(task_rev)
 
 
 class TaskRevision:
@@ -213,33 +163,33 @@ class TaskRevision:
     @staticmethod
     def create_default(model) -> TaskRevision:
         return TaskRevision(
-            id=0,
-            prev_id=None,
             task_serial=0,
+            rev_no=0,
             date='',
             category='',
             title='',
             body='',
+            group_serial=0,
             model=model)
 
-    def __init__(self, id: int, prev_id: Optional[int], task_serial: int,
-                 date: str, category: str, title: str, body: str, model: TaskModel):
-        self._id = id
-        self._prev_id = prev_id
+    def __init__(self, task_serial: int, rev_no: int,
+                 date: str, category: str, title: str, body: str, group_serial: int, model: TaskModel):
+
         self._task_serial = task_serial
+        self._rev_no = rev_no
         self._date = date
         self._category = category
         self._title = title
         self._body = body
         self._page = read_from_xmlstr(body, contains_page_element=False)
         self._model = model
+        self._group_serial = group_serial
         self._keywords: Set[str] = self._extract_keywords()
 
     def get_values(self):
         return {
-            'id': self._id,
-            'prev_id': self._prev_id,
             'task_serial': self._task_serial,
+            'rev_no': self._rev_no,
             'date': self._date,
             'category': self._category,
             'title': self._title,
@@ -248,24 +198,16 @@ class TaskRevision:
         }
 
     @property
-    def id(self):
-        return self._id
-
-    @property
-    def prev_id(self):
-        return self._prev_id
-
-    @property
-    def prev(self):
-        return self._model.get_task_revision(self._prev_id)
-
-    @property
     def task_serial(self):
         return self._task_serial
 
     @property
     def task(self):
         return self._model.get_task(self._task_serial)
+
+    @property
+    def rev_no(self):
+        return self._rev_no
 
     @property
     def date(self) -> str:
@@ -310,14 +252,15 @@ class TaskRevision:
     def have_values_changed(self, new_values: Dict[str, Any]) -> bool:
         return self._title != new_values['title'] or \
                self._body != new_values['body'] or \
-               self._category != new_values['category']
+               self._category != new_values['category'] or \
+               self._group_serial != new_values['group_serial']
 
 
 class KeywordExtractor:
     rex = re.compile(r"[a-zA-Z0-9_äöüßÄÖÜ.]+[a-zA-Z0-9_äöüßÄÖÜ\-.]*[a-zA-Z0-9_äöüßÄÖÜ.]")
 
-    def __init__(self, no_keywords_pathname: str):
-        lines = open(no_keywords_pathname, encoding='utf-8').readlines()
+    def __init__(self, no_keywords_path: Path):
+        lines = no_keywords_path.open(encoding='utf-8').readlines()
         self._no_keywords = set(line.strip() for line in lines)
         self._no_keywords.add('')
 

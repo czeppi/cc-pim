@@ -30,7 +30,7 @@ elif constants.GUI == 'pyside2':
     from PySide2.QtWidgets import *
     from pysidegui.mainwindow import MainWindow
     
-from context import Context
+from context import Context, Config
  
 
 def main():
@@ -39,7 +39,7 @@ def main():
         start_dir = Path(sys.argv[0]).resolve().parent
         root_dir = start_dir.parent
 
-    context = Context(root_dir)
+    context = Context(root_dir, Config())
     
     if constants.GUI == 'wx':
         start_wx_app(context)

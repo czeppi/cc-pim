@@ -16,17 +16,20 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
+
+import sys
 from collections import OrderedDict
 from configparser import RawConfigParser
+from pathlib import Path
 from typing import Dict, ValuesView, Any
 
-from tasks.context import Context
+from context import Context, Config
 from tasks.tasktypes import Date, ID, Int, Ref, String, XmlString  # necessary for MetaModel._process_section()
 
 
 class MetaModel:
 
-    def __init__(self, logging_enabled=False):
+    def __init__(self, logging_enabled: bool = False):
         self._logging_enabled = logging_enabled
         self._structures: Dict[str, Structure] = OrderedDict()
 
@@ -34,7 +37,7 @@ class MetaModel:
     def structures(self):
         return self._structures.values()
         
-    def read(self, config_path):
+    def read(self, config_path: Path) -> None:
         self._structures.clear()
         config = RawConfigParser()
         config.optionxform = lambda x: x  # necessary, for prevent letters to convert in small letters
@@ -93,6 +96,8 @@ class Attribute:
     
 
 if __name__ == '__main__':
-    context = Context()
+    start_dir = Path(sys.argv[0]).resolve().parent
+    root_dir = start_dir.parent
+    context = Context(root_dir, Config())
     meta_model = MetaModel()
-    meta_model.read(context.metamodel_pathname)
+    meta_model.read(context.tasks_metamodel_path)

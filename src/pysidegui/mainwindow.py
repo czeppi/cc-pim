@@ -42,7 +42,7 @@ class MainWindow(QMainWindow):
         self._data_icons = self._create_data_icons(context)
 
         self._contacts_gui = ContactsGui(context)
-        self._tasks_gui = TasksGui()
+        self._tasks_gui = TasksGui(context)
 
         self._cur_model_gui = self._contacts_gui
         self._show_obj_id = None

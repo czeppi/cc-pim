@@ -15,29 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import annotations
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Tuple
 
 
 class Context:
 
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, config: Config):
         self._root_dir = root_dir
         self._etc_dir = root_dir / 'etc'
-        self._config = Config()
+        self._config = config
 
     @property
     def config(self):
         return self._config
-
-    # def read_icon(self, icon_name):
-    # icon_dir = self._get_icon_dir()
-    # path = os.path.join(icon_dir, icon_name)
-    # return wx.Icon(path, wx.BITMAP_TYPE_ICO)
-
-    # def read_bitmap(self, bmp_name):
-    # icon_dir = self._get_icon_dir()
-    # path = os.path.join(icon_dir, bmp_name)
-    # return wx.Bitmap(path)
 
     @property
     def app_icon_dir(self):
@@ -48,10 +41,6 @@ class Context:
         return self.data_dir / 'icons'
 
     @property
-    def user_css(self):
-        return self._etc_dir / 'user.css'
-
-    @property
     def data_dir(self):
         return Path('g:/app-data/cc-pim')
 
@@ -59,25 +48,24 @@ class Context:
     def contacts_db_path(self):
         return self.data_dir / 'contacts.sqlite'
 
+    @property
+    def tasks_db_path(self):
+        return self.data_dir / 'tasks.sqlite3'
 
+    @property
+    def tasks_metamodel_path(self):
+        return self._etc_dir / 'tasks.ini'
+
+    @property
+    def no_keywords_path(self):
+        return self._etc_dir / 'no-keywords.txt'
+
+
+@dataclass
 class Config:
-
-    @property
-    def app_title(self):
-        return 'CC-PIM'
-
-    @property
-    def frame_pos(self):
-        return 0, 0
-
-    @property
-    def frame_size(self):
-        return 1200, 800
-
-    @property
-    def search_width(self):
-        return 400
-
-    @property
-    def margin(self):
-        return 5
+    app_title: str = 'CC-PIM'
+    frame_pos: Tuple[int, int] = 0, 0
+    frame_size: Tuple[int, int] = 1200, 800
+    search_width: int = 400
+    margin: int = 5
+    logging_enabled: bool = False
