@@ -14,8 +14,10 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
+
 from typing import Iterator, Dict
 
+from PySide2 import QtGui
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QDialog, QApplication, QWidget
 
@@ -24,18 +26,18 @@ from tasks.html_creator import write_htmlstr
 from tasks.markup_reader import read_markup
 from tasks.markup_writer import write_markup
 from tasks.taskmodel import Task, TaskModel
-from tasks.xml_reader import read_from_xmlstr
 
 
 class TaskEditDialog(QDialog):
 
-    def __init__(self, parent: QWidget, task: Task, task_model: TaskModel):
+    def __init__(self, parent: QWidget, task: Task, task_model: TaskModel, data_icons: Dict[str, QtGui.QIcon]):
         super().__init__(parent, f=Qt.WindowMaximizeButtonHint)
         self.ui = Ui_TaskEditDialog()
         self.ui.setupUi(self)
         
         self._task = task
         self._task_model = task_model
+        self._data_icons = data_icons
         self._init_title()
         self._init_splitter()
         self._init_id_edit()
@@ -64,12 +66,16 @@ class TaskEditDialog(QDialog):
     
     def _init_cat_combo(self) -> None:
         task = self._task
-        sorted_categories = self._task_model.get_sorted_categories()
-        self.ui.cat_combo.addItems(sorted_categories)
-        
+        for category in self._task_model.get_sorted_categories():
+            icon = self._data_icons.get(category.lower(), None)
+            if icon is not None:
+                self.ui.cat_combo.addItem(icon, category)
+            else:
+                self.ui.cat_combo.addItem(category)
+
         cat_str = task.last_revision.category
         self.ui.cat_combo.setEditText(cat_str)
-        
+
     def _init_title_text(self) -> None:
         task = self._task
         self.ui.title_edit.setText(task.last_revision.title)
@@ -89,26 +95,19 @@ class TaskEditDialog(QDialog):
         self.ui.body_edit.setText(markup)
     
     def _init_preview(self) -> None:
-        task = self._task
-        # self.ui.preview.setText(task.last_revision.get_html_text())
         html_text = self._get_html_text()
-        # html_text = '\n'.join(self._create_dummy_html_text())
-        # print(html_text)
-        # self.ui.preview.setFontPointSize(20);
-        # self.ui.preview.setStyleSheet(
-        #    'title: { text-align: center }')
-        #    #'font: 12px')
-        self.ui.preview.setStyleSheet(
+
+        self.ui.preview.document().setDefaultStyleSheet(
             '* {'
-            '    color:  # 222;'
-            '    font-size: 10px;'
+            '    color:  #000000;'
+            '    font-size: 12px;'
             '    font-weight: normal;'
             '    margin: 0;'
             '    padding: 0;'
             '}'
             'h1 {'
-            '   color:  # 555;'
-            '   font-size: 12px;'
+            '   color: #008000;'
+            '   font-size: 16px;'
             '   text-align: center;'
             '}'
         )

@@ -99,7 +99,7 @@ class MainWindow(QMainWindow):
         self._update_list()
 
     def on_new_item(self):
-        new_obj_id = self._cur_model_gui.new_item(frame=self)
+        new_obj_id = self._cur_model_gui.new_item(frame=self, data_icons=self._data_icons)
         if new_obj_id is not None:
             self._update_icons()
             self._update_list(select_obj_id=new_obj_id)
@@ -117,7 +117,7 @@ class MainWindow(QMainWindow):
         if obj_id is None:
             return
 
-        if self._cur_model_gui.edit_item(obj_id, frame=self):
+        if self._cur_model_gui.edit_item(obj_id, frame=self, data_icons=self._data_icons):
             self._update_icons()
             self._update_list()
             self._update_html_view(obj_id)

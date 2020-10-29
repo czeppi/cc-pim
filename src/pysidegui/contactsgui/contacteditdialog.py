@@ -20,6 +20,7 @@ import difflib
 from collections import OrderedDict
 from typing import Dict, Callable, Optional
 
+from PySide2 import QtGui
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QInputDialog, QLabel,
                                QLayout, QLineEdit, QMessageBox, QPushButton, QVBoxLayout, QWidget)
@@ -31,7 +32,7 @@ from pysidegui.contactsgui.vaguedatedialog import VagueDateDialog
 
 class ContactEditDialog(QDialog):
 
-    def __init__(self, parent, contact: Contact, contacts_model: ContactModel):
+    def __init__(self, parent, contact: Contact, contacts_model: ContactModel, data_icons: Dict[str, QtGui.QIcon]):
         super().__init__(parent, f=Qt.WindowMaximizeButtonHint)
 
         self._contact_is_new = not contacts_model.contains(contact.id)
@@ -40,6 +41,7 @@ class ContactEditDialog(QDialog):
         else:
             self._contact = contact.copy()
         self._contacts_model = contacts_model
+        self._data_icons = data_icons
         self._date_changes: Dict[int, VagueDate] = {}  # date_serial -> VagueDate
         self._fact_changes: Dict[int, Fact] = {}  # fact_serial -> Fact
 

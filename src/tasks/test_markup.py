@@ -27,6 +27,9 @@ from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, R
 
 class TestMarkup(unittest.TestCase):
 
+    def test_empty(self):
+        self._test_n([], '')
+
     def test_header(self):
         self._test1(
             Header(level=1, inline_elements=[NormalText('title')]),

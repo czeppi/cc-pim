@@ -150,6 +150,7 @@ class Task:
             category=category,
             title=title,
             body=body,
+            group_serial=0,
             model=self._model
         )
 
@@ -194,6 +195,7 @@ class TaskRevision:
             'category': self._category,
             'title': self._title,
             'body': self._body,
+            'group_serial': self._group_serial,
             'model': self._model,
         }
 

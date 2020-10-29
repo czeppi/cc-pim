@@ -35,7 +35,6 @@ class _MarkupParser:
 
     def __init__(self, markup_text: str):
         self._markup_text = markup_text
-        self._list_items_always_preformatted = False  # True
 
     def parse(self) -> Page:
         block_elements = list(self._iter_block_elements())
@@ -43,6 +42,9 @@ class _MarkupParser:
 
     def _iter_block_elements(self) -> Iterator[BlockElement]:
         self._line_iter = _LineIterator(self._markup_text)
+        while not self._line_iter.stopped and self._line_iter.cur_line.is_empty:
+            self._line_iter.get_next_line()
+
         while not self._line_iter.stopped:
             for create_func in [self._create_header, self._create_list, self._create_table, self._create_paragraph]:
                 new_block_element = create_func()
@@ -135,8 +137,6 @@ class _MarkupParser:
     def _create_list_item(self, list_line0: _ListLine) -> ListItem:
         lines = list(self._iter_list_item_lines(list_line0))
         preformatted = self._are_lines_preformatted(lines)
-        if self._list_items_always_preformatted:
-            preformatted = True
         text = '\n'.join(lines)
         inline_parser = InlineParser(text, preformatted)
         inline_elements = inline_parser.parse()

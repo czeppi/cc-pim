@@ -26,6 +26,7 @@ def write_markup(page: Page) -> str:
 
 
 class _MarkupCreator:
+
     def __init__(self, page: Page):
         self._page = page
 

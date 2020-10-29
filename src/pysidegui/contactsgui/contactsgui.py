@@ -16,7 +16,9 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import OrderedDict
-from typing import Optional, Iterator, Iterable
+from typing import Optional, Iterator, Iterable, Dict
+
+from PySide2 import QtGui
 from PySide2.QtWidgets import QInputDialog, QMainWindow
 
 from contacts.repository import Repository
@@ -36,7 +38,7 @@ class ContactsGui(ModelGui):
         date_changes, fact_changes = self._contact_repo.aggregate_revisions()
         self._contact_model = ContactModel(date_changes, fact_changes)
 
-    def new_item(self, frame: QMainWindow) -> Optional[GlobalItemID]:
+    def new_item(self, frame: QMainWindow, data_icons: Dict[str, QtGui.QIcon]) -> Optional[GlobalItemID]:
         contact_model = self._contact_model
         type_map = OrderedDict((x.type_name.lower(), x) for x in contact_model.iter_object_classes())
         type_name, ok = QInputDialog.getItem(frame, 'new', 'select a type', list(type_map.keys()), editable=False)
@@ -44,7 +46,7 @@ class ContactsGui(ModelGui):
             contact_cls = type_map[type_name]
             new_contact = self._contact_model.create_contact(contact_cls.contact_type)
 
-            dlg = ContactEditDialog(frame, new_contact, contact_model)
+            dlg = ContactEditDialog(frame, new_contact, contact_model, data_icons=data_icons)
             if dlg.exec() == dlg.Accepted:
                 contact_model.add_changes(
                     date_changes=dlg.date_changes,
@@ -52,10 +54,10 @@ class ContactsGui(ModelGui):
                 )
                 return _convert_contact2global_id(new_contact.id)
 
-    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow) -> bool:
+    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow, data_icons: Dict[str, QtGui.QIcon]) -> bool:
         contact_id = _convert_global2contact_id(glob_item_id)
         contact = self._contact_model.get_contact(contact_id)
-        dlg = ContactEditDialog(frame, contact, self._contact_model)
+        dlg = ContactEditDialog(frame, contact, self._contact_model, data_icons=data_icons)
         if dlg.exec() != dlg.Accepted:
             return False
         if not dlg.check_contact_with_message_box():
