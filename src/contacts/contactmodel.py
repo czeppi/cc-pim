@@ -54,8 +54,9 @@ class Contact:
 
     contact_type = None
     type_name = None
-    attributes: Dict[str, Attribute] = OrderedDict()
-    back_attributes: Dict[str, Attribute] = OrderedDict()
+    attributes = None
+    back_attributes = None
+    last_serial = None
 
     def __init__(self, serial: int):
         self.serial = serial
@@ -125,6 +126,8 @@ class Person(Contact):
 
     contact_type = ContactType.PERSON
     type_name = contact_type.name
+    attributes: Dict[str, Attribute] = OrderedDict()
+    back_attributes: Dict[str, Attribute] = OrderedDict()
     last_serial = 0
 
     @property
@@ -145,6 +148,8 @@ class Company(Contact):
 
     contact_type = ContactType.COMPANY
     type_name = contact_type.name
+    attributes: Dict[str, Attribute] = OrderedDict()
+    back_attributes: Dict[str, Attribute] = OrderedDict()
     last_serial = 0
 
     @property
@@ -160,6 +165,8 @@ class Address(Contact):
 
     contact_type = ContactType.ADDRESS
     type_name = contact_type.name
+    attributes: Dict[str, Attribute] = OrderedDict()
+    back_attributes: Dict[str, Attribute] = OrderedDict()
     last_serial = 0
 
     @property
@@ -200,7 +207,7 @@ class ContactID:
         self.serial = serial
 
     def __str__(self):
-        return self.contact_type.name + str(self.serial)
+        return self.contact_type.name.lower() + str(self.serial)
 
     def __eq__(self, other):
         return (self.contact_type, self.serial) == (other.contact_type, other.serial)

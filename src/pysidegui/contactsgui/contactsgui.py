@@ -38,7 +38,7 @@ class ContactsGui(ModelGui):
 
     def new_item(self, frame: QMainWindow) -> Optional[GlobalItemID]:
         contact_model = self._contact_model
-        type_map = OrderedDict((x.type_name, x) for x in contact_model.iter_object_classes())
+        type_map = OrderedDict((x.type_name.lower(), x) for x in contact_model.iter_object_classes())
         type_name, ok = QInputDialog.getItem(frame, 'new', 'select a type', list(type_map.keys()), editable=False)
         if ok:
             contact_cls = type_map[type_name]

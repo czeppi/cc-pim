@@ -50,7 +50,7 @@ class ContactEditDialog(QDialog):
 
         self._date_combos = []
         self._main_vertical_layout = self._create_main_vertical_layout()
-        self._grid_layout          = self._create_grid_layout(self)
+        self._grid_layout          = self._create_grid_layout()
         self._add_fact_button      = self._create_add_fact_button(self)
         self._button_box           = self._create_button_box()
 
@@ -61,12 +61,11 @@ class ContactEditDialog(QDialog):
         # self._left_widget.setLayout(self._left_layout)
         self._fill_main_layout()
 
-        self._button_box.accepted().connect(self.accept)
-        self._button_box.rejected().connect(self.reject)
+        self._button_box.accepted.connect(self.accept)
+        self._button_box.rejected.connect(self.reject)
 
     def _init_title(self) -> None:
-        type_lower_name = self._contact.type_name
-        type_name = type_lower_name[0].upper() + type_lower_name[1:]
+        type_name = self._contact.type_name[0].upper() + self._contact.type_name[1:].lower()
         prefix = 'New' if self._contact_is_new else 'Edit'
         title = prefix + ' ' + type_name
         self.setWindowTitle(title)
@@ -77,13 +76,13 @@ class ContactEditDialog(QDialog):
         return layout
 
     @staticmethod
-    def _create_grid_layout(parent: QWidget) -> QGridLayout:
-        grid_layout = QGridLayout(parent)
+    def _create_grid_layout() -> QGridLayout:
+        grid_layout = QGridLayout()
         return grid_layout
 
     def _create_add_fact_button(self, parent: QWidget) -> QPushButton:
         button = QPushButton('add', parent)
-        button.clicked().connect(self.on_add_fact_button_clicked)
+        button.clicked.connect(self.on_add_fact_button_clicked)
         return button
 
     def _fill_main_layout(self) -> None:
@@ -169,7 +168,7 @@ class ContactEditDialog(QDialog):
             combo.addItem(title, contact.serial)
         cur_index = combo.findData(current_data)
         combo.setCurrentIndex(cur_index)
-        combo.currentIndexChanged().connect(self.on_val_combo_index_changed)
+        combo.currentIndexChanged.connect(self.on_val_combo_index_changed)
         combo.row = row
         return combo
 
@@ -188,7 +187,7 @@ class ContactEditDialog(QDialog):
         val_edit = QLineEdit(row.parent)
         val = '' if row.fact is None else self._contacts_model.get_fact_value(row.fact)
         val_edit.setText(val)
-        val_edit.textChanged().connect(self.on_text_changed)
+        val_edit.textChanged.connect(self.on_text_changed)
         val_edit.row = row
         return val_edit
 
@@ -196,7 +195,7 @@ class ContactEditDialog(QDialog):
         note_edit = QLineEdit(row.parent)
         text = '' if row.fact is None else row.fact.note
         note_edit.setText(text)
-        note_edit.textChanged().connect(self.on_note_changed)
+        note_edit.textChanged.connect(self.on_note_changed)
         note_edit.row = row
         return note_edit
 
@@ -204,7 +203,7 @@ class ContactEditDialog(QDialog):
         valid_checkbox = QCheckBox(row.parent)
         is_checked = True if row.fact is None else row.fact.is_valid
         valid_checkbox.setChecked(is_checked)
-        valid_checkbox.stateChanged().connect(self.on_valid_changed)
+        valid_checkbox.stateChanged.connect(self.on_valid_changed)
         valid_checkbox.row = row
         return valid_checkbox
 
@@ -233,7 +232,7 @@ class ContactEditDialog(QDialog):
 
         cur_index = combo.findData(cur_serial)
         combo.setCurrentIndex(cur_index)
-        combo.currentIndexChanged().connect(on_func)
+        combo.currentIndexChanged.connect(on_func)
         combo.row = row
         return combo
 
@@ -247,14 +246,14 @@ class ContactEditDialog(QDialog):
     def _create_from_until_button(row: RowWidgets, on_func: Callable) -> QPushButton:
         button = QPushButton('*', row.parent)
         button.setFixedWidth(20)
-        button.clicked().connect(on_func)
+        button.clicked.connect(on_func)
         button.row = row
         return button
 
     def _create_remove_button(self, row: RowWidgets) -> QPushButton:
         remove_button = QPushButton('x', row.parent)
         remove_button.setFixedWidth(40)
-        remove_button.clicked().connect(self.on_remove_button_clicked)
+        remove_button.clicked.connect(self.on_remove_button_clicked)
         remove_button.row = row
         return remove_button
 
