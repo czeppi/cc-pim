@@ -14,42 +14,46 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
-   
-import constants
-   
+
 import sys
 import traceback
 from pathlib import Path
 
-if constants.GUI == 'wx':
+from context import Context, SystemResourceMgr, UserResourceMgr, GUI
+
+if GUI == 'wx':
     import wx
     import wxgui.mainframe
-elif constants.GUI == 'pyside2':
+elif GUI == 'pyside2':
     from PySide2.QtCore import *
     from PySide2.QtGui import *
     from PySide2.QtWidgets import *
     from pysidegui.mainwindow import MainWindow
     
-from context import Context, Config
- 
 
 def main():
-    root_dir = None
-    if len(sys.argv) > 0:
-        start_dir = Path(sys.argv[0]).resolve().parent
-        root_dir = start_dir.parent
+    if len(sys.argv) != 2:
+        raise Exception('usage: cc-pim.py <user-data-dir>')
 
-    context = Context(root_dir, Config())
-    
-    if constants.GUI == 'wx':
+    start_dir = Path(sys.argv[0]).resolve().parent
+    root_dir = start_dir.parent
+    etc_dir = root_dir / 'etc'
+    user_dir = Path(sys.argv[1])
+    if not user_dir.exists():
+        raise Exception(f'user data dir "{user_dir}" does not exists.')
+
+    context = Context(
+        system=SystemResourceMgr(etc_dir),
+        user=UserResourceMgr(user_dir))
+
+    if GUI == 'wx':
         start_wx_app(context)
-    elif constants.GUI in ['pyside', 'pyside2']:
+    elif GUI == 'pyside2':
         start_pyside_app(context)
 
 
-def start_wx_app(context):
+def start_wx_app(context: Context):
     app = wx.App()
-        
     try:
         frame = wxgui.mainframe.MainFrame(context)
         frame.Show()
@@ -59,13 +63,9 @@ def start_wx_app(context):
     app.MainLoop()
     
 
-def start_pyside_app(context):
-    # with context.user_css.open() as css_fh:
-    #     style_sheet = css_fh.read()
-
-    app = QApplication(sys.argv)
+def start_pyside_app(context: Context):
+    app = QApplication()
     frame = MainWindow(context)
-    # frame.setStyleSheet(style_sheet)
     frame.show()
     sys.exit(app.exec_())
 

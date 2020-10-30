@@ -17,13 +17,11 @@
 
 from __future__ import annotations
 
-import sys
 from collections import OrderedDict
 from configparser import RawConfigParser
 from pathlib import Path
 from typing import Dict, ValuesView, Any
 
-from context import Context, Config
 from tasks.tasktypes import Date, ID, Int, Ref, String, XmlString  # necessary for MetaModel._process_section()
 
 
@@ -93,11 +91,3 @@ class Attribute:
     @property
     def type(self) -> Any:
         return self._type
-    
-
-if __name__ == '__main__':
-    start_dir = Path(sys.argv[0]).resolve().parent
-    root_dir = start_dir.parent
-    context = Context(root_dir, Config())
-    meta_model = MetaModel()
-    meta_model.read(context.tasks_metamodel_path)

@@ -17,11 +17,9 @@
 
 from __future__ import annotations
 import sqlite3
-import sys
 from pathlib import Path
 from typing import Dict, ValuesView, Optional
 
-from context import Context, Config
 from tasks.metamodel import MetaModel, Structure
 
 
@@ -146,15 +144,3 @@ class Row:
         
     def value_keys(self):
         return [x.name for x in self._table.attributes if x.name in self._values]
-        
-    
-if __name__ == '__main__':
-    start_dir = Path(sys.argv[0]).resolve().parent
-    root_dir = start_dir.parent
-    context = Context(root_dir, Config())
-
-    meta_model = MetaModel(context.config.logging_enabled)
-    meta_model.read(context.tasks_metamodel_path)
-
-    db = DB(context.tasks_db_path, meta_model)
-    db.create()

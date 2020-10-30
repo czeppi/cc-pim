@@ -34,21 +34,10 @@ from tasks.taskmodel import TaskModel, KeywordExtractor, Task
 
 class TasksGui(ModelGui):
 
-    def __init__(self, context: Context):
-        metamodel_path = context.tasks_metamodel_path
-        meta_model = MetaModel(context.config.logging_enabled)
-        meta_model.read(metamodel_path)
-        sqlite3_path = context.tasks_db_path
-
-        db = DB(sqlite3_path, meta_model, logging_enabled=context.config.logging_enabled)
-
-        keyword_extractor = KeywordExtractor(context.no_keywords_path)
-
-        self._task_model = TaskModel(db, keyword_extractor=keyword_extractor)
-        self._task_model.read()
-
+    def __init__(self, task_model: TaskModel):
+        self._task_model = task_model
         keywords = self._task_model.calc_keywords()
-        # self.ui.title_edit.init_completer(keywords)  # todo
+        # self.ui.title_edit.init_completer(keywords)  # todo?
 
     def new_item(self, frame: QMainWindow, data_icons: Dict[str, QtGui.QIcon]) -> Optional[GlobalItemID]:
         new_task = self._task_model.create_new_task()
@@ -73,22 +62,13 @@ class TasksGui(ModelGui):
 
         new_task_rev = task.create_new_revision(**dlg_values)
         self._task_model.add_task_revision(new_task_rev)
-        # html_text = task.last_revision.get_html_text()
-        # self.ui.html_edit.setText(html_text)
         return True
 
     def save_all(self) -> bool:
-        # comment, ok = QInputDialog.getText(None, 'Commit', 'please enter a comment')
-        # if not ok:
-        #     return False
-
-        # self._contact_model.commit(comment, self._contact_repo)
-        return True
+        return True  # not necessary, cause changes were committed at end of dialog
 
     def revert_change(self) -> bool:
-        # date_changes, fact_changes = self._contact_repo.aggregate_revisions()
-        # self._contact_model = ContactModel(date_changes, fact_changes)
-        return True
+        raise NotImplemented  # todo: implement
 
     def get_html_text(self, glob_item_id: GlobalItemID) -> str:
         task_serial = _convert_global2task_serial(glob_item_id)
@@ -99,12 +79,10 @@ class TasksGui(ModelGui):
         return html_text
 
     def exists_uncommitted_changes(self) -> bool:
-        # return self._contact_model.exists_uncommitted_changes()
-        return False  # todo
+        return False  # there are not such changes, cause changes were committed at end of dialog
 
     def get_id_from_href(self, href_str: str) -> GlobalItemID:
-        contact_id = ContactID.create_from_string(href_str)
-        return contact_id  # todo
+        raise NotImplemented  # todo: implement
 
     def iter_sorted_ids_from_keywords(self, keywords) -> Iterator[GlobalItemID]:
         filtered_tasks = self._iter_filtered_tasks(keywords)

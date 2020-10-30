@@ -1,1 +1,0 @@
-GUI = 'pyside2'

@@ -26,6 +26,7 @@ from tasks.html_creator import write_htmlstr
 from tasks.markup_reader import read_markup
 from tasks.markup_writer import write_markup
 from tasks.taskmodel import Task, TaskModel
+from tasks.xml_write import write_xmlstr
 
 
 class TaskEditDialog(QDialog):
@@ -146,9 +147,11 @@ class TaskEditDialog(QDialog):
         return html_text
 
     def get_values(self) -> Dict[str, str]:
+        markup_str = self.ui.body_edit.toPlainText()
+        page = read_markup(markup_str)
         return {
             'title':    self.ui.title_edit.text(),
-            'body':     self.ui.body_edit.toPlainText(),
+            'body':     write_xmlstr(page, with_page_element=False),
             'category': self.ui.cat_combo.currentText(),
         }
         
@@ -164,7 +167,7 @@ class FastPreviewUpdater:
         self._dialog._update_preview()
 
 
-class LazyPreviewUpdater:
+class LazyPreviewUpdater:  # todo: not used => use it or remove it
 
     def __init__(self, dialog: QDialog):
         self._dialog = dialog

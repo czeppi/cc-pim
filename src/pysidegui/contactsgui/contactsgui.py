@@ -32,11 +32,8 @@ from pysidegui.contactsgui.contacteditdialog import ContactEditDialog
 
 class ContactsGui(ModelGui):
 
-    def __init__(self, context: Context):
-        self._contact_repo = Repository(context.contacts_db_path)
-        self._contact_repo.reload()
-        date_changes, fact_changes = self._contact_repo.aggregate_revisions()
-        self._contact_model = ContactModel(date_changes, fact_changes)
+    def __init__(self, contact_model: ContactModel):
+        self._contact_model = contact_model
 
     def new_item(self, frame: QMainWindow, data_icons: Dict[str, QtGui.QIcon]) -> Optional[GlobalItemID]:
         contact_model = self._contact_model

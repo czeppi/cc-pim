@@ -27,8 +27,8 @@ class MainFrame(wx.Frame):
     def __init__(self, context):
         self._context = context
         cfg = context.config
-        wx.Frame.__init__(self, None, -1, cfg.app_title, cfg.frame_pos, cfg.frame_size)
-        icon = wx.Icon(str(self._context.app_icon_dir / 'info.ico'), wx.BITMAP_TYPE_ICO)
+        wx.Frame.__init__(self, None, -1, cfg.app_title, cfg.user.state.frame_pos, cfg.user.state.frame_size)
+        icon = context.system.read_icon('info')
         self.SetIcon(icon)
         self._create_menubar()
         self._create_toolbar()
@@ -58,7 +58,7 @@ class MainFrame(wx.Frame):
 
     def _add_toolitem(self, toolbar, icon_name, handler, tooltip=""):
         new_id = wx.NewId()
-        bmp = wx.Bitmap(str(self._context.app_icon_dir / 'info.ico'), wx.BITMAP_TYPE_ICO)
+        bmp = wx.Bitmap(str(self._context.system.icon_dir / 'info.ico'), wx.BITMAP_TYPE_ICO)
         toolbar.AddTool(new_id, '', bmp, shortHelp=tooltip)        
         self.Bind(wx.EVT_TOOL, handler, id=new_id)
         return new_id
@@ -68,7 +68,8 @@ class MainFrame(wx.Frame):
         self._search_view  = SearchView(self._splitter, self._context)
         self._notebook_win = Notebook(self._splitter, self._context)
         
-        self._splitter.SplitVertically (self._search_view, self._notebook_win, self._context.config.search_width)
+        self._splitter.SplitVertically (self._search_view, self._notebook_win,
+                                        self._context.config.user.state.search_width)
         
     def _create_statusbar(self):
         bar = wx.Frame.CreateStatusBar(self, 2)

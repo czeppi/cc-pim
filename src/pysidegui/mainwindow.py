@@ -39,10 +39,13 @@ class MainWindow(QMainWindow):
         self.ui.splitter.setStretchFactor(0, 0)
         self.ui.splitter.setStretchFactor(1, 1)
 
-        self._data_icons = self._create_data_icons(context)
+        self._data_icons = context.user.read_icons()
 
-        self._contacts_gui = ContactsGui(context)
-        self._tasks_gui = TasksGui(context)
+        contact_model = context.user.read_contact_model()
+        task_meta_model = context.system.read_task_metamodel()
+        task_model = context.user.read_task_model(task_meta_model)
+        self._contacts_gui = ContactsGui(contact_model)
+        self._tasks_gui = TasksGui(task_model)
 
         self._cur_model_gui = self._contacts_gui
         self._show_obj_id = None
@@ -66,11 +69,6 @@ class MainWindow(QMainWindow):
         self.ui.search_result_list.currentItemChanged.connect(self.on_cur_list_item_changed)
         self.ui.search_result_list.itemActivated.connect(self.on_list_item_activated)
         self.ui.html_view.click_link_observers.append(self.on_html_view_click_link)
-
-    @staticmethod
-    def _create_data_icons(context: Context) -> Dict[str, QtGui.QIcon]:
-        return {icon_fpath.stem.lower(): QtGui.QIcon(str(icon_fpath))
-                for icon_fpath in context.data_icon_dir.iterdir()}
 
     def _update_category_filter(self) -> None:
         self.ui.category_filter.clear()
