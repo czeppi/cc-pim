@@ -20,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List as TList
+from typing import List as TList, Optional
 
 """
 example:
@@ -71,7 +71,7 @@ class ElementBase:
 
 @dataclass
 class InlineElement(ElementBase):
-    text: str
+    text: Optional[str]
 
 
 @dataclass
@@ -90,10 +90,10 @@ class BoldText(InlineElement):
 
 @dataclass
 class Link(InlineElement):
-    url: str
+    uri: str
 
     def copy(self):
-        return Link(text=self.text, url=self.url)
+        return Link(text=self.text, uri=self.uri)
 
 
 @dataclass

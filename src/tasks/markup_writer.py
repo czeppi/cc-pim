@@ -123,7 +123,10 @@ class _MarkupCreator:
 
     @staticmethod
     def _create_link_str(link: Link) -> str:
-        return f'[link: url={link.url}, text={link.text}]'
+        if link.text:
+            return f'[link: {link.uri}, {link.text}]'
+        else:
+            return f'[link: {link.uri}]'
 
     @staticmethod
     def _create_image_str(image: Image) -> str:

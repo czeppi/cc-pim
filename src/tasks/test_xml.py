@@ -17,7 +17,7 @@
 
 import unittest
 
-from tasks.page import HAlign, BlockElement
+from tasks.page import HAlign, BlockElement, Link
 from tasks.page import NormalText, BoldText
 from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell
 from tasks.xml_reader import read_from_xmlstr
@@ -48,6 +48,18 @@ class TestXml(unittest.TestCase):
         self._test_one_element(
             Paragraph([NormalText('aaa'), BoldText('bbb'), NormalText('ccc')]),
             '<paragraph>aaa<bold>bbb</bold>ccc</paragraph>'
+        )
+
+    def test_link_with_text(self):
+        self._test_one_element(
+            Paragraph([Link(uri="https://www.wikipedia.de", text="Wikipedia")]),
+            '<paragraph><link uri="https://www.wikipedia.de">Wikipedia</link></paragraph>'
+        )
+
+    def test_link_without_text(self):
+        self._test_one_element(
+            Paragraph([Link(uri="https://www.wikipedia.de", text=None)]),
+            '<paragraph><link uri="https://www.wikipedia.de" /></paragraph>'
         )
 
     def test_simple_list(self):

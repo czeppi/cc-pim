@@ -20,7 +20,7 @@ import re
 from re import Match
 from typing import Iterator, Optional, List as TList
 
-from tasks.page import HAlign, BlockElement, InlineElement
+from tasks.page import HAlign, BlockElement, InlineElement, Link
 from tasks.page import NormalText, BoldText
 from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell
 
@@ -95,7 +95,7 @@ class _MarkupParser:
         self._line_iter.get_next_line()
 
     @staticmethod
-    def _are_lines_preformatted(lines: List[str]) -> bool:
+    def _are_lines_preformatted(lines: TList[str]) -> bool:
         return any(len(line) > 0 and (line[0] == ' ' or line[-1] == ' ') for line in lines)
 
     def _create_list(self) -> Optional[List]:
@@ -344,9 +344,9 @@ class _TableLine:
 
 class InlineParser:
 
-    _BOLD_REX = re.compile(r'(?P<bold>\*(?P<bold_core>\w[^*\n]*\w)\*)')
-    _LINK_REX = re.compile(r"\[(.*)(\|.*)]")
-    _IMAGE_REX = re.compile(r"")
+    _BOLD_PATTERN = r'(?P<bold>\*(?P<bold_core>\w[^*\n]*\w)\*)'
+    _LINK_PATTERN = r'(?P<link>\[link\: *(?P<uri>[^ ,\]\n]+) *(?:, *(?P<text>[^ ,\]\n]+) *)?\])'
+    _REX = re.compile(f'{_BOLD_PATTERN}|{_LINK_PATTERN}')
 
     def __init__(self, text: str, preformatted: bool = False):
         self._text = text
@@ -362,7 +362,7 @@ class InlineParser:
         self._prev_end = 0
         self._cur_xml_child = None
 
-        for match in self._BOLD_REX.finditer(self._text):
+        for match in self._REX.finditer(self._text):
             self._process_gap(match)
             for process_func in [self._process_bold, self._process_link, self._process_image]:
                 processed = process_func(match)
@@ -380,33 +380,29 @@ class InlineParser:
         self._prev_end = match_end
 
     def _process_gap_text(self, gap_text: str) -> None:
-        normal_text = NormalText(gap_text)
-        self._inline_elements.append(normal_text)
+        if len(gap_text) > 0:
+            normal_text = NormalText(gap_text)
+            self._inline_elements.append(normal_text)
 
     def _process_bold(self, match: Match) -> bool:
-        bold = match.group('bold')
-        if bold is None:
+        if match.group('bold') is None:
             return False
 
         bold_text = BoldText(match.group('bold_core'))
         self._inline_elements.append(bold_text)
         return True
 
-    @staticmethod
-    def _process_link(match: Match) -> bool:
-        bold = match.group('link')
-        if bold is None:
+    def _process_link(self, match: Match) -> bool:
+        if match.group('link') is None:
             return False
 
-        return False  # todo....
+        link = Link(uri=match.group('uri'), text=match.group('text'))
+        self._inline_elements.append(link)
+        return True
 
     @staticmethod
     def _process_image(match: Match) -> bool:
-        bold = match.group('image')
-        if bold is None:
-            return False
-
-        return False  # todo....
+        return False  # todo: implement
 
 
 class MarkupParseError(Exception):

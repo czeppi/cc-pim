@@ -18,7 +18,7 @@
 import xml.etree.ElementTree as ET
 from typing import Optional, List as TList, Iterator
 
-from tasks.page import NormalText, BoldText
+from tasks.page import NormalText, BoldText, Link
 from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell, BlockElement, InlineElement
 
 
@@ -182,9 +182,17 @@ class _HtmlCreator:
     def _add_html_inline_element(self, html_block_element, inline_element: InlineElement) -> ET.SubElement:
         if isinstance(inline_element, BoldText):
             return self._add_html_bold(html_block_element, inline_element)
+        elif isinstance(inline_element, Link):
+            return self._add_html_link(html_block_element, inline_element)
 
     @staticmethod
     def _add_html_bold(html_parent, bold_text: BoldText) -> ET.SubElement:
         html_bold = ET.SubElement(html_parent, 'b')
         html_bold.text = bold_text.text
         return html_bold
+
+    @staticmethod
+    def _add_html_link(html_parent, link: Link) -> ET.SubElement:
+        html_link = ET.SubElement(html_parent, 'a', href=link.uri)
+        html_link.text = link.text
+        return html_link

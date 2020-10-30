@@ -20,7 +20,7 @@ from typing import List as TList
 
 from tasks.markup_reader import read_markup
 from tasks.markup_writer import write_markup
-from tasks.page import HAlign, BlockElement
+from tasks.page import HAlign, BlockElement, Link
 from tasks.page import NormalText, BoldText
 from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell
 
@@ -296,6 +296,16 @@ class TestMarkup(unittest.TestCase):
             Paragraph([NormalText('aaa *bb\nbb* ccc')]),
             'aaa *bb\n'
             'bb* ccc\n')
+
+    def test_link_without_text(self):
+        self._test1(
+            Paragraph([Link(uri='www.wikipedia.de', text=None)]),
+            '[link: www.wikipedia.de]\n')
+
+    def test_link_with_text(self):
+        self._test1(
+            Paragraph([Link(uri='www.wikipedia.de', text='Wikipedia')]),
+            '[link: www.wikipedia.de, Wikipedia]\n')
 
     def _test1(self, block_element: BlockElement, markup_str1: str):
         self._test_n([block_element], markup_str1)

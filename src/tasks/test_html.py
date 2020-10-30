@@ -18,7 +18,7 @@
 import unittest
 
 from tasks.html_creator import write_htmlstr
-from tasks.page import HAlign, BlockElement
+from tasks.page import HAlign, BlockElement, Link
 from tasks.page import NormalText, BoldText
 from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell
 
@@ -47,6 +47,18 @@ class TestHtml(unittest.TestCase):
         self._test_one_element(
             Paragraph([NormalText('aaa'), BoldText('bbb'), NormalText('ccc')]),
             '<p>aaa<b>bbb</b>ccc</p>'
+        )
+
+    def test_link_with_text(self):
+        self._test_one_element(
+            Paragraph([Link(uri='www.wikipedia.de', text='Wikipedia')]),
+            '<p><a href="www.wikipedia.de">Wikipedia</a></p>'
+        )
+
+    def test_link_without_text(self):
+        self._test_one_element(
+            Paragraph([Link(uri='www.wikipedia.de', text=None)]),
+            '<p><a href="www.wikipedia.de" /></p>'
         )
 
     def test_list(self):

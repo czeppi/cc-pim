@@ -129,8 +129,8 @@ class _XmlReader:
 
     @staticmethod
     def _create_link(xml_link) -> Link:
-        path = xml_link.attrib['path']
-        return Link(url=path, text=xml_link.text)
+        uri = xml_link.attrib['uri']
+        return Link(uri=uri, text=xml_link.text)
 
     @staticmethod
     def _create_image(xml_image) -> Image:
