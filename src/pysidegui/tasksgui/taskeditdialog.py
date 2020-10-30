@@ -23,10 +23,10 @@ from PySide2.QtWidgets import QDialog, QApplication, QWidget
 
 from pysidegui._ui2_.ui_taskeditdialog import Ui_TaskEditDialog
 from tasks.html_creator import write_htmlstr
-from tasks.markup_reader import read_markup
-from tasks.markup_writer import write_markup
+from tasks.markup_reading import read_markup
+from tasks.markup_writing import write_markup
 from tasks.taskmodel import Task, TaskModel
-from tasks.xml_write import write_xmlstr
+from tasks.xml_writing import write_xmlstr
 
 
 class TaskEditDialog(QDialog):

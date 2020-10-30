@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Optional, Dict, List, Iterable, Any, Iterator, Set
 
 from tasks.db import Row, DB
-from tasks.xml_reader import read_from_xmlstr
+from tasks.xml_reading import read_from_xmlstr
 
 
 class TaskModel:

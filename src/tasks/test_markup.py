@@ -18,8 +18,8 @@
 import unittest
 from typing import List as TList
 
-from tasks.markup_reader import read_markup
-from tasks.markup_writer import write_markup
+from tasks.markup_reading import read_markup
+from tasks.markup_writing import write_markup
 from tasks.page import HAlign, BlockElement, Link
 from tasks.page import NormalText, BoldText
 from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell

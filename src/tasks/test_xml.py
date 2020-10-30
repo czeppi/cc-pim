@@ -20,8 +20,8 @@ import unittest
 from tasks.page import HAlign, BlockElement, Link
 from tasks.page import NormalText, BoldText
 from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell
-from tasks.xml_reader import read_from_xmlstr
-from tasks.xml_write import write_xmlstr
+from tasks.xml_reading import read_from_xmlstr
+from tasks.xml_writing import write_xmlstr
 
 
 class TestXml(unittest.TestCase):
