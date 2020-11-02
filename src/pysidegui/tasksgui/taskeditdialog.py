@@ -22,7 +22,7 @@ from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QDialog, QApplication, QWidget
 
 from pysidegui._ui2_.ui_taskeditdialog import Ui_TaskEditDialog
-from tasks.html_creator import write_htmlstr
+from tasks.html_creator import write_htmlstr, LinkSolver
 from tasks.markup_reading import read_markup
 from tasks.markup_writing import write_markup
 from tasks.taskmodel import Task, TaskModel
@@ -142,7 +142,8 @@ class TaskEditDialog(QDialog):
 
         markup_str = body
         page = read_markup(markup_str)
-        html_text = write_htmlstr(title, page)
+        link_solver = LinkSolver(self._task_model)
+        html_text = write_htmlstr(title, page, link_solver=link_solver)
         print(html_text)
         return html_text
 

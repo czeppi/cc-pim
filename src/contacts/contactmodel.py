@@ -197,7 +197,7 @@ class ContactID:
         if not match:
             raise ValueError(id_str)
 
-        type_name = match.group('type')
+        type_name = match.group('type').upper()
         contact_type = ContactType[type_name]
         serial = int(match.group('serial'))
         return ContactID(contact_type, serial)

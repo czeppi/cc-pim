@@ -14,25 +14,21 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
-
-from pathlib import Path
+import re
 from typing import Optional, Iterator, Iterable, Dict
 
 from PySide2 import QtGui
 from PySide2.QtWidgets import QMainWindow
 
-from contacts.contactmodel import ContactID
 from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
 from pysidegui.modelgui import ModelGui
 from pysidegui.tasksgui.taskeditdialog import TaskEditDialog
-from context import Context
-from tasks.db import DB
-from tasks.html_creator import write_htmlstr
-from tasks.metamodel import MetaModel
-from tasks.taskmodel import TaskModel, KeywordExtractor, Task
+from tasks.html_creator import write_htmlstr, LinkSolver
+from tasks.taskmodel import TaskModel, Task
 
 
 class TasksGui(ModelGui):
+    _REX = re.compile(r"(?P<type>[a-zA-Z]+)(?P<serial>[0-9]+)")
 
     def __init__(self, task_model: TaskModel):
         self._task_model = task_model
@@ -75,14 +71,22 @@ class TasksGui(ModelGui):
         task = self._task_model.get_task(task_serial)
         title = task.get_header()
         page = task.last_revision.page
-        html_text = write_htmlstr(title, page)
+        link_solver = LinkSolver(self._task_model)
+        html_text = write_htmlstr(title, page, link_solver=link_solver)
         return html_text
 
     def exists_uncommitted_changes(self) -> bool:
         return False  # there are not such changes, cause changes were committed at end of dialog
 
-    def get_id_from_href(self, href_str: str) -> GlobalItemID:
-        raise NotImplemented  # todo: implement
+    @classmethod
+    def get_id_from_href(cls, href_str: str) -> Optional[GlobalItemID]:
+        match = cls._REX.match(href_str)
+        if match:
+            type_name = match.group('type').upper()
+            serial = int(match.group('serial'))
+
+            global_type = GlobalItemTypes[type_name]
+            return GlobalItemID(global_type, serial)
 
     def iter_sorted_ids_from_keywords(self, keywords) -> Iterator[GlobalItemID]:
         filtered_tasks = self._iter_filtered_tasks(keywords)

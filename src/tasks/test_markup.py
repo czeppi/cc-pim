@@ -307,6 +307,13 @@ class TestMarkup(unittest.TestCase):
             Paragraph([Link(uri='www.wikipedia.de', text='Wikipedia')]),
             '[link: www.wikipedia.de, Wikipedia]\n')
 
+    def test_link_in_list(self):
+        self._test1(
+            List([ListItem(inline_elements=[
+                NormalText('aaa '),
+                Link(uri='www.wikipedia.de', text=None)])]),
+            '- aaa [link: www.wikipedia.de]\n')
+
     def _test1(self, block_element: BlockElement, markup_str1: str):
         self._test_n([block_element], markup_str1)
 

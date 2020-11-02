@@ -346,7 +346,8 @@ class InlineParser:
 
     _BOLD_PATTERN = r'(?P<bold>\*(?P<bold_core>\w[^*\n]*\w)\*)'
     _LINK_PATTERN = r'(?P<link>\[link\: *(?P<uri>[^ ,\]\n]+) *(?:, *(?P<text>[^ ,\]\n]+) *)?\])'
-    _REX = re.compile(f'{_BOLD_PATTERN}|{_LINK_PATTERN}')
+    _STD_REX = re.compile(f'{_BOLD_PATTERN}|{_LINK_PATTERN}')
+    _PREFORMATTED_REX = re.compile(_LINK_PATTERN)
 
     def __init__(self, text: str, preformatted: bool = False):
         self._text = text
@@ -357,14 +358,18 @@ class InlineParser:
 
     def parse(self) -> TList[InlineElement]:
         if self._preformatted:
-            return [NormalText(self._text)]
+            process_func_list = [self._process_link]
+            rex = self._PREFORMATTED_REX
+        else:
+            process_func_list = [self._process_bold, self._process_link]
+            rex = self._STD_REX
 
         self._prev_end = 0
         self._cur_xml_child = None
 
-        for match in self._REX.finditer(self._text):
+        for match in rex.finditer(self._text):
             self._process_gap(match)
-            for process_func in [self._process_bold, self._process_link, self._process_image]:
+            for process_func in process_func_list:
                 processed = process_func(match)
                 if processed:
                     break

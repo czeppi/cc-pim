@@ -21,13 +21,11 @@ from typing import Optional, Iterator, Iterable, Dict
 from PySide2 import QtGui
 from PySide2.QtWidgets import QInputDialog, QMainWindow
 
-from contacts.repository import Repository
 from contacts.contactmodel import ContactModel, ContactID, ContactType, Address, Person, Company, Contact
-from context import Context
-from pysidegui.htmlview import ContactHtmlCreator
-from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
-from pysidegui.modelgui import ModelGui
 from pysidegui.contactsgui.contacteditdialog import ContactEditDialog
+from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
+from pysidegui.htmlview import ContactHtmlCreator
+from pysidegui.modelgui import ModelGui
 
 
 class ContactsGui(ModelGui):

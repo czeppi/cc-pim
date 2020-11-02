@@ -40,7 +40,7 @@ class ModelGui:
     def exists_uncommitted_changes(self) -> bool:
         raise Exception('net yet implemented.')
 
-    def get_id_from_href(self, href_str: str) -> GlobalItemID:
+    def get_id_from_href(self, href_str: str) -> Optional[GlobalItemID]:
         raise Exception('net yet implemented.')
 
     def iter_sorted_ids_from_keywords(self, keywords: Iterable[str]) -> Iterator[GlobalItemID]:

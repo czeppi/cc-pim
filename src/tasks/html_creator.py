@@ -15,30 +15,32 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import annotations
+
+import re
 import xml.etree.ElementTree as ET
 from typing import Optional, List as TList, Iterator
 
 from tasks.page import NormalText, BoldText, Link
 from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell, BlockElement, InlineElement
+from tasks.taskmodel import TaskModel
 
 
-def write_htmlstr(title: str, page: Page, markup_str: Optional[str] = None) -> str:
-    html_root = _HtmlCreator(title, page).create(markup_str)
+def write_htmlstr(title: str, page: Page,
+                  link_solver: Optional[LinkSolver] = None) -> str:
+    html_root = _HtmlCreator(title, page, link_solver).create()
     return ET.tostring(html_root, encoding='unicode')
 
 
 class _HtmlCreator:
 
-    def __init__(self, title: str, page: Page):
+    def __init__(self, title: str, page: Page, link_solver: Optional[LinkSolver]):
         self._title = title
         self._page = page
+        self._link_solver = link_solver
 
-    def create(self, markup_str: Optional[str] = None) -> ET.XML:
+    def create(self) -> ET.XML:
         html_page: ET.XML = ET.fromstring('<html></html>')
-
-        if markup_str is not None:
-            html_pre = ET.SubElement(html_page, 'pre')
-            html_pre.text = markup_str
 
         if self._title:
             self._add_html_header(html_page, Header(level=0, inline_elements=[NormalText(self._title)]))
@@ -191,8 +193,27 @@ class _HtmlCreator:
         html_bold.text = bold_text.text
         return html_bold
 
-    @staticmethod
-    def _add_html_link(html_parent, link: Link) -> ET.SubElement:
+    def _add_html_link(self, html_parent, link: Link) -> ET.SubElement:
         html_link = ET.SubElement(html_parent, 'a', href=link.uri)
-        html_link.text = link.text
+        if link.text:
+            html_link.text = link.text
+        elif self._link_solver is not None:
+            html_link.text = self._link_solver.get_link_text(link.uri)
+        else:
+            html_link.text = link.uri
         return html_link
+
+
+class LinkSolver:
+    _TASK_REX = re.compile(r"task(?P<serial>[0-9]+)")
+
+    def __init__(self, task_model: TaskModel):
+        self._task_model = task_model
+
+    def get_link_text(self, uri: str) -> str:
+        match = self._TASK_REX.match(uri)
+        if match:
+            task_serial = int(match.group('serial'))
+            task = self._task_model.get_task(task_serial)
+            return task.get_header()
+        return uri

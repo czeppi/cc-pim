@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Dict, Optional, Iterator
+import webbrowser
+from typing import Optional, Iterator
 
-from PySide2 import QtGui
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QListWidgetItem
 from PySide2.QtWidgets import QMainWindow
@@ -135,7 +135,10 @@ class MainWindow(QMainWindow):
 
     def on_html_view_click_link(self, href_str: str):
         obj_id = self._cur_model_gui.get_id_from_href(href_str)
-        self._update_html_view(obj_id)
+        if obj_id is not None:
+            self._update_html_view(obj_id)
+        else:
+            webbrowser.open_new_tab(href_str)
 
     def on_save_all(self):
         if self._cur_model_gui.save_all():
