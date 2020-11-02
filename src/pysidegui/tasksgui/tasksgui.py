@@ -32,7 +32,7 @@ class TasksGui(ModelGui):
 
     def __init__(self, task_model: TaskModel):
         self._task_model = task_model
-        keywords = self._task_model.calc_keywords()
+        # keywords = self._task_model.calc_keywords()
         # self.ui.title_edit.init_completer(keywords)  # todo?
 
     def new_item(self, frame: QMainWindow, data_icons: Dict[str, QtGui.QIcon]) -> Optional[GlobalItemID]:

@@ -20,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List as TList, Optional
+from typing import List as TList, Optional, Iterator
 
 """
 example:
@@ -109,17 +109,26 @@ class Image(InlineElement):
 class BlockElement(ElementBase):
     pass
 
+    def iter_inline_elements(self) -> Iterator[InlineElement]:
+        raise NotImplemented
+
 
 @dataclass
 class Header(BlockElement):
     level: int
     inline_elements: TList[InlineElement] = field(default_factory=list)
 
+    def iter_inline_elements(self) -> Iterator[InlineElement]:
+        yield from self.inline_elements
+
 
 @dataclass
 class Paragraph(BlockElement):
     inline_elements: TList[InlineElement] = field(default_factory=list)
     preformatted: bool = False
+
+    def iter_inline_elements(self) -> Iterator[InlineElement]:
+        yield from self.inline_elements
 
 
 @dataclass
@@ -129,10 +138,19 @@ class ListItem(ElementBase):
     symbol: str = '-'
     preformatted: bool = False
 
+    def iter_inline_elements(self) -> Iterator[InlineElement]:
+        yield from self.inline_elements
+        for sub_item in self.sub_items:
+            yield from sub_item.iter_inline_elements()
+
 
 @dataclass
 class List(BlockElement):
     items: TList[ListItem] = field(default_factory=list)
+
+    def iter_inline_elements(self) -> Iterator[InlineElement]:
+        for item in self.items:
+            yield from item.iter_inline_elements()
 
 
 @dataclass
@@ -145,10 +163,17 @@ class Column(ElementBase):
 class Cell(ElementBase):
     inline_elements: TList[InlineElement] = field(default_factory=list)
 
+    def iter_inline_elements(self) -> Iterator[InlineElement]:
+        yield from self.inline_elements
+
 
 @dataclass
 class Row(ElementBase):
     cells: TList[Cell] = field(default_factory=list)
+
+    def iter_inline_elements(self) -> Iterator[InlineElement]:
+        for cell in self.cells:
+            yield from cell.iter_inline_elements()
 
 
 @dataclass
@@ -156,7 +181,15 @@ class Table(BlockElement):
     columns: TList[Column]
     rows: TList[Row]
 
+    def iter_inline_elements(self) -> Iterator[InlineElement]:
+        for row in self.rows:
+            yield from row.iter_inline_elements()
+
 
 @dataclass
 class Page(ElementBase):
     block_elements: TList[BlockElement] = field(default_factory=list)
+
+    def iter_inline_elements(self) -> Iterator[InlineElement]:
+        for block_element in self.block_elements:
+            yield from block_element.iter_inline_elements()

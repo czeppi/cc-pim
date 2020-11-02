@@ -86,6 +86,7 @@ class TaskModel:
         keywords = set()
         for task in self._tasks.values():
             keywords |= task.last_revision.keywords
+
         return sorted(keywords)
 
     def search_tasks(self, with_keywords: Optional[List[str]] = None) -> List[Task]:
@@ -186,6 +187,7 @@ class TaskRevision:
         self._model = model
         self._group_serial = group_serial
         self._keywords: Set[str] = self._extract_keywords()
+        self._part_keywords = set(word[:n] for word in self._keywords for n in range(2, len(word)))
 
     def get_values(self):
         return {
@@ -239,16 +241,18 @@ class TaskRevision:
         return self._keywords
 
     def _extract_keywords(self) -> Set[str]:
-        title_keywords = set(self._model.extract_keywords(self._title))
-        body_keywords = set(self._model.extract_keywords(self._body))
-        return title_keywords | body_keywords
+        return set(self._iter_keywords())
+
+    def _iter_keywords(self):
+        yield from self._model.extract_keywords(self._title)
+        for inline_elem in self._page.iter_inline_elements():
+            if inline_elem.text:
+                yield from self._model.extract_keywords(inline_elem.text)
 
     def contains_all_keyword(self, keywords: Iterable[str]) -> bool:
-        return set(keywords) <= self.keywords
+        return set(keywords) <= self._part_keywords
 
     def get_header(self) -> str:
-        # return '{}: {}'.format(self._date, self._title)
-        # return '{}-{}: {}'.format(self._task_id[:6], self._task_id[6:].upper(), self._title)
         return self.task.get_header()
 
     def have_values_changed(self, new_values: Dict[str, Any]) -> bool:

@@ -58,7 +58,7 @@ class TestHtml(unittest.TestCase):
     def test_link_without_text(self):
         self._test_one_element(
             Paragraph([Link(uri='www.wikipedia.de', text=None)]),
-            '<p><a href="www.wikipedia.de" /></p>'
+            '<p><a href="www.wikipedia.de">www.wikipedia.de</a></p>'
         )
 
     def test_list(self):
