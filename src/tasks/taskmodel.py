@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Iterable, Any, Iterator, Set, Tuple
 
-from tasks.caching import TaskCache, TaskCacheManager
+from tasks.caching import TaskCache, TaskCacheManager, TaskCaches
 from tasks.db import Row, DB
 from tasks.xml_reading import read_from_xmlstr
 
@@ -127,34 +127,37 @@ class TaskModel:
         return self._keyword_extractor.get_keywords(text)
 
     def update_cache(self, timestamp: datetime, task_cache_list: List[TaskCache]) -> None:
-        task_map = {self._get_task_key(task): task for task in self._tasks.values()}
         for cache in task_cache_list:
             cache_task_key = cache.category, cache.date_str, cache.title
-            if cache.task_serial:
-                task = self._tasks.get(cache.task_serial, None)
-                if task is None:
-                    raise Exception(cache.task_serial)
-                task_key = self._get_task_key(task)
-                if task_key != cache_task_key:
-                    raise Exception(cache.task_serial)
-            else:
-                task = task_map.get(cache_task_key, None)
-                if task is None:
-                    task = self.create_new_task()
-                    new_task_rev = task.create_new_revision(**dlg_values)
-                    self.add_task_revision(new_task_rev)
-                    task_resource = ...
-                    task_resource.write_meta(task.serial)
-                else:
-                    cache.task_serial = task.serial
+            if not cache.task_serial:
+                # task = task_map.get(cache_task_key, None)
+                # if task is None:
+                #     task = self.create_new_task()
+                #     new_task_rev = task.create_new_revision(**dlg_values)
+                #     self.add_task_revision(new_task_rev)
+                #     task_resource = ...
+                #     task_resource.write_meta(task.serial)
+                # else:
+                #     cache.task_serial = task.serial
+                raise Exception(cache_task_key)
+            task = self._tasks.get(cache.task_serial, None)
+            if task is None:
+                raise Exception(cache.task_serial)  # todo: show error dialog
+
+            task_key = self._get_task_key(task)
+            if task_key != cache_task_key:
+                raise Exception(cache.task_serial)  # todo: show error dialog
 
         cache_mgr = TaskCacheManager(self._tasks_root)
+        task_caches = TaskCaches(
+            update_datetime=timestamp,
+            map={cache.task_serial: cache for cache in task_cache_list})
         cache_mgr.write_db(task_caches=task_caches, db=self._db)
 
     @staticmethod
     def _get_task_key(task: Task) -> Tuple[str, str, str]:
         task_rev = task.last_revision
-        return [task_rev.category, task_rev.date_str, task_rev.title]
+        return task_rev.category, task_rev.date, task_rev.title
 
 
 class Task:

@@ -60,3 +60,10 @@ class ModelGui:
 
     def get_object_rgb(self, glob_item_id: GlobalItemID) -> Optional[RGB]:
         return None
+
+    @staticmethod
+    def iter_context_menu_items(glob_item_id: GlobalItemID) -> Iterator[str]:
+        yield from []  # default: no context menu
+
+    def exec_context_menu_action(self, glob_item_id: GlobalItemID, action_name: str) -> None:
+        pass

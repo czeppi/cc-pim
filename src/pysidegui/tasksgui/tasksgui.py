@@ -115,6 +115,15 @@ class TasksGui(ModelGui):
     def get_object_rgb(self, glob_item_id: GlobalItemID) -> Optional[RGB]:
         return 128, 128, 255
 
+    @staticmethod
+    def iter_context_menu_items(glob_item_id: GlobalItemID) -> Iterator[str]:
+        yield 'zip'
+        yield 'unzip'
+        yield 'open-in-explorer'
+
+    def exec_context_menu_action(self, glob_item_id: GlobalItemID, action_name: str) -> None:
+        print(glob_item_id, action_name)
+
 
 def _convert_global2task_serial(glob_id: GlobalItemID) -> int:
     assert glob_id.type == GlobalItemTypes.TASK

@@ -20,8 +20,8 @@ from datetime import datetime
 from time import time
 from typing import Optional, Iterator, List
 
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QListWidgetItem, QProgressDialog
+from PySide2.QtCore import Qt, QPoint
+from PySide2.QtWidgets import QListWidgetItem, QProgressDialog, QMenu
 from PySide2.QtWidgets import QMainWindow
 
 from context import Context
@@ -65,7 +65,9 @@ class MainWindow(QMainWindow):
         self._update_list()
         self.ui.files_state_filter.hide()
         self.ui.search_edit.setFocus()
-        
+        self.ui.search_result_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.ui.search_result_list.customContextMenuRequested.connect(self.on_list_item_context_menu)
+
         self.ui.action_contacts.triggered.connect(self.on_contacts_mode)
         self.ui.action_tasks.triggered.connect(self.on_tasks_mode)
         self.ui.action_contacts.setChecked(True)
@@ -175,6 +177,20 @@ class MainWindow(QMainWindow):
         if self._enable_show_details:
             obj_id = None if item is None else item.data(Qt.UserRole)
             self._update_html_view(obj_id)
+
+    def on_list_item_context_menu(self, point: QPoint):
+        cur_item = self.ui.search_result_list.currentItem()
+        obj_id = cur_item.data(Qt.UserRole)
+
+        global_pos = self.ui.search_result_list.mapToGlobal(point)
+        menu_items = list(self._cur_model_gui.iter_context_menu_items(obj_id))
+        if menu_items:
+            context_menu = QMenu()
+            for menu_item in menu_items:
+                context_menu.addAction(menu_item)
+            action = context_menu.exec_(global_pos)
+            if action is not None:
+                self._cur_model_gui.exec_context_menu_action(obj_id, action.text())
 
     def on_html_view_click_link(self, href_str: str):
         obj_id = self._cur_model_gui.get_id_from_href(href_str)

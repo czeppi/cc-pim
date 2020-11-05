@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass, field
 from enum import Enum
@@ -50,7 +51,7 @@ class TaskCache:
     date_str: str
     title: str
     readme: str
-    file_names: str  # list of indented file names
+    file_names: str
 
 
 @dataclass
@@ -74,6 +75,11 @@ class TaskFilesState(Enum):
         }.get(self.value, None)
 
 
+@dataclass
+class TaskMetaFileData:
+    task_serial: int
+
+
 class TaskCacheManager:
 
     def __init__(self, root: Path):
@@ -92,7 +98,8 @@ class TaskCacheManager:
             elif _TASK_ZIPFILE_REX.match(item.name):
                 yield TaskZipFile(item)
 
-    def read_from_db(self, db: DB) -> TaskCaches:
+    @staticmethod
+    def read_from_db(db: DB) -> TaskCaches:
         misc_table = db.table('misc')
         misc_rows = misc_table.select(where_str='key = "task_caches_timestamp"')
         assert len(misc_rows) == 1
@@ -115,7 +122,8 @@ class TaskCacheManager:
             )
         return task_caches
 
-    def write_db(self, db: DB, task_caches: TaskCaches) -> None:
+    @staticmethod
+    def write_db(db: DB, task_caches: TaskCaches) -> None:
         task_caches_table = db.table('task_caches')
         task_caches_table.clear()
         for cache in task_caches.map.values():
@@ -125,15 +133,25 @@ class TaskCacheManager:
                 'category': cache.category,
                 'date': cache.date_str,
                 'title': cache.title,
-                'readme': cache.readme,
+                'readme': '' if cache.readme is None else cache.readme,
                 'file_names': cache.file_names,
             }
             new_row = Row(table=task_caches_table, values=row_values)
             task_caches_table.insert_row(new_row)
 
+        print('write_db: ready with caches')
+        print(f'update_time: {task_caches.update_datetime}, = {int(task_caches.update_datetime.timestamp())}')
+
         misc_table = db.table('misc')
-        misc_table.update_row(values={'value': str(task_caches.update_datetime.timestamp())},
-                              where_str='key="task_caches_timestamp"')
+
+        where_str = 'key = "task_caches_timestamp"'
+        value = str(int(task_caches.update_datetime.timestamp()))
+        rows = misc_table.select(where_str=where_str)
+        if len(rows) == 0:
+            row = Row({'key': 'task_caches_timestamp', 'value': value}, misc_table)
+            misc_table.insert_row(row)
+        else:
+            misc_table.update_row(values={'value': value}, where_str=where_str)
         db.commit()
 
 
@@ -150,7 +168,7 @@ class TaskResource:
     def read(self) -> TaskCache:
         match = _TASK_FSTEM_REX.match(self._path.stem)
         return TaskCache(
-            task_serial=self._read_metafile(),
+            task_serial=self._read_metafile().task_serial,
             files_state=self.files_state,
             category=self._path.parent.name,
             date_str=match.group('date_str'),
@@ -160,25 +178,28 @@ class TaskResource:
         )
 
     def _read_filenames(self):
-        raise NotImplemented
+        raise NotImplemented()
 
     def _read_readme(self) -> Optional[str]:
-        raise NotImplemented
+        raise NotImplemented()
 
-    def _read_metafile(self) -> Optional[str]:
-        raise NotImplemented
+    def _read_metafile(self) -> Optional[TaskMetaFileData]:
+        raise NotImplemented()
+
+    def write_metafile(self, meta_data: TaskMetaFileData) -> None:
+        raise NotImplemented()
 
 
 class TaskZipFile(TaskResource):
     files_state = TaskFilesState.PASSIVE
 
-    def _read_filenames(self):
+    def _read_filenames(self) -> str:
         lines = []
         with ZipFile(self._path, 'r') as zip_file:
             for zip_info in zip_file.infolist():
                 lines.append(zip_info.filename)
         tree = self._create_file_tree(lines)
-        return list(self._iter_file_tree_items(tree, indent=''))
+        return '\n'.join(list(self._iter_file_tree_items(tree, indent='')))
 
     def _iter_file_tree_items(self, tree: Dict[str, Any], indent: str) -> Iterator[str]:
         for name in sorted(tree.keys()):
@@ -214,22 +235,33 @@ class TaskZipFile(TaskResource):
             except KeyError:
                 return
 
-    def _read_metafile(self) -> Optional[str]:
+    def _read_metafile(self) -> Optional[TaskMetaFileData]:
         with ZipFile(self._path, 'r') as zip_file:
             try:
-                data = zip_file.read('readme.txt')
+                data = zip_file.read('.meta')
                 buf = data.decode('utf-8')
                 yaml_data = yaml.safe_load(buf)
-                return yaml_data['task-serial']
+                return TaskMetaFileData(
+                    task_serial=int(yaml_data['task_serial']))
             except KeyError:
                 return
+
+    def write_metafile(self, meta_data: TaskMetaFileData) -> None:
+        zip_stat = self._path.stat()
+        zip_mtime = zip_stat.st_mtime
+        zip_atime = zip_mtime
+        yaml_data = {'task_serial': meta_data.task_serial}
+        yaml_str = yaml.safe_dump(yaml_data)
+        with ZipFile(self._path, 'a') as zip_file:
+            zip_file.writestr('.meta', yaml_str)
+        os.utime(self._path, times=(zip_atime, zip_mtime))
 
 
 class TaskDir(TaskResource):
     files_state = TaskFilesState.ACTIVE
 
-    def _read_filenames(self) -> List[str]:
-        return list(self._read_filenames_recursive(self._path, 0))
+    def _read_filenames(self) -> str:
+        return '\n'.join(list(self._read_filenames_recursive(self._path, 0)))
 
     def _read_filenames_recursive(self, dpath: Path, level: int) -> Iterator[str]:
         indent = ' ' * level
@@ -238,7 +270,7 @@ class TaskDir(TaskResource):
             if item.is_dir():
                 yield from self._read_filenames_recursive(item, level + 1)
 
-    def read_readme(self) -> Optional[str]:
+    def _read_readme(self) -> Optional[str]:
         readme_fpath = self._path / 'readme.txt'
         if readme_fpath.exists():
             data = readme_fpath.open('rb').read()
@@ -249,10 +281,16 @@ class TaskDir(TaskResource):
                 buf = data.decode('latin1')
                 return buf
 
-    def _read_metafile(self) -> Optional[int]:
-        readme_fpath = self._path / '.meta'
-        if readme_fpath.exists():
-            stream = readme_fpath.open('r', encoding='utf-8')
+    def _read_metafile(self) -> Optional[TaskMetaFileData]:
+        meta_fpath = self._path / '.meta'
+        if meta_fpath.exists():
+            stream = meta_fpath.open('r', encoding='utf-8')
             yaml_data = yaml.safe_load(stream)
-            return yaml_data['task_serial']
+            return TaskMetaFileData(
+                task_serial=int(yaml_data['task_serial']))
 
+    def write_metafile(self, meta_data: TaskMetaFileData) -> None:
+        yaml_data = {'task_serial': meta_data.task_serial}
+        meta_fpath = self._path / '.meta'
+        stream = meta_fpath.open('w', encoding='utf-8')
+        yaml.safe_dump(yaml_data, stream)
