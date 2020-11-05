@@ -19,6 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple, Dict
+import yaml
 
 from contacts.contactmodel import ContactModel
 from contacts.repository import Repository
@@ -68,10 +69,44 @@ class UserResourceMgr:
         self._user_dpath = user_dpath
 
     def read_config(self) -> Config:
-        return Config()  # todo: read it from file
+        config_fpath = self._user_dpath / 'config.yaml'
+        stream = config_fpath.open('r')
+        yaml_data = yaml.safe_load(stream)
+        config_data = {}
+        if 'tasks_root' in yaml_data:
+            root_dpath = Path(yaml_data['tasks_root'])
+            if not root_dpath.is_absolute():
+                root_dpath = (self._user_dpath / root_dpath).resolve()
+            config_data['tasks_root'] = root_dpath
+        return Config(**config_data)
 
     def read_state(self) -> UserState:
-        return UserState()  # todo: read it from file
+        state_fpath = self._user_dpath / 'state.yaml'
+        if state_fpath.exists():
+            stream = state_fpath.open('r')
+            yaml_data = yaml.safe_load(stream)
+            state_data = {
+                'frame_pos': (int(yaml_data['frame_x']), int(yaml_data['frame_y'])),
+                'frame_size': (int(yaml_data['frame_width']), int(yaml_data['frame_height'])),
+                'search_width': int(yaml_data['search_width']),
+            }
+            return UserState(**state_data)
+        else:
+            return UserState()
+
+    def write_state(self, state: UserState) -> None:
+        state_fpath = self._user_dpath / 'state.yaml'
+        stream = state_fpath.open('w')
+        frame_x, frame_y = state.frame_pos
+        frame_width, frame_height = state.frame_size
+        yaml_data = {
+            'frame_x': frame_x,
+            'frame_y': frame_y,
+            'frame_width': frame_width,
+            'frame_height': frame_height,
+            'search_width': state.search_width,
+        }
+        yaml.safe_dump(yaml_data, stream)
 
     def read_icons(self) -> Dict[str, Icon]:
         icon_dpath = self._user_dpath / 'icons'
@@ -84,11 +119,11 @@ class UserResourceMgr:
         date_changes, fact_changes = contact_repo.aggregate_revisions()
         return ContactModel(date_changes, fact_changes)
 
-    def read_task_model(self, tasks_metamodel: MetaModel) -> TaskModel:
+    def read_task_model(self, tasks_metamodel: MetaModel, tasks_root: Path) -> TaskModel:
         sqlite3_path = self._user_dpath / 'tasks.sqlite'
         db = DB(sqlite3_path, tasks_metamodel, logging_enabled=LOGGING_ENABLED)
         keyword_extractor = KeywordExtractor(self._user_dpath / 'no-keywords.txt')
-        task_model = TaskModel(db, keyword_extractor=keyword_extractor)
+        task_model = TaskModel(db, tasks_root=tasks_root, keyword_extractor=keyword_extractor)
         task_model.read()
         return task_model
 
@@ -102,8 +137,8 @@ class UserState:
 
 @dataclass
 class Config:
+    tasks_root: Path
     margin: int = 5
-    logging_enabled: bool = False
 
 
 def _read_icon(icon_fpath: Path) -> Icon:

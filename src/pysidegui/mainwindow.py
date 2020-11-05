@@ -16,43 +16,54 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 import webbrowser
-from typing import Optional, Iterator
+from datetime import datetime
+from time import time
+from typing import Optional, Iterator, List
 
 from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QListWidgetItem
+from PySide2.QtWidgets import QListWidgetItem, QProgressDialog
 from PySide2.QtWidgets import QMainWindow
 
 from context import Context
-from pysidegui._ui2_.ui_mainwindow import Ui_MainWindow
+from pysidegui._ui2_.ui_mainwindow import Ui_MainWindow, QResizeEvent, QMoveEvent, QBrush, QColor
 from pysidegui.contactsgui.contactsgui import ContactsGui
 from pysidegui.globalitemid import GlobalItemID
 from pysidegui.tasksgui.tasksgui import TasksGui
+from tasks.caching import TaskCacheManager, TaskCaches, TaskCache, TaskFilesState
 
 
 class MainWindow(QMainWindow):
 
     def __init__(self, context: Context):
         super().__init__(None)
+        self._context = context
+        self._config = context.user.read_config()
+        self._state = context.user.read_state()
+        self._data_icons = context.user.read_icons()
+
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
         self.ui.splitter.setStretchFactor(0, 0)
         self.ui.splitter.setStretchFactor(1, 1)
-
-        self._data_icons = context.user.read_icons()
+        self.resize(*self._state.frame_size)
+        self.move(*self._state.frame_pos)
+        self.ui.splitter.setSizes([self._state.search_width, self._state.frame_size[0] - self._state.search_width])
 
         contact_model = context.user.read_contact_model()
         task_meta_model = context.system.read_task_metamodel()
-        task_model = context.user.read_task_model(task_meta_model)
+        self._task_model = context.user.read_task_model(task_meta_model, self._config.tasks_root)
         self._contacts_gui = ContactsGui(contact_model)
-        self._tasks_gui = TasksGui(task_model)
+        self._tasks_gui = TasksGui(self._task_model)
 
         self._cur_model_gui = self._contacts_gui
         self._show_obj_id = None
         self._enable_show_details = True
 
         self._update_category_filter()
+        self._update_files_state_filter()
         self._update_list()
+        self.ui.files_state_filter.hide()
         self.ui.search_edit.setFocus()
         
         self.ui.action_contacts.triggered.connect(self.on_contacts_mode)
@@ -64,6 +75,8 @@ class MainWindow(QMainWindow):
         self.ui.action_edit_item.triggered.connect(self.on_edit_item)
         self.ui.action_save_all.triggered.connect(self.on_save_all)
         self.ui.action_revert_changes.triggered.connect(self.on_revert_changed)
+        self.ui.action_update_cache.triggered.connect(self.on_update_cache)
+        self.ui.splitter.splitterMoved.connect(self.on_splitter_moved)
         self.ui.search_edit.textChanged.connect(self.on_search_text_changed)
         self.ui.category_filter.currentIndexChanged.connect(self.on_category_changed)
         self.ui.search_result_list.currentItemChanged.connect(self.on_cur_list_item_changed)
@@ -80,9 +93,38 @@ class MainWindow(QMainWindow):
             else:
                 self.ui.category_filter.addItem(category)
 
+    def _update_files_state_filter(self) -> None:
+        self.ui.files_state_filter.clear()
+        self.ui.files_state_filter.addItem('')
+        for i, files_state in enumerate(TaskFilesState):
+            if files_state != TaskFilesState.UNKNOWN:
+                self.ui.files_state_filter.addItem(files_state.name.lower())
+                rgb = files_state.rgb()
+                if rgb is not None:
+                    color = QColor(*rgb)
+                    self.ui.files_state_filter.setItemData(i, color, Qt.ForegroundRole)
+
+    def resizeEvent(self, resize_event: QResizeEvent) -> None:
+        new_size = resize_event.size().width(), resize_event.size().height()
+        if new_size != self._state.frame_size:
+            self._state.frame_size = new_size
+            self._context.user.write_state(self._state)
+
+    def moveEvent(self, move_event: QMoveEvent) -> None:
+        new_pos = move_event.pos().x(), move_event.pos().y()
+        if new_pos != self._state.frame_pos:
+            self._state.frame_pos = new_pos
+            self._context.user.write_state(self._state)
+
+    def on_splitter_moved(self, new_pos: int, index: int) -> None:
+        if new_pos != self._state.search_width:
+            self._state.search_width = new_pos
+            self._context.user.write_state(self._state)
+
     def on_contacts_mode(self):
         self.ui.action_contacts.setChecked(True)
         self.ui.action_tasks.setChecked(False)
+        self.ui.files_state_filter.hide()
         self._cur_model_gui = self._contacts_gui
         self._update_category_filter()
         self.ui.search_result_list.setCurrentItem(None)
@@ -91,6 +133,7 @@ class MainWindow(QMainWindow):
     def on_tasks_mode(self):
         self.ui.action_contacts.setChecked(False)
         self.ui.action_tasks.setChecked(True)
+        self.ui.files_state_filter.show()
         self._cur_model_gui = self._tasks_gui
         self._update_category_filter()
         self.ui.search_result_list.setCurrentItem(None)
@@ -150,6 +193,26 @@ class MainWindow(QMainWindow):
             self._update_list(select_obj_id=None)
             self._update_html_view(obj_id=None)
 
+    def on_update_cache(self):
+        t0 = datetime.now()
+        cache_mgr = TaskCacheManager(self._config.tasks_root)
+        task_resources = cache_mgr.read_resources()
+
+        task_caches: List[TaskCache] = []
+        n = len(task_resources)
+        dlg = QProgressDialog("updating...", "Abort", 0, n)
+        dlg.setWindowTitle("Cache")
+        dlg.setWindowModality(Qt.WindowModal)
+        for i in range(n):
+            task_caches.append(task_resources[i].read())
+
+            dlg.setValue(i)
+            if dlg.wasCanceled():
+                return
+
+        self._task_model.update_cache(t0, task_caches)
+        dlg.setValue(n)
+
     def _update_icons(self):
         exists_uncommitted_changes = self._cur_model_gui.exists_uncommitted_changes()
         self.ui.action_save_all.setEnabled(exists_uncommitted_changes)
@@ -196,8 +259,15 @@ class MainWindow(QMainWindow):
     def _create_new_list_item(self, obj_id: GlobalItemID) -> QListWidgetItem:
         title = self._cur_model_gui.get_object_title(obj_id)
         category = self._cur_model_gui.get_object_category(obj_id)
+
         new_item = QListWidgetItem(title)
         new_item.setData(Qt.UserRole, obj_id)
+
+        rgb = self._cur_model_gui.get_object_rgb(obj_id)
+        if rgb is not None:
+            color = QColor(*rgb)
+            brush = QBrush(color)
+            new_item.setForeground(brush)
 
         icon = self._data_icons.get(category.lower(), None)
         if icon is not None:

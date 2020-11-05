@@ -18,7 +18,7 @@
 from __future__ import annotations
 import sqlite3
 from pathlib import Path
-from typing import Dict, ValuesView, Optional
+from typing import Dict, ValuesView, Optional, Any
 
 from tasks.metamodel import MetaModel, Structure
 
@@ -101,29 +101,33 @@ class Table:
     def attribute(self, name: str):
         return self._struct.attribute(name)
         
-    def create(self):
+    def create(self) -> None:
         fields = [x.name + ' ' + x.type.sqlite3_typename
                   for x in self.attributes]
         fields_str = ', '.join(fields)
         sql_cmd = f"create table {self.name} ({fields_str})"
         self._execute_sql(sql_cmd)
-        
-    def insert_row(self, row):
+
+    def clear(self) -> None:
+        sql_cmd = f"delete from {self.name}"
+        self._execute_sql(sql_cmd)
+
+    def insert_row(self, row: Row) -> None:
         values = [f'"{row.value(x.name)}"' for x in self.attributes]
         values_str = ', '.join(values)
         sql_cmd = f'insert into {self.name} values ({values_str})'
         self._execute_sql(sql_cmd)
         
-    def update_row(self, id_, values):
-        row = Row(values, self)
-        value_list = [f'{x}="{row.value(x)}"' for x in row.value_keys()]
+    def update_row(self, values: Dict[str, Any], where_str: str) -> None:
+        value_list = [f'{key}="{value}"' for key, value in values.items()]
         values_str = ', '.join(value_list)
-        sql_cmd = f'update {self.name} set {values_str} where id = "{id_}"'
+        sql_cmd = f'update {self.name} set {values_str} where {where_str}'
         self._execute_sql(sql_cmd)
-        self._db.commit()
-        
-    def select(self):
+
+    def select(self, where_str: str = ''):
         sql_cmd = f"select * from {self.name}"
+        if where_str:
+            sql_cmd += f' where {where_str}'
         cursor = self._execute_sql(sql_cmd)
         return cursor.fetchall()
         

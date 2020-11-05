@@ -190,6 +190,9 @@ class Table(BlockElement):
 class Page(ElementBase):
     block_elements: TList[BlockElement] = field(default_factory=list)
 
+    def is_empty(self) -> bool:
+        return len(self.block_elements) == 0
+
     def iter_inline_elements(self) -> Iterator[InlineElement]:
         for block_element in self.block_elements:
             yield from block_element.iter_inline_elements()

@@ -17,18 +17,24 @@
 
 from __future__ import annotations
 import re
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, List, Iterable, Any, Iterator, Set
+from typing import Optional, Dict, List, Iterable, Any, Iterator, Set, Tuple
 
+from tasks.caching import TaskCache, TaskCacheManager
 from tasks.db import Row, DB
 from tasks.xml_reading import read_from_xmlstr
 
 
+TaskSerial = int
+
+
 class TaskModel:
 
-    def __init__(self, db: DB, keyword_extractor: KeywordExtractor):
+    def __init__(self, db: DB, tasks_root: Path, keyword_extractor: KeywordExtractor):
         self._db = db
+        self._tasks_root = tasks_root
         self._tasks_revisions_table = self._db.table('tasks_revisions')
         self._keyword_extractor = keyword_extractor
         self._tasks: Dict[int, Task] = {}
@@ -38,18 +44,33 @@ class TaskModel:
     def tasks(self):
         return self._tasks.values()
 
-    def read(self):
+    def read(self) -> None:
         self._db.open()
         self._tasks.clear()
-        task_serial2revisions: Dict[int, List[TaskRevision]] = {}
+        task_revision_map = self._read_task_revisions()
+        self._tasks = {serial: Task(serial, sorted(revs, key=lambda x: x.rev_no), self)
+                       for serial, revs in task_revision_map.items()}
+
+    def _read_task_revisions(self) -> Dict[TaskSerial, List[TaskRevision]]:
+        task_revision_map: Dict[int, List[TaskRevision]] = {}
         for row in self._tasks_revisions_table.select():
             task_rev = TaskRevision(model=self, **row)
             task_serial = task_rev.task_serial
-            if task_serial not in task_serial2revisions:
-                task_serial2revisions[task_serial] = [self._default_rev]
-            task_serial2revisions[task_serial].append(task_rev)
-        self._tasks = {serial: Task(serial, sorted(revs, key=lambda x: x.rev_no), self)
-                       for serial, revs in task_serial2revisions.items()}
+            if task_serial not in task_revision_map:
+                task_revision_map[task_serial] = [self._default_rev]
+            task_revision_map[task_serial].append(task_rev)
+        return task_revision_map
+
+    def _read_task_caches(self) -> None:
+        cache_mgr = TaskCacheManager()
+        cache_table = cache_mgr.read()
+        for cache_row in cache_table.rows:
+            task = self._tasks.get(cache_row.task_serial, None)
+            if task is None:
+                raise Exception('task_cache: task {task_cache.task_serial} not found')
+            task.cache = TaskCacheData(readme=cache_row.readme, filenames=cache_row.filenames)
+        self._cache_update_timestamp = cache_mgr.read_update_timestamp()
+
 
     def create_new_task(self, task_serial: Optional[int] = None) -> Task:
         if task_serial is None:
@@ -104,6 +125,36 @@ class TaskModel:
 
     def extract_keywords(self, text: str) -> List[str]:
         return self._keyword_extractor.get_keywords(text)
+
+    def update_cache(self, timestamp: datetime, task_cache_list: List[TaskCache]) -> None:
+        task_map = {self._get_task_key(task): task for task in self._tasks.values()}
+        for cache in task_cache_list:
+            cache_task_key = cache.category, cache.date_str, cache.title
+            if cache.task_serial:
+                task = self._tasks.get(cache.task_serial, None)
+                if task is None:
+                    raise Exception(cache.task_serial)
+                task_key = self._get_task_key(task)
+                if task_key != cache_task_key:
+                    raise Exception(cache.task_serial)
+            else:
+                task = task_map.get(cache_task_key, None)
+                if task is None:
+                    task = self.create_new_task()
+                    new_task_rev = task.create_new_revision(**dlg_values)
+                    self.add_task_revision(new_task_rev)
+                    task_resource = ...
+                    task_resource.write_meta(task.serial)
+                else:
+                    cache.task_serial = task.serial
+
+        cache_mgr = TaskCacheManager(self._tasks_root)
+        cache_mgr.write_db(task_caches=task_caches, db=self._db)
+
+    @staticmethod
+    def _get_task_key(task: Task) -> Tuple[str, str, str]:
+        task_rev = task.last_revision
+        return [task_rev.category, task_rev.date_str, task_rev.title]
 
 
 class Task:
@@ -287,3 +338,5 @@ class KeywordExtractor:
     @staticmethod
     def _is_alnum(ch):
         return ch.isalnum() or ch in ['ä', 'ö', 'ü', 'ß', 'Ä', 'Ö', 'Ü']
+
+

@@ -32,7 +32,14 @@
          <widget class="SearchEdit" name="search_edit"/>
         </item>
         <item>
-         <widget class="QComboBox" name="category_filter"/>
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <item>
+           <widget class="QComboBox" name="category_filter"/>
+          </item>
+          <item>
+           <widget class="QComboBox" name="files_state_filter"/>
+          </item>
+         </layout>
         </item>
         <item>
          <widget class="QListWidget" name="search_result_list"/>
@@ -50,7 +57,7 @@
      <x>0</x>
      <y>0</y>
      <width>1000</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
   </widget>
@@ -74,6 +81,7 @@
    <addaction name="action_edit_item"/>
    <addaction name="action_save_all"/>
    <addaction name="action_revert_changes"/>
+   <addaction name="action_update_cache"/>
   </widget>
   <action name="action_edit_item">
    <property name="enabled">
@@ -160,6 +168,18 @@
    </property>
    <property name="toolTip">
     <string>tasks</string>
+   </property>
+  </action>
+  <action name="action_update_cache">
+   <property name="icon">
+    <iconset>
+     <normaloff>../etc/icons/update-cache.svg</normaloff>../etc/icons/update-cache.svg</iconset>
+   </property>
+   <property name="text">
+    <string>UpdateCache</string>
+   </property>
+   <property name="toolTip">
+    <string>update cache ...</string>
    </property>
   </action>
  </widget>

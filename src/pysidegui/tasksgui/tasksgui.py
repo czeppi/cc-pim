@@ -21,7 +21,7 @@ from PySide2 import QtGui
 from PySide2.QtWidgets import QMainWindow
 
 from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
-from pysidegui.modelgui import ModelGui
+from pysidegui.modelgui import ModelGui, RGB
 from pysidegui.tasksgui.taskeditdialog import TaskEditDialog
 from tasks.html_creator import write_htmlstr, LinkSolver
 from tasks.taskmodel import TaskModel, Task
@@ -111,6 +111,9 @@ class TasksGui(ModelGui):
 
     def iter_categories(self) -> Iterator[str]:
         yield from self._task_model.get_sorted_categories()
+
+    def get_object_rgb(self, glob_item_id: GlobalItemID) -> Optional[RGB]:
+        return 128, 128, 255
 
 
 def _convert_global2task_serial(glob_id: GlobalItemID) -> int:

@@ -23,10 +23,17 @@ from tasks.page import Page, Header, Paragraph, List, Table
 
 
 def write_xmlstr(page: Page, with_page_element: bool = True) -> str:
+    if page.is_empty():
+        if with_page_element:
+            return '<page/>'
+        else:
+            return ''
+
     xml_root = _XmlCreator(page).create()
     s = ET.tostring(xml_root, encoding='unicode')
     assert s.startswith('<page>')
     assert s.endswith('</page>')
+
     if with_page_element:
         return s
     else:
