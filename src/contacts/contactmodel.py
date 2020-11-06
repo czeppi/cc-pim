@@ -114,6 +114,11 @@ class Contact:
     def contains_all_keywords(self, keywords: Iterable[str]) -> bool:
         return all(self.contains_keyword(x) for x in keywords)
 
+    def does_meet_the_criteria(self, search_words: Iterable[str], category: str) -> bool:
+        if category and category != self.contact_type.name.lower():
+            return False
+        return all(self.contains_keyword(x) for x in search_words)
+
     def copy(self) -> Contact:
         new_contact = _create_contact(self.contact_type, self.serial)
         for attr_name, fact_list in self._facts_map.items():

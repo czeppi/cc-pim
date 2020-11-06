@@ -27,6 +27,7 @@ from context import Context
 from pysidegui._ui2_.ui_mainwindow import Ui_MainWindow, QResizeEvent, QMoveEvent, QBrush, QColor
 from pysidegui.contactsgui.contactsgui import ContactsGui
 from pysidegui.globalitemid import GlobalItemID
+from pysidegui.modelgui import ResultItemData
 from pysidegui.tasksgui.tasksgui import TasksGui
 from tasks.caching import TaskCacheManager, TaskCache, TaskFilesState
 
@@ -80,6 +81,7 @@ class MainWindow(QMainWindow):
         self.ui.splitter.splitterMoved.connect(self.on_splitter_moved)
         self.ui.search_edit.textChanged.connect(self.on_search_text_changed)
         self.ui.category_filter.currentIndexChanged.connect(self.on_category_changed)
+        self.ui.files_state_filter.currentIndexChanged.connect(self.on_files_state_changed)
         self.ui.search_result_list.currentItemChanged.connect(self.on_cur_list_item_changed)
         self.ui.search_result_list.itemActivated.connect(self.on_list_item_activated)
         self.ui.html_view.click_link_observers.append(self.on_html_view_click_link)
@@ -143,7 +145,7 @@ class MainWindow(QMainWindow):
     def on_new_item(self):
         new_obj_id = self._cur_model_gui.new_item(frame=self, data_icons=self._data_icons)
         if new_obj_id is not None:
-            self._update_icons()
+            self._update_toolbar_icons()
             self._update_list(select_obj_id=new_obj_id)
             self._update_html_view(new_obj_id)
 
@@ -160,7 +162,7 @@ class MainWindow(QMainWindow):
             return
 
         if self._cur_model_gui.edit_item(obj_id, frame=self, data_icons=self._data_icons):
-            self._update_icons()
+            self._update_toolbar_icons()
             self._update_list()
             self._update_html_view(obj_id)
 
@@ -168,6 +170,9 @@ class MainWindow(QMainWindow):
         self._update_list()
 
     def on_category_changed(self, category_index: int):
+        self._update_list()
+
+    def on_files_state_changed(self, files_state_index: int):
         self._update_list()
 
     def on_cur_list_item_changed(self, item, previous_item):
@@ -203,11 +208,11 @@ class MainWindow(QMainWindow):
 
     def on_save_all(self):
         if self._cur_model_gui.save_all():
-            self._update_icons()
+            self._update_toolbar_icons()
 
     def on_revert_changed(self):
         if self._cur_model_gui.revert_change():
-            self._update_icons()
+            self._update_toolbar_icons()
             self._update_list(select_obj_id=None)
             self._update_html_view(obj_id=None)
 
@@ -232,7 +237,7 @@ class MainWindow(QMainWindow):
         dlg.setValue(n)
         self._update_list()
 
-    def _update_icons(self):
+    def _update_toolbar_icons(self):
         exists_uncommitted_changes = self._cur_model_gui.exists_uncommitted_changes()
         self.ui.action_save_all.setEnabled(exists_uncommitted_changes)
         self.ui.action_revert_changes.setEnabled(exists_uncommitted_changes)
@@ -242,9 +247,8 @@ class MainWindow(QMainWindow):
         old_cur_obj_id = self._get_cur_list_item_obj_id()
 
         self.ui.search_result_list.clear()
-        for obj_id in self._iter_sorted_ids_from_keywords():
-            if self._is_id_in_category_filter(obj_id):
-                self._add_list_item(obj_id)
+        for result_item in self._iter_filtered_items():
+            self._add_list_item2(result_item)
 
         if select_obj_id is None:
             select_obj_id = old_cur_obj_id
@@ -258,42 +262,33 @@ class MainWindow(QMainWindow):
         if old_cur_list_item:
             return old_cur_list_item.data(Qt.UserRole)
 
-    def _iter_sorted_ids_from_keywords(self) -> Iterator[GlobalItemID]:
-        keywords_str = self.ui.search_edit.text()
-        keywords = [x.strip() for x in keywords_str.split() if x.strip() != '']
-        yield from self._cur_model_gui.iter_sorted_ids_from_keywords(keywords)
-
-    def _is_id_in_category_filter(self, obj_id: GlobalItemID) -> bool:
+    def _iter_filtered_items(self) -> Iterator[ResultItemData]:
+        search_text = self.ui.search_edit.text()
+        search_words = [x.strip() for x in search_text.split() if x.strip() != '']
         filter_category = self.ui.category_filter.currentText()
-        if filter_category == '':
-            return True  # no filter
-        else:
-            category = self._cur_model_gui.get_object_category(obj_id)
-            return category == filter_category
+        filter_files_state = ''
+        if self.ui.files_state_filter.isVisible():
+            filter_files_state = self.ui.files_state_filter.currentText()
 
-    def _add_list_item(self, obj_id: GlobalItemID) -> None:
-        new_item = self._create_new_list_item(obj_id)
-        self.ui.search_result_list.addItem(new_item)
-        
-    def _create_new_list_item(self, obj_id: GlobalItemID) -> QListWidgetItem:
-        title = self._cur_model_gui.get_object_title(obj_id)
-        category = self._cur_model_gui.get_object_category(obj_id)
+        yield from sorted(
+            self._cur_model_gui.iter_filtered_items(
+                search_words, filter_category, filter_files_state),
+            key=lambda x: x.title)
 
-        new_item = QListWidgetItem(title)
-        new_item.setData(Qt.UserRole, obj_id)
+    def _add_list_item2(self, item_data: ResultItemData) -> None:
+        new_item = QListWidgetItem(item_data.title)
+        new_item.setData(Qt.UserRole, item_data.glob_id)
 
-        rgb = self._cur_model_gui.get_object_rgb(obj_id)
-        if rgb is not None:
-            color = QColor(*rgb)
+        if item_data.rgb is not None:
+            color = QColor(*item_data.rgb)
             brush = QBrush(color)
             new_item.setForeground(brush)
 
-        icon = self._data_icons.get(category.lower(), None)
+        icon = self._data_icons.get(item_data.category.lower(), None)
         if icon is not None:
             new_item.setIcon(icon)
-        else:
-            pass
-        return new_item
+
+        self.ui.search_result_list.addItem(new_item)
 
     def _select_item(self, obj_id: GlobalItemID) -> None:
         list_ctrl = self.ui.search_result_list

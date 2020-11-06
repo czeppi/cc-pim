@@ -110,7 +110,7 @@ class BlockElement(ElementBase):
     pass
 
     def iter_inline_elements(self) -> Iterator[InlineElement]:
-        raise NotImplemented
+        raise NotImplemented()
 
 
 @dataclass

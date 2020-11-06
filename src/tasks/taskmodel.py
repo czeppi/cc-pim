@@ -25,7 +25,7 @@ from typing import Optional, Dict, List, Iterable, Any, Iterator, Set, Tuple
 
 import yaml
 
-from tasks.caching import TaskCache, TaskCacheManager, TaskCaches, TaskCacheData, TaskFilesState
+from tasks.caching import TaskCache, TaskCacheManager, TaskCaches, TaskCacheData, TaskFilesState, RGB
 from tasks.db import Row, DB
 from tasks.xml_reading import read_from_xmlstr
 from tasks.zipping import Unzipper, Zipper
@@ -201,6 +201,10 @@ class Task:
     def revisions_list(self):
         return self._revisions
 
+    @property
+    def files_state(self):
+        return self.cache.files_state if self.cache else TaskFilesState.NO_FILES
+
     def get_revision(self, rev_no: int) -> TaskRevision:
         return self._revisions[rev_no]
 
@@ -213,6 +217,10 @@ class Task:
         rev_1st = self._revisions[1] if n >= 2 else self._revisions[0]
         rev_last = self._revisions[-1]
         return f'{rev_1st.date}: {rev_last.title}'
+
+    def get_rgb(self) -> RGB:
+        if self.cache:
+            return self.cache.files_state.rgb()
 
     def create_new_revision(self, title: str, body: str, category: str) -> TaskRevision:
         new_rev_no = len(self._revisions)
@@ -278,6 +286,16 @@ class Task:
     def get_rel_path(self) -> str:
         task_rev = self.last_revision
         return f'{task_rev.category}/{task_rev.date}-{task_rev.title}'
+
+    def does_meet_the_criteria(self, search_words: Iterable[str],
+                               category: str, files_state: str) -> bool:
+        task_rev = self.last_revision
+        if category and category != task_rev.category:
+            return False
+        if files_state:
+            if self.files_state.name.lower() != files_state:
+                return False
+        return task_rev.contains_all_keyword(search_words)
 
 
 class TaskRevision:

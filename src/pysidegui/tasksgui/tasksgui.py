@@ -24,9 +24,9 @@ from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QMainWindow
 
 from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
-from pysidegui.modelgui import ModelGui, RGB
+from pysidegui.modelgui import ModelGui, ResultItemData
 from pysidegui.tasksgui.taskeditdialog import TaskEditDialog
-from tasks.caching import TaskFilesState, TaskCacheManager
+from tasks.caching import TaskFilesState, TaskCacheManager, RGB
 from tasks.html_creator import write_htmlstr, LinkSolver
 from tasks.page import Header, NormalText, Paragraph
 from tasks.taskmodel import TaskModel, Task
@@ -69,7 +69,7 @@ class TasksGui(ModelGui):
         return True  # not necessary, cause changes were committed at end of dialog
 
     def revert_change(self) -> bool:
-        raise NotImplemented
+        raise NotImplemented()
 
     def get_html_text(self, glob_item_id: GlobalItemID) -> str:
         task_serial = _convert_global2task_serial(glob_item_id)
@@ -104,37 +104,20 @@ class TasksGui(ModelGui):
             global_type = GlobalItemTypes[type_name]
             return GlobalItemID(global_type, serial)
 
-    def iter_sorted_ids_from_keywords(self, keywords) -> Iterator[GlobalItemID]:
-        filtered_tasks = self._iter_filtered_tasks(keywords)
-        sorted_tasks = sorted(filtered_tasks, key=lambda x: x.serial, reverse=True)
-        for task in sorted_tasks:
-            yield _convert_task2global_id(task.serial)
-
-    def _iter_filtered_tasks(self, keywords: Iterable[str]) -> Iterator[Task]:
+    def iter_filtered_items(self, search_words: Iterable[str],
+                            filter_category: str,
+                            filter_files_state: str) -> Iterator[ResultItemData]:
         for task in self._task_model.tasks:
-            if task.last_revision.contains_all_keyword(keywords):
-                yield task
-
-    def get_object_title(self, glob_item_id: GlobalItemID) -> str:
-        task_serial = _convert_global2task_serial(glob_item_id)
-        task = self._task_model.get_task(task_serial)
-        return task.get_header()
-
-    def get_object_category(self, glob_item_id: GlobalItemID) -> str:
-        task_serial = _convert_global2task_serial(glob_item_id)
-        task = self._task_model.get_task(task_serial)
-        return task.last_revision.category
+            if task.does_meet_the_criteria(search_words, filter_category, filter_files_state):
+                yield ResultItemData(
+                    glob_id=_convert_task2global_id(task.serial),
+                    category=task.last_revision.category,
+                    title=task.get_header(),
+                    rgb=task.get_rgb(),
+                )
 
     def iter_categories(self) -> Iterator[str]:
         yield from self._task_model.get_sorted_categories()
-
-    def get_object_rgb(self, glob_item_id: GlobalItemID) -> Optional[RGB]:
-        task_serial = _convert_global2task_serial(glob_item_id)
-        task = self._task_model.get_task(task_serial)
-        if task.cache is not None:
-            rgb = task.cache.files_state.rgb()
-            if rgb:
-                return rgb
 
     def iter_context_menu_items(self, glob_item_id: GlobalItemID) -> Iterator[str]:
         task_serial = _convert_global2task_serial(glob_item_id)

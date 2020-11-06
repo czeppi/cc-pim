@@ -22,7 +22,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Iterator, Optional, Any
+from typing import Dict, List, Iterator, Optional, Any, Tuple
 from datetime import datetime
 from zipfile import ZipFile
 
@@ -31,6 +31,7 @@ import yaml
 from tasks.db import DB, Row
 
 TaskSerial = int
+RGB = Tuple[int, int, int]
 
 _TASK_DPATH_REX = re.compile(r"[0-9x]{4,6}-.*")
 _TASK_ZIPFILE_REX = re.compile(r"[0-9x]{4,6}-.*\.zip")
@@ -68,7 +69,7 @@ class TaskFilesState(Enum):
     PASSIVE = 3   # zipped
     ARCHIVED = 4  # on extra hard disc
 
-    def rgb(self):
+    def rgb(self) -> RGB:
         return {
             self.ACTIVE.value: [0, 160, 0],
             self.PASSIVE.value: [0, 0, 255],
@@ -295,11 +296,8 @@ class TaskDir(TaskResource):
         if meta_fpath.exists():
             stream = meta_fpath.open('r', encoding='utf-8')
             yaml_data = yaml.safe_load(stream)
-            try:
-                return TaskMetaFileData(
-                    task_serial=int(yaml_data['task_serial']))
-            except TypeError:
-                dummy = True
+            return TaskMetaFileData(
+                task_serial=int(yaml_data['task_serial']))
 
     def write_metafile(self, meta_data: TaskMetaFileData) -> None:
         yaml_data = {'task_serial': meta_data.task_serial}

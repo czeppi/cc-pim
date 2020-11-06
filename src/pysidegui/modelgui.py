@@ -14,13 +14,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import annotations
+from dataclasses import dataclass
+
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QMainWindow
 
 from pysidegui.globalitemid import GlobalItemID
-from typing import Optional, Iterator, Iterable, Tuple, Dict
+from typing import Optional, Iterator, Iterable, Dict
 
-RGB = Tuple[int, int, int]
+from tasks.caching import RGB
 
 
 class ModelGui:
@@ -46,21 +50,14 @@ class ModelGui:
     def get_id_from_href(self, href_str: str) -> Optional[GlobalItemID]:
         raise NotImplemented()
 
-    def iter_sorted_ids_from_keywords(self, keywords: Iterable[str]) -> Iterator[GlobalItemID]:
-        raise NotImplemented()
-
-    def get_object_title(self, glob_item_id: GlobalItemID) -> str:
-        raise NotImplemented()
-
-    def get_object_category(self, glob_item_id: GlobalItemID) -> str:
+    def iter_filtered_items(self, search_words: Iterable[str],
+                            filter_category: str,
+                            filter_files_state: str) -> Iterator[ResultItemData]:
         raise NotImplemented()
 
     @staticmethod
     def iter_categories() -> Iterator[str]:
         raise NotImplemented()
-
-    def get_object_rgb(self, glob_item_id: GlobalItemID) -> Optional[RGB]:
-        return None
 
     @staticmethod
     def iter_context_menu_items(glob_item_id: GlobalItemID) -> Iterator[str]:
@@ -69,3 +66,11 @@ class ModelGui:
     def exec_context_menu_action(self, glob_item_id: GlobalItemID,
                                  action_name: str, file_commander_cmd: str) -> None:
         pass
+
+
+@dataclass
+class ResultItemData:
+    glob_id: GlobalItemID
+    category: str
+    title: str
+    rgb: Optional[RGB] = None

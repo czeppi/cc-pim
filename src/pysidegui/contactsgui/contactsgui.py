@@ -25,7 +25,7 @@ from contacts.contactmodel import ContactModel, ContactID, ContactType, Address,
 from pysidegui.contactsgui.contacteditdialog import ContactEditDialog
 from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
 from pysidegui.htmlview import ContactHtmlCreator
-from pysidegui.modelgui import ModelGui
+from pysidegui.modelgui import ModelGui, ResultItemData
 
 
 class ContactsGui(ModelGui):
@@ -90,32 +90,22 @@ class ContactsGui(ModelGui):
         contact_id = ContactID.create_from_string(href_str)
         return _convert_contact2global_id(contact_id)
 
-    def iter_sorted_ids_from_keywords(self, keywords: Iterable[str]) -> Iterator[GlobalItemID]:
-        filtered_contacts = self._iter_filtered_contacts(keywords)
-        sorted_contacts = sorted(filtered_contacts, key=lambda x: x.id)
-        for contact in sorted_contacts:
-            yield _convert_contact2global_id(contact.id)
-
-    def _iter_filtered_contacts(self, keywords: Iterable[str]) -> Iterator[Contact]:
+    def iter_filtered_items(self, search_words: Iterable[str],
+                            filter_category: str,
+                            filter_files_state: str) -> Iterator[ResultItemData]:
         for contact in self._contact_model.iter_objects():
-            if contact.contains_all_keywords(keywords):
-                yield contact
-
-    def get_object_title(self, glob_item_id: GlobalItemID) -> str:
-        contact_id = _convert_global2contact_id(glob_item_id)
-        contact = self._contact_model.get_contact(contact_id)
-        return contact.title
-
-    def get_object_category(self, glob_item_id: GlobalItemID) -> str:
-        contact_id = _convert_global2contact_id(glob_item_id)
-        contact = self._contact_model.get_contact(contact_id)
-        return contact.type_name
+            if contact.does_meet_the_criteria(search_words, filter_category):
+                yield ResultItemData(
+                    glob_id=_convert_contact2global_id(contact.id),
+                    category=contact.contact_type.name.lower(),
+                    title=contact.title,
+                )
 
     @staticmethod
     def iter_categories() -> Iterator[str]:
-        yield Person.type_name
-        yield Company.type_name
-        yield Address.type_name
+        yield Person.type_name.lower()
+        yield Company.type_name.lower()
+        yield Address.type_name.lower()
 
 
 def _convert_global2contact_id(glob_id: GlobalItemID) -> ContactID:
