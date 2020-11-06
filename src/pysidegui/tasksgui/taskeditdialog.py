@@ -17,11 +17,10 @@
 
 from typing import Iterator, Dict
 
-from PySide2 import QtGui
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QDialog, QApplication, QWidget
 
-from pysidegui._ui2_.ui_taskeditdialog import Ui_TaskEditDialog
+from pysidegui._ui2_.ui_taskeditdialog import Ui_TaskEditDialog, QIcon
 from tasks.html_creator import write_htmlstr, LinkSolver
 from tasks.markup_reading import read_markup
 from tasks.markup_writing import write_markup
@@ -31,7 +30,7 @@ from tasks.xml_writing import write_xmlstr
 
 class TaskEditDialog(QDialog):
 
-    def __init__(self, parent: QWidget, task: Task, task_model: TaskModel, data_icons: Dict[str, QtGui.QIcon]):
+    def __init__(self, parent: QWidget, task: Task, task_model: TaskModel, data_icons: Dict[str, QIcon]):
         super().__init__(parent, f=Qt.WindowMaximizeButtonHint)
         self.ui = Ui_TaskEditDialog()
         self.ui.setupUi(self)

@@ -56,8 +56,9 @@ class TaskCache:
 
 @dataclass
 class TaskCacheData:
+    files_state: TaskFilesState
     readme: str
-    filenames: List[str]
+    file_names: str
 
 
 class TaskFilesState(Enum):
@@ -152,6 +153,14 @@ class TaskCacheManager:
             misc_table.insert_row(row)
         else:
             misc_table.update_row(values={'value': value}, where_str=where_str)
+        db.commit()
+
+    def update_state_files_in_db(self, task_serial: TaskSerial,
+                                 new_files_state: TaskFilesState, db: DB) -> None:
+        task_caches_table = db.table('task_caches')
+        where_str = f'task_serial = {task_serial}'
+        values = {'files_state': new_files_state.name.lower()}
+        task_caches_table.update_row(values=values, where_str=where_str)
         db.commit()
 
 
@@ -286,8 +295,11 @@ class TaskDir(TaskResource):
         if meta_fpath.exists():
             stream = meta_fpath.open('r', encoding='utf-8')
             yaml_data = yaml.safe_load(stream)
-            return TaskMetaFileData(
-                task_serial=int(yaml_data['task_serial']))
+            try:
+                return TaskMetaFileData(
+                    task_serial=int(yaml_data['task_serial']))
+            except TypeError:
+                dummy = True
 
     def write_metafile(self, meta_data: TaskMetaFileData) -> None:
         yaml_data = {'task_serial': meta_data.task_serial}

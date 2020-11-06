@@ -78,6 +78,8 @@ class UserResourceMgr:
             if not root_dpath.is_absolute():
                 root_dpath = (self._user_dpath / root_dpath).resolve()
             config_data['tasks_root'] = root_dpath
+        if 'file_commander_cmd' in yaml_data:
+            config_data['file_commander_cmd'] = yaml_data['file_commander_cmd']
         return Config(**config_data)
 
     def read_state(self) -> UserState:
@@ -138,6 +140,7 @@ class UserState:
 @dataclass
 class Config:
     tasks_root: Path
+    file_commander_cmd: str
     margin: int = 5
 
 

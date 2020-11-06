@@ -14,16 +14,21 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
+import os
 import re
+import copy
+from pathlib import Path
 from typing import Optional, Iterator, Iterable, Dict
 
-from PySide2 import QtGui
+from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QMainWindow
 
 from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
 from pysidegui.modelgui import ModelGui, RGB
 from pysidegui.tasksgui.taskeditdialog import TaskEditDialog
+from tasks.caching import TaskFilesState, TaskCacheManager
 from tasks.html_creator import write_htmlstr, LinkSolver
+from tasks.page import Header, NormalText, Paragraph
 from tasks.taskmodel import TaskModel, Task
 
 
@@ -35,7 +40,7 @@ class TasksGui(ModelGui):
         # keywords = self._task_model.calc_keywords()
         # self.ui.title_edit.init_completer(keywords)  # todo?
 
-    def new_item(self, frame: QMainWindow, data_icons: Dict[str, QtGui.QIcon]) -> Optional[GlobalItemID]:
+    def new_item(self, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> Optional[GlobalItemID]:
         new_task = self._task_model.create_new_task()
         dlg = TaskEditDialog(frame, task=new_task, task_model=self._task_model, data_icons=data_icons)
         if dlg.exec() == dlg.Accepted:
@@ -44,7 +49,7 @@ class TasksGui(ModelGui):
             self._task_model.add_task_revision(new_task_rev)
             return _convert_task2global_id(new_task_rev.task_serial)
 
-    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow, data_icons: Dict[str, QtGui.QIcon]) -> bool:
+    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> bool:
         task_serial = _convert_global2task_serial(glob_item_id)
         task = self._task_model.get_task(task_serial)
 
@@ -64,16 +69,27 @@ class TasksGui(ModelGui):
         return True  # not necessary, cause changes were committed at end of dialog
 
     def revert_change(self) -> bool:
-        raise NotImplemented  # todo: implement
+        raise NotImplemented
 
     def get_html_text(self, glob_item_id: GlobalItemID) -> str:
         task_serial = _convert_global2task_serial(glob_item_id)
         task = self._task_model.get_task(task_serial)
         title = task.get_header()
-        page = task.last_revision.page
+        page = copy.deepcopy(task.last_revision.page)
+        self._extend_page_with_task_cache(page=page, task_cache=task.cache)
         link_solver = LinkSolver(self._task_model)
         html_text = write_htmlstr(title, page, link_solver=link_solver)
         return html_text
+
+    @staticmethod
+    def _extend_page_with_task_cache(page, task_cache):
+        if task_cache:
+            if task_cache.readme:
+                page.block_elements.append(Header(level=2, inline_elements=[NormalText('readme:')]))
+                page.block_elements.append(Paragraph([NormalText(task_cache.readme)], preformatted=True))
+            if task_cache.file_names:
+                page.block_elements.append(Header(level=2, inline_elements=[NormalText('files:')]))
+                page.block_elements.append(Paragraph([NormalText(task_cache.file_names)], preformatted=True))
 
     def exists_uncommitted_changes(self) -> bool:
         return False  # there are not such changes, cause changes were committed at end of dialog
@@ -113,16 +129,55 @@ class TasksGui(ModelGui):
         yield from self._task_model.get_sorted_categories()
 
     def get_object_rgb(self, glob_item_id: GlobalItemID) -> Optional[RGB]:
-        return 128, 128, 255
+        task_serial = _convert_global2task_serial(glob_item_id)
+        task = self._task_model.get_task(task_serial)
+        if task.cache is not None:
+            rgb = task.cache.files_state.rgb()
+            if rgb:
+                return rgb
 
-    @staticmethod
-    def iter_context_menu_items(glob_item_id: GlobalItemID) -> Iterator[str]:
-        yield 'zip'
-        yield 'unzip'
-        yield 'open-in-explorer'
+    def iter_context_menu_items(self, glob_item_id: GlobalItemID) -> Iterator[str]:
+        task_serial = _convert_global2task_serial(glob_item_id)
+        task = self._task_model.get_task(task_serial)
+        if task.cache:
+            files_state = task.cache.files_state
+            if files_state in [TaskFilesState.ACTIVE, TaskFilesState.PASSIVE]:
+                yield 'open-in-explorer'
 
-    def exec_context_menu_action(self, glob_item_id: GlobalItemID, action_name: str) -> None:
+            if files_state == TaskFilesState.ACTIVE:
+                yield 'zip'
+            elif files_state == TaskFilesState.PASSIVE:
+                yield 'unzip'
+        else:
+            yield 'create-dir'
+
+    def exec_context_menu_action(self, glob_item_id: GlobalItemID,
+                                 action_name: str, file_commander_cmd: str) -> None:
         print(glob_item_id, action_name)
+
+        tasks_root = self._task_model.tasks_root
+        task_serial = _convert_global2task_serial(glob_item_id)
+        task = self._task_model.get_task(task_serial)
+
+        if action_name == 'open-in-explorer':
+            path = task.get_path(tasks_root, task.cache.files_state)
+            cmd = file_commander_cmd.format(path=path)
+            os.system(cmd)
+        elif action_name == 'create-dir':
+            task.create_dir(tasks_root)
+            self._update_files_state(task)
+        elif action_name == 'zip':
+            task.zip_dir(tasks_root)
+            self._update_files_state(task)
+        elif action_name == 'unzip':
+            task.unzip_file(tasks_root)
+            self._update_files_state(task)
+
+    def _update_files_state(self, task: Task) -> None:
+        cache_mgr = TaskCacheManager(self._task_model.tasks_root)
+        cache_mgr.update_state_files_in_db(task.serial,
+                                           task.cache.files_state,
+                                           db=self._task_model._db)
 
 
 def _convert_global2task_serial(glob_id: GlobalItemID) -> int:

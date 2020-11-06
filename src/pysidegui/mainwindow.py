@@ -17,7 +17,6 @@
 
 import webbrowser
 from datetime import datetime
-from time import time
 from typing import Optional, Iterator, List
 
 from PySide2.QtCore import Qt, QPoint
@@ -29,7 +28,7 @@ from pysidegui._ui2_.ui_mainwindow import Ui_MainWindow, QResizeEvent, QMoveEven
 from pysidegui.contactsgui.contactsgui import ContactsGui
 from pysidegui.globalitemid import GlobalItemID
 from pysidegui.tasksgui.tasksgui import TasksGui
-from tasks.caching import TaskCacheManager, TaskCaches, TaskCache, TaskFilesState
+from tasks.caching import TaskCacheManager, TaskCache, TaskFilesState
 
 
 class MainWindow(QMainWindow):
@@ -190,7 +189,10 @@ class MainWindow(QMainWindow):
                 context_menu.addAction(menu_item)
             action = context_menu.exec_(global_pos)
             if action is not None:
-                self._cur_model_gui.exec_context_menu_action(obj_id, action.text())
+                self._cur_model_gui.exec_context_menu_action(
+                    obj_id, action.text(),
+                    file_commander_cmd=self._config.file_commander_cmd)
+                self._update_list()
 
     def on_html_view_click_link(self, href_str: str):
         obj_id = self._cur_model_gui.get_id_from_href(href_str)
@@ -228,6 +230,7 @@ class MainWindow(QMainWindow):
 
         self._task_model.update_cache(t0, task_caches)
         dlg.setValue(n)
+        self._update_list()
 
     def _update_icons(self):
         exists_uncommitted_changes = self._cur_model_gui.exists_uncommitted_changes()

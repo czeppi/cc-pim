@@ -18,7 +18,7 @@
 from collections import OrderedDict
 from typing import Optional, Iterator, Iterable, Dict
 
-from PySide2 import QtGui
+from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QInputDialog, QMainWindow
 
 from contacts.contactmodel import ContactModel, ContactID, ContactType, Address, Person, Company, Contact
@@ -33,7 +33,7 @@ class ContactsGui(ModelGui):
     def __init__(self, contact_model: ContactModel):
         self._contact_model = contact_model
 
-    def new_item(self, frame: QMainWindow, data_icons: Dict[str, QtGui.QIcon]) -> Optional[GlobalItemID]:
+    def new_item(self, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> Optional[GlobalItemID]:
         contact_model = self._contact_model
         type_map = OrderedDict((x.type_name.lower(), x) for x in contact_model.iter_object_classes())
         type_name, ok = QInputDialog.getItem(frame, 'new', 'select a type', list(type_map.keys()), editable=False)
@@ -49,7 +49,7 @@ class ContactsGui(ModelGui):
                 )
                 return _convert_contact2global_id(new_contact.id)
 
-    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow, data_icons: Dict[str, QtGui.QIcon]) -> bool:
+    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> bool:
         contact_id = _convert_global2contact_id(glob_item_id)
         contact = self._contact_model.get_contact(contact_id)
         dlg = ContactEditDialog(frame, contact, self._contact_model, data_icons=data_icons)

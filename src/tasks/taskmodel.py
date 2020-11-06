@@ -16,16 +16,19 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
+
 import re
-from dataclasses import dataclass
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Iterable, Any, Iterator, Set, Tuple
 
-from tasks.caching import TaskCache, TaskCacheManager, TaskCaches
+import yaml
+
+from tasks.caching import TaskCache, TaskCacheManager, TaskCaches, TaskCacheData, TaskFilesState
 from tasks.db import Row, DB
 from tasks.xml_reading import read_from_xmlstr
-
+from tasks.zipping import Unzipper, Zipper
 
 TaskSerial = int
 
@@ -44,12 +47,17 @@ class TaskModel:
     def tasks(self):
         return self._tasks.values()
 
+    @property
+    def tasks_root(self):
+        return self._tasks_root
+
     def read(self) -> None:
         self._db.open()
         self._tasks.clear()
         task_revision_map = self._read_task_revisions()
         self._tasks = {serial: Task(serial, sorted(revs, key=lambda x: x.rev_no), self)
                        for serial, revs in task_revision_map.items()}
+        self._read_task_caches()
 
     def _read_task_revisions(self) -> Dict[TaskSerial, List[TaskRevision]]:
         task_revision_map: Dict[int, List[TaskRevision]] = {}
@@ -62,15 +70,15 @@ class TaskModel:
         return task_revision_map
 
     def _read_task_caches(self) -> None:
-        cache_mgr = TaskCacheManager()
-        cache_table = cache_mgr.read()
-        for cache_row in cache_table.rows:
-            task = self._tasks.get(cache_row.task_serial, None)
+        cache_mgr = TaskCacheManager(self._tasks_root)
+        task_caches = cache_mgr.read_from_db(self._db)
+        for cache in task_caches.map.values():
+            task = self._tasks.get(cache.task_serial, None)
             if task is None:
                 raise Exception('task_cache: task {task_cache.task_serial} not found')
-            task.cache = TaskCacheData(readme=cache_row.readme, filenames=cache_row.filenames)
-        self._cache_update_timestamp = cache_mgr.read_update_timestamp()
-
+            task.cache = TaskCacheData(files_state=cache.files_state,
+                                       readme=cache.readme,
+                                       file_names=cache.file_names)
 
     def create_new_task(self, task_serial: Optional[int] = None) -> Task:
         if task_serial is None:
@@ -110,15 +118,15 @@ class TaskModel:
 
         return sorted(keywords)
 
-    def search_tasks(self, with_keywords: Optional[List[str]] = None) -> List[Task]:
-        if with_keywords is None:
-            with_keywords = []
-        result_tasks = []
-        for id_ in sorted(self._tasks.keys()):
-            task = self._tasks[id_]
-            if len(with_keywords) == 0 or (set(with_keywords) & set(task.keywords)):
-                result_tasks.append(task)
-        return result_tasks
+    # def search_tasks(self, with_keywords: Optional[List[str]] = None) -> List[Task]:
+    #     if with_keywords is None:
+    #         with_keywords = []
+    #     result_tasks = []
+    #     for id_ in sorted(self._tasks.keys()):
+    #         task = self._tasks[id_]
+    #         if len(with_keywords) == 0 or (set(with_keywords) & set(task.keywords)):
+    #             result_tasks.append(task)
+    #     return result_tasks
 
     def get_task(self, task_serial: int) -> Task:
         return self._tasks[task_serial]
@@ -154,6 +162,15 @@ class TaskModel:
             map={cache.task_serial: cache for cache in task_cache_list})
         cache_mgr.write_db(task_caches=task_caches, db=self._db)
 
+        # update task.cache
+        for task in self._tasks.values():
+            task.cache = None
+        for cache in task_caches.map.values():
+            new_data = TaskCacheData(files_state=cache.files_state,
+                                     readme=cache.readme,
+                                     file_names=cache.file_names)
+            self._tasks[cache.task_serial].cache = new_data
+
     @staticmethod
     def _get_task_key(task: Task) -> Tuple[str, str, str]:
         task_rev = task.last_revision
@@ -170,6 +187,7 @@ class Task:
         self._serial = serial
         self._revisions = revisions
         self._model = model
+        self.cache = None
 
     @property
     def serial(self):
@@ -212,6 +230,54 @@ class Task:
     def add_revision(self, task_rev: TaskRevision) -> None:
         assert len(self._revisions) == task_rev.rev_no
         self._revisions.append(task_rev)
+
+    def create_dir(self, tasks_root: Path) -> None:
+        assert self.cache is None
+        task_dpath = tasks_root / self.get_rel_path()
+        assert not task_dpath.exists()
+        task_dpath.mkdir()
+        self._create_meta_file(task_dpath)
+        self.cache = TaskCacheData(files_state=TaskFilesState.ACTIVE,
+                                   readme='',
+                                   file_names='')
+
+    def _create_meta_file(self, task_dpath: Path) -> None:
+        meta_fpath = task_dpath / '.meta'
+        stream = meta_fpath.open('w')
+        meta_data = {'task_serial': self.serial}
+        yaml.safe_dump(meta_data, stream)
+
+    def zip_dir(self, tasks_root: Path) -> None:
+        assert self.cache is not None
+        assert self.cache.files_state == TaskFilesState.ACTIVE
+        task_dpath = tasks_root / self.get_rel_path()
+        assert task_dpath.exists()
+        zipper = Zipper(task_dpath)
+        zipper.start()
+        self.cache.files_state = TaskFilesState.PASSIVE
+        shutil.rmtree(task_dpath)
+
+    def unzip_file(self, tasks_root: Path) -> None:
+        assert self.cache is not None
+        assert self.cache.files_state == TaskFilesState.PASSIVE
+        zip_fpath = tasks_root / (self.get_rel_path() + '.zip')
+        assert zip_fpath.exists()
+        unzipper = Unzipper(zip_fpath)
+        unzipper.start()
+        self.cache.files_state = TaskFilesState.ACTIVE
+        zip_fpath.unlink()
+
+    def get_path(self, tasks_root: Path, files_state: TaskFilesState) -> Path:
+        task_rev = self.last_revision
+        name = f'{task_rev.category}/{task_rev.date}-{task_rev.title}'
+        if files_state == TaskFilesState.ACTIVE:
+            return tasks_root / name
+        elif files_state == TaskFilesState.PASSIVE:
+            return tasks_root / (name + '.zip')
+
+    def get_rel_path(self) -> str:
+        task_rev = self.last_revision
+        return f'{task_rev.category}/{task_rev.date}-{task_rev.title}'
 
 
 class TaskRevision:
@@ -341,5 +407,3 @@ class KeywordExtractor:
     @staticmethod
     def _is_alnum(ch):
         return ch.isalnum() or ch in ['ä', 'ö', 'ü', 'ß', 'Ä', 'Ö', 'Ü']
-
-

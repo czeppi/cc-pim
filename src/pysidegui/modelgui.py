@@ -14,20 +14,21 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
+from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QMainWindow
 
 from pysidegui.globalitemid import GlobalItemID
-from typing import Optional, Iterator, Iterable, Tuple
+from typing import Optional, Iterator, Iterable, Tuple, Dict
 
 RGB = Tuple[int, int, int]
 
 
 class ModelGui:
 
-    def new_item(self, frame: QMainWindow) -> Optional[GlobalItemID]:
+    def new_item(self, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> Optional[GlobalItemID]:
         raise NotImplemented()
 
-    def edit_item(self, glob_item_id: GlobalItemID, frame) -> bool:
+    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> bool:
         raise NotImplemented()
 
     def save_all(self) -> None:
@@ -65,5 +66,6 @@ class ModelGui:
     def iter_context_menu_items(glob_item_id: GlobalItemID) -> Iterator[str]:
         yield from []  # default: no context menu
 
-    def exec_context_menu_action(self, glob_item_id: GlobalItemID, action_name: str) -> None:
+    def exec_context_menu_action(self, glob_item_id: GlobalItemID,
+                                 action_name: str, file_commander_cmd: str) -> None:
         pass
