@@ -290,6 +290,9 @@ class Task:
     def does_meet_the_criteria(self, search_words: Iterable[str],
                                category: str, files_state: str) -> bool:
         task_rev = self.last_revision
+        if task_rev.date == '200114':
+            dummy = True
+
         if category and category != task_rev.category:
             return False
         if files_state:
@@ -325,7 +328,7 @@ class TaskRevision:
         self._model = model
         self._group_serial = group_serial
         self._keywords: Set[str] = self._extract_keywords()
-        self._part_keywords = set(word[:n] for word in self._keywords for n in range(2, len(word)))
+        self._part_keywords = set(word[:n] for word in self._keywords for n in range(2, len(word) + 1))
 
     def get_values(self):
         return {
