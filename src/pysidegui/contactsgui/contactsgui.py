@@ -90,9 +90,17 @@ class ContactsGui(ModelGui):
         contact_id = ContactID.create_from_string(href_str)
         return _convert_contact2global_id(contact_id)
 
-    def iter_filtered_items(self, search_words: Iterable[str],
-                            filter_category: str,
-                            filter_files_state: str) -> Iterator[ResultItemData]:
+    def iter_sorted_filtered_items(self, search_words: Iterable[str],
+                                   filter_category: str,
+                                   filter_files_state: str) -> Iterator[ResultItemData]:
+        yield from sorted(
+            self._iter_filtered_items(
+                search_words, filter_category, filter_files_state),
+            key=lambda x: x.title)
+
+    def _iter_filtered_items(self, search_words: Iterable[str],
+                             filter_category: str,
+                             filter_files_state: str) -> Iterator[ResultItemData]:
         for contact in self._contact_model.iter_objects():
             if contact.does_meet_the_criteria(search_words, filter_category):
                 yield ResultItemData(

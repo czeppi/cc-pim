@@ -104,9 +104,17 @@ class TasksGui(ModelGui):
             global_type = GlobalItemTypes[type_name]
             return GlobalItemID(global_type, serial)
 
-    def iter_filtered_items(self, search_words: Iterable[str],
-                            filter_category: str,
-                            filter_files_state: str) -> Iterator[ResultItemData]:
+    def iter_sorted_filtered_items(self, search_words: Iterable[str],
+                                   filter_category: str,
+                                   filter_files_state: str) -> Iterator[ResultItemData]:
+        yield from sorted(
+            self._iter_filtered_items(
+                search_words, filter_category, filter_files_state),
+            key=lambda x: x.title, reverse=True)
+
+    def _iter_filtered_items(self, search_words: Iterable[str],
+                             filter_category: str,
+                             filter_files_state: str) -> Iterator[ResultItemData]:
         for task in self._task_model.tasks:
             if task.does_meet_the_criteria(search_words, filter_category, filter_files_state):
                 yield ResultItemData(

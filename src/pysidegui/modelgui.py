@@ -50,9 +50,9 @@ class ModelGui:
     def get_id_from_href(self, href_str: str) -> Optional[GlobalItemID]:
         raise NotImplemented()
 
-    def iter_filtered_items(self, search_words: Iterable[str],
-                            filter_category: str,
-                            filter_files_state: str) -> Iterator[ResultItemData]:
+    def iter_sorted_filtered_items(self, search_words: Iterable[str],
+                                   filter_category: str,
+                                   filter_files_state: str) -> Iterator[ResultItemData]:
         raise NotImplemented()
 
     @staticmethod

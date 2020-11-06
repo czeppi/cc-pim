@@ -1,0 +1,13 @@
+cc-pim:
+- add support for group_serials
+- add support for edit task links
+- solve: contact commit vs. task commit (at once or manual triggered)
+- edit person or company: add support for adding address in dialog
+- task-categories: add, remove, rename
+
+css:
+- add user.css-file (for contacts + tasks)
+
+refactoring:
+- TaskRevision: make to dataclass
+

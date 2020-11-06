@@ -27,7 +27,7 @@ from context import Context
 from pysidegui._ui2_.ui_mainwindow import Ui_MainWindow, QResizeEvent, QMoveEvent, QBrush, QColor
 from pysidegui.contactsgui.contactsgui import ContactsGui
 from pysidegui.globalitemid import GlobalItemID
-from pysidegui.modelgui import ResultItemData
+from pysidegui.modelgui import ResultItemData, ModelGui
 from pysidegui.tasksgui.tasksgui import TasksGui
 from tasks.caching import TaskCacheManager, TaskCache, TaskFilesState
 
@@ -56,13 +56,15 @@ class MainWindow(QMainWindow):
         self._contacts_gui = ContactsGui(contact_model)
         self._tasks_gui = TasksGui(self._task_model)
 
-        self._cur_model_gui = self._contacts_gui
+        self._cur_model_gui: ModelGui = self._contacts_gui
         self._show_obj_id = None
         self._enable_show_details = True
 
         self._update_category_filter()
         self._update_files_state_filter()
         self._update_list()
+
+        self.ui.action_revert_changes.setVisible(False)  # todo: implement or remove
         self.ui.files_state_filter.hide()
         self.ui.search_edit.setFocus()
         self.ui.search_result_list.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -248,7 +250,7 @@ class MainWindow(QMainWindow):
 
         self.ui.search_result_list.clear()
         for result_item in self._iter_filtered_items():
-            self._add_list_item2(result_item)
+            self._add_list_item(result_item)
 
         if select_obj_id is None:
             select_obj_id = old_cur_obj_id
@@ -270,12 +272,10 @@ class MainWindow(QMainWindow):
         if self.ui.files_state_filter.isVisible():
             filter_files_state = self.ui.files_state_filter.currentText()
 
-        yield from sorted(
-            self._cur_model_gui.iter_filtered_items(
-                search_words, filter_category, filter_files_state),
-            key=lambda x: x.title)
+        yield from self._cur_model_gui.iter_sorted_filtered_items(
+            search_words, filter_category, filter_files_state)
 
-    def _add_list_item2(self, item_data: ResultItemData) -> None:
+    def _add_list_item(self, item_data: ResultItemData) -> None:
         new_item = QListWidgetItem(item_data.title)
         new_item.setData(Qt.UserRole, item_data.glob_id)
 
