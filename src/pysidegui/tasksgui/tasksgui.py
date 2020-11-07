@@ -18,7 +18,7 @@ import os
 import re
 import copy
 from pathlib import Path
-from typing import Optional, Iterator, Iterable, Dict
+from typing import Optional, Iterator, Iterable, Dict, List as TList, Any
 
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QMainWindow
@@ -28,7 +28,7 @@ from pysidegui.modelgui import ModelGui, ResultItemData
 from pysidegui.tasksgui.taskeditdialog import TaskEditDialog
 from tasks.caching import TaskFilesState, TaskCacheManager, RGB
 from tasks.html_creator import write_htmlstr, LinkSolver
-from tasks.page import Header, NormalText, Paragraph
+from tasks.page import Header, NormalText, Paragraph, List, ListItem, Link, Page
 from tasks.taskmodel import TaskModel, Task
 
 
@@ -76,20 +76,36 @@ class TasksGui(ModelGui):
         task = self._task_model.get_task(task_serial)
         title = task.get_header()
         page = copy.deepcopy(task.last_revision.page)
-        self._extend_page_with_task_cache(page=page, task_cache=task.cache)
+        self._extend_page_with_task_cache(page=page, task=task)
         link_solver = LinkSolver(self._task_model)
         html_text = write_htmlstr(title, page, link_solver=link_solver)
         return html_text
 
-    @staticmethod
-    def _extend_page_with_task_cache(page, task_cache):
+    def _extend_page_with_task_cache(self, page: Page, task: Task) -> None:
+        task_cache = task.cache
         if task_cache:
             if task_cache.readme:
                 page.block_elements.append(Header(level=2, inline_elements=[NormalText('readme:')]))
                 page.block_elements.append(Paragraph([NormalText(task_cache.readme)], preformatted=True))
             if task_cache.file_names:
                 page.block_elements.append(Header(level=2, inline_elements=[NormalText('files:')]))
-                page.block_elements.append(Paragraph([NormalText(task_cache.file_names)], preformatted=True))
+                file_tree = FilebufSplitter(task_cache.file_names).split()
+                new_list = List()
+                task_path = task.get_path(self._task_model.tasks_root)
+                for name in sorted(file_tree.keys()):
+                    new_link = Link(text=name, uri=str(task_path / name))
+                    new_item = ListItem(inline_elements=[new_link])
+                    self._build_file_list_recursive(new_item, file_tree[name], task_path / name)
+                    new_list.items.append(new_item)
+
+                page.block_elements.append(new_list)
+
+    def _build_file_list_recursive(self, list_item: ListItem, file_subtree: Dict[str, Any], dpath: Path):
+        for name in sorted(file_subtree.keys()):
+            new_link = Link(text=name, uri=str(dpath / name))
+            new_sub_item = ListItem(inline_elements=[new_link])
+            list_item.sub_items.append(new_sub_item)
+            self._build_file_list_recursive(new_sub_item, file_subtree[name], dpath / name)
 
     def exists_uncommitted_changes(self) -> bool:
         return False  # there are not such changes, cause changes were committed at end of dialog
@@ -151,7 +167,7 @@ class TasksGui(ModelGui):
         task = self._task_model.get_task(task_serial)
 
         if action_name == 'open-in-explorer':
-            path = task.get_path(tasks_root, task.cache.files_state)
+            path = task.get_path(tasks_root)
             cmd = file_commander_cmd.format(path=path)
             os.system(cmd)
         elif action_name == 'create-dir':
@@ -169,6 +185,31 @@ class TasksGui(ModelGui):
         cache_mgr.update_state_files_in_db(task.serial,
                                            task.cache.files_state,
                                            db=self._task_model._db)
+
+
+class FilebufSplitter:
+
+    def __init__(self, file_buf: str):
+        self._file_buf = file_buf
+
+    def split(self) -> Dict[str, Any]:
+        file_tree: Dict[str, Any] = {}
+        path_items: TList[Dict[str, Any]] = [file_tree]
+        for line in self._file_buf.split('\n'):
+            indent_len = self._calc_indent_len(line)
+            assert indent_len % 2 == 0
+            level =  indent_len // 2
+            assert len(path_items) > level
+            del path_items[level + 1:]
+            name = line[indent_len:]
+            assert name != ''
+            new_item = {}
+            path_items[level][name] = new_item
+            path_items.append(new_item)
+        return file_tree
+
+    def _calc_indent_len(self, line) -> int:
+        return len(line) - len(line.lstrip())
 
 
 def _convert_global2task_serial(glob_id: GlobalItemID) -> int:

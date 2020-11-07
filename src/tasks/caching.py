@@ -274,7 +274,7 @@ class TaskDir(TaskResource):
         return '\n'.join(list(self._read_filenames_recursive(self._path, 0)))
 
     def _read_filenames_recursive(self, dpath: Path, level: int) -> Iterator[str]:
-        indent = ' ' * level
+        indent = '  ' * level
         for item in dpath.iterdir():
             yield indent + item.name
             if item.is_dir():

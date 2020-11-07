@@ -275,13 +275,15 @@ class Task:
         self.cache.files_state = TaskFilesState.ACTIVE
         zip_fpath.unlink()
 
-    def get_path(self, tasks_root: Path, files_state: TaskFilesState) -> Path:
-        task_rev = self.last_revision
-        name = f'{task_rev.category}/{task_rev.date}-{task_rev.title}'
-        if files_state == TaskFilesState.ACTIVE:
-            return tasks_root / name
-        elif files_state == TaskFilesState.PASSIVE:
-            return tasks_root / (name + '.zip')
+    def get_path(self, tasks_root: Path) -> Optional[Path]:
+        if self.cache:
+            files_state = self.cache.files_state
+            task_rev = self.last_revision
+            name = f'{task_rev.category}/{task_rev.date}-{task_rev.title}'
+            if files_state == TaskFilesState.ACTIVE:
+                return tasks_root / name
+            elif files_state == TaskFilesState.PASSIVE:
+                return tasks_root / (name + '.zip')
 
     def get_rel_path(self) -> str:
         task_rev = self.last_revision
@@ -290,8 +292,6 @@ class Task:
     def does_meet_the_criteria(self, search_words: Iterable[str],
                                category: str, files_state: str) -> bool:
         task_rev = self.last_revision
-        if task_rev.date == '200114':
-            dummy = True
 
         if category and category != task_rev.category:
             return False

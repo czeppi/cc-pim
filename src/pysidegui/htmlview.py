@@ -16,8 +16,12 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import defaultdict
+from pathlib import Path
 from typing import List, Dict, Any
-from PySide2.QtWidgets import QTextEdit
+
+from PySide2.QtCore import QEvent
+from PySide2.QtGui import QHelpEvent
+from PySide2.QtWidgets import QTextEdit, QToolTip, QWidget
 
 from contacts.basetypes import Fact
 from contacts.contactmodel import ContactModel, Contact
@@ -29,6 +33,47 @@ class HtmlView(QTextEdit):
         super().__init__(parent)
         self.zoomIn(range=1)
         self.click_link_observers = []
+        self.setMouseTracking(True)
+        self._tooltip_caches = {}  # path -> buf
+
+    def event(self, event: QEvent):
+        if event.type() == QEvent.ToolTip:
+            help_event: QHelpEvent = event
+            anchor = self.anchorAt(help_event.pos())
+            if anchor:
+                tooltip = self._get_tooltip(anchor)
+                # html = "<img src='G:/app-data/cc-pim/icons/finn.ico'>Hallo</img>"
+                QToolTip.showText(help_event.globalPos(), tooltip)
+            else:
+                QToolTip.hideText()
+                event.ignore()
+            return True
+
+        return super().event(event)
+
+    def _get_tooltip(self, anchor: str) -> str:
+        if anchor not in self._tooltip_caches:
+            self._tooltip_caches[anchor] = self._create_tooltip(anchor)
+        return self._tooltip_caches[anchor]
+
+    def _create_tooltip(self, anchor: str) -> str:
+        path = Path(anchor)
+        suffix = path.suffix
+        if suffix in ('.txt', '.py', '.html', '.xml'):
+            file_buf = self._read_text_file(path)
+            if suffix == '.html':
+                return file_buf
+            else:
+                return f'<pre>{file_buf}</pre>'
+        return f'<p>{anchor}</p>'
+
+    @staticmethod
+    def _read_text_file(path: Path) -> str:
+        if path.exists():
+            try:
+                return path.open('r', encoding='utf-8').read()
+            except PermissionError:
+                pass
 
     def mousePressEvent(self, event):
         pos = event.pos()
