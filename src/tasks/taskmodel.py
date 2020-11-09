@@ -35,13 +35,17 @@ TaskSerial = int
 
 class TaskModel:
 
-    def __init__(self, db: DB, tasks_root: Path, keyword_extractor: KeywordExtractor):
+    def __init__(self, db: DB, tasks_root: Path, keyword_extractor: WordExtractor):
         self._db = db
         self._tasks_root = tasks_root
         self._tasks_revisions_table = self._db.table('tasks_revisions')
-        self._keyword_extractor = keyword_extractor
+        self._word_extractor = keyword_extractor
         self._tasks: Dict[int, Task] = {}
-        self._default_rev = TaskRevision.create_default(model=self)
+        self._default_rev = TaskRevision.create_default()
+
+    @property
+    def db(self):
+        return self._db
 
     @property
     def tasks(self):
@@ -50,6 +54,10 @@ class TaskModel:
     @property
     def tasks_root(self):
         return self._tasks_root
+
+    @property
+    def word_extractor(self):
+        return self._word_extractor
 
     def read(self) -> None:
         self._db.open()
@@ -62,7 +70,7 @@ class TaskModel:
     def _read_task_revisions(self) -> Dict[TaskSerial, List[TaskRevision]]:
         task_revision_map: Dict[int, List[TaskRevision]] = {}
         for row in self._tasks_revisions_table.select():
-            task_rev = TaskRevision(model=self, **row)
+            task_rev = TaskRevision(word_extractor=self._word_extractor, **row)
             task_serial = task_rev.task_serial
             if task_serial not in task_revision_map:
                 task_revision_map[task_serial] = [self._default_rev]
@@ -73,12 +81,18 @@ class TaskModel:
         cache_mgr = TaskCacheManager(self._tasks_root)
         task_caches = cache_mgr.read_from_db(self._db)
         for cache in task_caches.map.values():
-            task = self._tasks.get(cache.task_serial, None)
-            if task is None:
-                raise Exception('task_cache: task {task_cache.task_serial} not found')
-            task.cache = TaskCacheData(files_state=cache.files_state,
-                                       readme=cache.readme,
-                                       file_names=cache.file_names)
+            if cache.task_serial not in self._tasks:
+                raise Exception(f'task_cache: task {cache.task_serial} not found')
+
+        for task in self._tasks.values():
+            cache = task_caches.map.get(task.serial, None)
+            if cache is None:
+                cache_data = None
+            else:
+                cache_data = TaskCacheData(files_state=cache.files_state,
+                                           readme=cache.readme,
+                                           file_names=cache.file_names)
+            task.set_cache(cache_data, self._word_extractor)
 
     def create_new_task(self, task_serial: Optional[int] = None) -> Task:
         if task_serial is None:
@@ -111,28 +125,18 @@ class TaskModel:
                       if task.last_revision.category != '')
         return sorted(cat_set)
 
-    def calc_keywords(self) -> List[str]:
-        keywords = set()
+    def calc_words(self) -> Set[str]:
+        words = set()
         for task in self._tasks.values():
-            keywords |= task.last_revision.keywords
+            words |= task.last_revision.words
 
-        return sorted(keywords)
-
-    # def search_tasks(self, with_keywords: Optional[List[str]] = None) -> List[Task]:
-    #     if with_keywords is None:
-    #         with_keywords = []
-    #     result_tasks = []
-    #     for id_ in sorted(self._tasks.keys()):
-    #         task = self._tasks[id_]
-    #         if len(with_keywords) == 0 or (set(with_keywords) & set(task.keywords)):
-    #             result_tasks.append(task)
-    #     return result_tasks
+        return words
 
     def get_task(self, task_serial: int) -> Task:
         return self._tasks[task_serial]
 
-    def extract_keywords(self, text: str) -> List[str]:
-        return self._keyword_extractor.get_keywords(text)
+    def extract_words(self, text: str) -> Set[str]:
+        return self._word_extractor.get_words(text)
 
     def update_cache(self, timestamp: datetime, task_cache_list: List[TaskCache]) -> None:
         for cache in task_cache_list:
@@ -164,12 +168,12 @@ class TaskModel:
 
         # update task.cache
         for task in self._tasks.values():
-            task.cache = None
+            task.set_cache(None, self._word_extractor)
         for cache in task_caches.map.values():
             new_data = TaskCacheData(files_state=cache.files_state,
                                      readme=cache.readme,
                                      file_names=cache.file_names)
-            self._tasks[cache.task_serial].cache = new_data
+            self._tasks[cache.task_serial].set_cache(new_data, self._word_extractor)
 
     @staticmethod
     def _get_task_key(task: Task) -> Tuple[str, str, str]:
@@ -186,8 +190,11 @@ class Task:
 
         self._serial = serial
         self._revisions = revisions
+
         self._model = model
-        self.cache = None
+        self._cache = None
+        self._cache_words = set()
+        self._word_parts = set()
 
     @property
     def serial(self):
@@ -202,8 +209,12 @@ class Task:
         return self._revisions
 
     @property
+    def cache(self):
+        return self._cache
+
+    @property
     def files_state(self):
-        return self.cache.files_state if self.cache else TaskFilesState.NO_FILES
+        return self._cache.files_state if self._cache else TaskFilesState.NO_FILES
 
     def get_revision(self, rev_no: int) -> TaskRevision:
         return self._revisions[rev_no]
@@ -219,8 +230,8 @@ class Task:
         return f'{rev_1st.date}: {rev_last.title}'
 
     def get_rgb(self) -> RGB:
-        if self.cache:
-            return self.cache.files_state.rgb()
+        if self._cache:
+            return self._cache.files_state.rgb()
 
     def create_new_revision(self, title: str, body: str, category: str) -> TaskRevision:
         new_rev_no = len(self._revisions)
@@ -232,7 +243,7 @@ class Task:
             title=title,
             body=body,
             group_serial=0,
-            model=self._model
+            word_extractor=self._model.word_extractor
         )
 
     def add_revision(self, task_rev: TaskRevision) -> None:
@@ -240,14 +251,14 @@ class Task:
         self._revisions.append(task_rev)
 
     def create_dir(self, tasks_root: Path) -> None:
-        assert self.cache is None
+        assert self._cache is None
         task_dpath = tasks_root / self.get_rel_path()
         assert not task_dpath.exists()
         task_dpath.mkdir()
         self._create_meta_file(task_dpath)
-        self.cache = TaskCacheData(files_state=TaskFilesState.ACTIVE,
-                                   readme='',
-                                   file_names='')
+        self._cache = TaskCacheData(files_state=TaskFilesState.ACTIVE,
+                                    readme='',
+                                    file_names='')
 
     def _create_meta_file(self, task_dpath: Path) -> None:
         meta_fpath = task_dpath / '.meta'
@@ -256,28 +267,28 @@ class Task:
         yaml.safe_dump(meta_data, stream)
 
     def zip_dir(self, tasks_root: Path) -> None:
-        assert self.cache is not None
-        assert self.cache.files_state == TaskFilesState.ACTIVE
+        assert self._cache is not None
+        assert self._cache.files_state == TaskFilesState.ACTIVE
         task_dpath = tasks_root / self.get_rel_path()
         assert task_dpath.exists()
         zipper = Zipper(task_dpath)
         zipper.start()
-        self.cache.files_state = TaskFilesState.PASSIVE
+        self._cache.files_state = TaskFilesState.PASSIVE
         shutil.rmtree(task_dpath)
 
     def unzip_file(self, tasks_root: Path) -> None:
-        assert self.cache is not None
-        assert self.cache.files_state == TaskFilesState.PASSIVE
+        assert self._cache is not None
+        assert self._cache.files_state == TaskFilesState.PASSIVE
         zip_fpath = tasks_root / (self.get_rel_path() + '.zip')
         assert zip_fpath.exists()
         unzipper = Unzipper(zip_fpath)
         unzipper.start()
-        self.cache.files_state = TaskFilesState.ACTIVE
+        self._cache.files_state = TaskFilesState.ACTIVE
         zip_fpath.unlink()
 
     def get_path(self, tasks_root: Path) -> Optional[Path]:
-        if self.cache:
-            files_state = self.cache.files_state
+        if self._cache:
+            files_state = self._cache.files_state
             task_rev = self.last_revision
             name = f'{task_rev.category}/{task_rev.date}-{task_rev.title}'
             if files_state == TaskFilesState.ACTIVE:
@@ -289,6 +300,20 @@ class Task:
         task_rev = self.last_revision
         return f'{task_rev.category}/{task_rev.date}-{task_rev.title}'
 
+    def set_cache(self, cache_data: Optional[TaskCacheData], word_extractor: WordExtractor):
+        self._cache = cache_data
+        self._cache_words.clear()
+        if cache_data is not None:
+            if cache_data.readme:
+                self._cache_words |= word_extractor.get_words(cache_data.readme)
+            if cache_data.file_names:
+                self._cache_words |= word_extractor.get_words(cache_data.file_names)
+        self._update_word_parts()
+
+    def _update_word_parts(self) -> None:
+        words = self._cache_words | self.last_revision.words
+        self._word_parts = set(word[:n] for word in words for n in range(2, len(word) + 1))
+
     def does_meet_the_criteria(self, search_words: Iterable[str],
                                category: str, files_state: str) -> bool:
         task_rev = self.last_revision
@@ -298,13 +323,16 @@ class Task:
         if files_state:
             if self.files_state.name.lower() != files_state:
                 return False
-        return task_rev.contains_all_keyword(search_words)
+        return self._contains_all_words(search_words)
+
+    def _contains_all_words(self, words: Iterable[str]) -> bool:
+        return set(words) <= self._word_parts
 
 
 class TaskRevision:
 
     @staticmethod
-    def create_default(model) -> TaskRevision:
+    def create_default() -> TaskRevision:
         return TaskRevision(
             task_serial=0,
             rev_no=0,
@@ -312,43 +340,31 @@ class TaskRevision:
             category='',
             title='',
             body='',
-            group_serial=0,
-            model=model)
+            group_serial=0)
 
     def __init__(self, task_serial: int, rev_no: int,
-                 date: str, category: str, title: str, body: str, group_serial: int, model: TaskModel):
-
+                 date: str, category: str, title: str, body: str, group_serial: int,
+                 word_extractor: Optional[WordExtractor] = None):
         self._task_serial = task_serial
         self._rev_no = rev_no
         self._date = date
         self._category = category
         self._title = title
         self._body = body
-        self._page = read_from_xmlstr(body, contains_page_element=False)
-        self._model = model
         self._group_serial = group_serial
-        self._keywords: Set[str] = self._extract_keywords()
-        self._part_keywords = set(word[:n] for word in self._keywords for n in range(2, len(word) + 1))
 
-    def get_values(self):
-        return {
-            'task_serial': self._task_serial,
-            'rev_no': self._rev_no,
-            'date': self._date,
-            'category': self._category,
-            'title': self._title,
-            'body': self._body,
-            'group_serial': self._group_serial,
-            'model': self._model,
-        }
+        self._page = read_from_xmlstr(body, contains_page_element=False)
+        self._words: Set[str] = set(self._iter_words(word_extractor)) if word_extractor else set()
+
+    def _iter_words(self, word_extractor: WordExtractor) -> Iterator[str]:
+        yield from word_extractor.get_words(self._title)
+        for inline_elem in self._page.iter_inline_elements():
+            if inline_elem.text:
+                yield from word_extractor.get_words(inline_elem.text)
 
     @property
     def task_serial(self):
         return self._task_serial
-
-    @property
-    def task(self):
-        return self._model.get_task(self._task_serial)
 
     @property
     def rev_no(self):
@@ -378,23 +394,19 @@ class TaskRevision:
         return self._category
 
     @property
-    def keywords(self):
-        return self._keywords
+    def words(self):
+        return self._words
 
-    def _extract_keywords(self) -> Set[str]:
-        return set(self._iter_keywords())
-
-    def _iter_keywords(self):
-        yield from self._model.extract_keywords(self._title)
-        for inline_elem in self._page.iter_inline_elements():
-            if inline_elem.text:
-                yield from self._model.extract_keywords(inline_elem.text)
-
-    def contains_all_keyword(self, keywords: Iterable[str]) -> bool:
-        return set(keywords) <= self._part_keywords
-
-    def get_header(self) -> str:
-        return self.task.get_header()
+    def get_values(self):
+        return {
+            'task_serial': self._task_serial,
+            'rev_no': self._rev_no,
+            'date': self._date,
+            'category': self._category,
+            'title': self._title,
+            'body': self._body,
+            'group_serial': self._group_serial,
+        }
 
     def have_values_changed(self, new_values: Dict[str, Any]) -> bool:
         return self._title != new_values['title'] or \
@@ -403,7 +415,7 @@ class TaskRevision:
                self._group_serial != new_values['group_serial']
 
 
-class KeywordExtractor:
+class WordExtractor:
     rex = re.compile(r"[a-zA-Z0-9_äöüßÄÖÜ.]+[a-zA-Z0-9_äöüßÄÖÜ\-.]*[a-zA-Z0-9_äöüßÄÖÜ.]")
 
     def __init__(self, no_keywords_path: Path):
@@ -411,19 +423,19 @@ class KeywordExtractor:
         self._no_keywords = set(line.strip() for line in lines)
         self._no_keywords.add('')
 
-    def get_keywords(self, title: str) -> List[str]:
-        keywords = self.rex.findall(title)
-        return list(self._filter_keywords(keywords))
+    def get_words(self, title: str) -> Set[str]:
+        words = self.rex.findall(title)
+        return set(self._filter_words(words))
 
-    def _filter_keywords(self, keywords: Iterable[str]) -> Iterator[str]:
-        for keyword in keywords:
-            kw = keyword.lower()
+    def _filter_words(self, words: Iterable[str]) -> Iterator[str]:
+        for word in words:
+            kw = word.lower()
             while len(kw) > 0 and not self._is_alnum(kw[0]):
                 kw = kw[1:]
             while len(kw) > 0 and not self._is_alnum(kw[-1]):
                 kw = kw[:-1]
             if kw not in self._no_keywords:
-                yield keyword.lower()
+                yield word.lower()
 
     @staticmethod
     def _is_alnum(ch):

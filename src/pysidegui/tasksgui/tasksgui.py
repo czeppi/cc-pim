@@ -26,7 +26,7 @@ from PySide2.QtWidgets import QMainWindow
 from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
 from pysidegui.modelgui import ModelGui, ResultItemData
 from pysidegui.tasksgui.taskeditdialog import TaskEditDialog
-from tasks.caching import TaskFilesState, TaskCacheManager, RGB
+from tasks.caching import TaskFilesState, TaskCacheManager
 from tasks.html_creator import write_htmlstr, LinkSolver
 from tasks.page import Header, NormalText, Paragraph, List, ListItem, Link, Page
 from tasks.taskmodel import TaskModel, Task
@@ -184,7 +184,7 @@ class TasksGui(ModelGui):
         cache_mgr = TaskCacheManager(self._task_model.tasks_root)
         cache_mgr.update_state_files_in_db(task.serial,
                                            task.cache.files_state,
-                                           db=self._task_model._db)
+                                           db=self._task_model.db)
 
 
 class FilebufSplitter:
@@ -208,7 +208,8 @@ class FilebufSplitter:
             path_items.append(new_item)
         return file_tree
 
-    def _calc_indent_len(self, line) -> int:
+    @staticmethod
+    def _calc_indent_len(line) -> int:
         return len(line) - len(line.lstrip())
 
 

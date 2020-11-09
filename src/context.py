@@ -25,7 +25,7 @@ from contacts.contactmodel import ContactModel
 from contacts.repository import Repository
 from tasks.db import DB
 from tasks.metamodel import MetaModel
-from tasks.taskmodel import TaskModel, KeywordExtractor
+from tasks.taskmodel import TaskModel, WordExtractor
 
 GUI = 'pyside2'
 LOGGING_ENABLED = False
@@ -124,7 +124,7 @@ class UserResourceMgr:
     def read_task_model(self, tasks_metamodel: MetaModel, tasks_root: Path) -> TaskModel:
         sqlite3_path = self._user_dpath / 'tasks.sqlite'
         db = DB(sqlite3_path, tasks_metamodel, logging_enabled=LOGGING_ENABLED)
-        keyword_extractor = KeywordExtractor(self._user_dpath / 'no-keywords.txt')
+        keyword_extractor = WordExtractor(self._user_dpath / 'no-keywords.txt')
         task_model = TaskModel(db, tasks_root=tasks_root, keyword_extractor=keyword_extractor)
         task_model.read()
         return task_model

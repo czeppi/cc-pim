@@ -14,7 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
-from typing import List
+from typing import List, Iterable
 
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QFocusEvent, QKeyEvent
@@ -28,10 +28,10 @@ class SearchEdit(QLineEdit):
         QLineEdit.__init__(self, parent)
         self.completer = None
 
-    def init_completer(self, keywords: List[str]) -> None:
+    def init_completer(self, words: Iterable[str]) -> None:
         assert self.completer is None
 
-        self.completer = QCompleter(keywords, self)
+        self.completer = QCompleter(list(words), self)
         self.completer.setWidget(self)
         self.completer.setCompletionMode(QCompleter.PopupCompletion)
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)

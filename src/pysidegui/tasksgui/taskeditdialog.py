@@ -80,8 +80,8 @@ class TaskEditDialog(QDialog):
         task = self._task
         self.ui.title_edit.setText(task.last_revision.title)
         
-        keywords = self._task_model.calc_keywords()
-        self.ui.title_edit.init_completer(keywords)
+        words = self._task_model.calc_words()
+        self.ui.title_edit.init_completer(words)
     
     def _init_text_edit(self) -> None:
         task = self._task
