@@ -178,7 +178,7 @@ class TaskModel:
     @staticmethod
     def _get_task_key(task: Task) -> Tuple[str, str, str]:
         task_rev = task.last_revision
-        return task_rev.category, task_rev.date, task_rev.title
+        return task_rev.category, task_rev.date_str, task_rev.title
 
 
 class Task:
@@ -227,7 +227,7 @@ class Task:
         n = len(self._revisions)
         rev_1st = self._revisions[1] if n >= 2 else self._revisions[0]
         rev_last = self._revisions[-1]
-        return f'{rev_1st.date}: {rev_last.title}'
+        return f'{rev_1st.date_str}: {rev_last.title}'
 
     def get_rgb(self) -> RGB:
         if self._cache:
@@ -238,7 +238,7 @@ class Task:
         return TaskRevision(
             task_serial=self._serial,
             rev_no=new_rev_no,
-            date=datetime.today().strftime('%y%m%d'),
+            date_str=datetime.today().strftime('%y%m%d'),
             category=category,
             title=title,
             body=body,
@@ -290,7 +290,7 @@ class Task:
         if self._cache:
             files_state = self._cache.files_state
             task_rev = self.last_revision
-            name = f'{task_rev.category}/{task_rev.date}-{task_rev.title}'
+            name = f'{task_rev.category}/{task_rev.date_str}-{task_rev.title}'
             if files_state == TaskFilesState.ACTIVE:
                 return tasks_root / name
             elif files_state == TaskFilesState.PASSIVE:
@@ -298,7 +298,7 @@ class Task:
 
     def get_rel_path(self) -> str:
         task_rev = self.last_revision
-        return f'{task_rev.category}/{task_rev.date}-{task_rev.title}'
+        return f'{task_rev.category}/{task_rev.date_str}-{task_rev.title}'
 
     def set_cache(self, cache_data: Optional[TaskCacheData], word_extractor: WordExtractor):
         self._cache = cache_data
@@ -347,7 +347,7 @@ class TaskRevision:
                  word_extractor: Optional[WordExtractor] = None):
         self._task_serial = task_serial
         self._rev_no = rev_no
-        self._date = date
+        self._date_str = self._norm_date_str(date)
         self._category = category
         self._title = title
         self._body = body
@@ -355,6 +355,13 @@ class TaskRevision:
 
         self._page = read_from_xmlstr(body, contains_page_element=False)
         self._words: Set[str] = set(self._iter_words(word_extractor)) if word_extractor else set()
+
+    @staticmethod
+    def _norm_date_str(date_str) -> str:
+        normed_date = date_str
+        if len(normed_date) % 2 == 1:
+            normed_date = '0' + normed_date
+        return normed_date
 
     def _iter_words(self, word_extractor: WordExtractor) -> Iterator[str]:
         yield from word_extractor.get_words(self._title)
@@ -371,11 +378,8 @@ class TaskRevision:
         return self._rev_no
 
     @property
-    def date(self) -> str:
-        normed_date = str(self._date)
-        if len(normed_date) % 2 == 1:
-            normed_date = '0' + normed_date
-        return normed_date
+    def date_str(self) -> str:
+        return self._date_str
 
     @property
     def title(self):
@@ -401,7 +405,7 @@ class TaskRevision:
         return {
             'task_serial': self._task_serial,
             'rev_no': self._rev_no,
-            'date': self._date,
+            'date': self._date_str,
             'category': self._category,
             'title': self._title,
             'body': self._body,

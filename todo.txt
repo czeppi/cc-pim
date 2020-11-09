@@ -6,7 +6,6 @@ cc-pim:
 - task-categories: add, remove, rename
 - readme, files_state: add words to keywords
 - html-page, task-files: 
-  - show as link 
   - add color
   - preview?
 - html-page: split view (for compare + preview)

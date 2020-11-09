@@ -17,10 +17,11 @@
 
 from collections import defaultdict
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple, Optional
+from zipfile import ZipFile
 
-from PySide2.QtCore import QEvent
-from PySide2.QtGui import QHelpEvent
+from PySide2.QtCore import QEvent, QBuffer, QIODevice, QByteArray, QSize, Qt
+from PySide2.QtGui import QHelpEvent, QImage, QPixmap
 from PySide2.QtWidgets import QTextEdit, QToolTip, QWidget
 
 from contacts.basetypes import Fact
@@ -60,20 +61,55 @@ class HtmlView(QTextEdit):
         path = Path(anchor)
         suffix = path.suffix
         if suffix in ('.txt', '.py', '.html', '.xml'):
-            file_buf = self._read_text_file(path)
+            file_buf = self._read_file(path).decode('utf-8')
             if suffix == '.html':
                 return file_buf
             else:
                 return f'<pre>{file_buf}</pre>'
+        elif suffix in ('.png', '.jpg'):
+            image = self._read_image(path)
+            if image:
+                buffer = QBuffer()
+                buffer.open(QIODevice.WriteOnly)
+                pixmap = QPixmap.fromImage(image)
+                pixmap.save(buffer, "PNG")
+                data = bytes(buffer.data().toBase64()).decode()
+                return f'<img src="data:image/png;base64,{data}">'
+
         return f'<p>{anchor}</p>'
 
+    def _read_image(self, path: Path) -> Optional[QImage]:
+        data = self._read_file(path)
+        if data:
+            image = QImage()
+            image.loadFromData(data, path.suffix[1:])
+            max_size = QSize(600, 400)
+            image_size = image.size()
+            if image_size.width() > max_size.width() or image_size.height() > max_size.height():
+                image = image.scaled(max_size, Qt.AspectRatioMode.KeepAspectRatio)
+            return image
+
+    def _read_file(self, path: Path) -> Optional[bytes]:
+        try:
+            if path.exists():
+                return path.open('rb').read()
+            else:
+                zip_fpath, zipped_filename = self._split_zip_path(path)
+                if zip_fpath:
+                    with ZipFile(zip_fpath, 'r') as zip_file:
+                        return zip_file.read(zipped_filename)
+        except PermissionError:
+            pass
+
     @staticmethod
-    def _read_text_file(path: Path) -> str:
-        if path.exists():
-            try:
-                return path.open('r', encoding='utf-8').read()
-            except PermissionError:
-                pass
+    def _split_zip_path(path: Path) -> Tuple[Optional[Path], Optional[str]]:
+        p = path
+        while p:
+            if p.suffix == '.zip':
+                n = len(p.parts)
+                return p, '/'.join(path.parts[n:])
+            p = p.parent
+        return None, None
 
     def mousePressEvent(self, event):
         pos = event.pos()
