@@ -115,11 +115,8 @@ class UserResourceMgr:
         return {icon_fpath.stem.lower(): _read_icon(icon_fpath)
                 for icon_fpath in icon_dpath.iterdir()}
 
-    def read_contact_model(self) -> ContactModel:
-        contact_repo = Repository(self._user_dpath / 'contacts.sqlite')
-        contact_repo.reload()
-        date_changes, fact_changes = contact_repo.aggregate_revisions()
-        return ContactModel(date_changes, fact_changes)
+    def get_contact_repo(self) -> Repository:
+        return Repository(self._user_dpath / 'contacts.sqlite')
 
     def read_task_model(self, tasks_metamodel: MetaModel, tasks_root: Path) -> TaskModel:
         sqlite3_path = self._user_dpath / 'tasks.sqlite'

@@ -22,6 +22,7 @@ from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QInputDialog, QMainWindow
 
 from contacts.contactmodel import ContactModel, ContactID, ContactType, Address, Person, Company, Contact
+from contacts.repository import Repository
 from pysidegui.contactsgui.contacteditdialog import ContactEditDialog
 from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
 from pysidegui.htmlview import ContactHtmlCreator
@@ -30,8 +31,9 @@ from pysidegui.modelgui import ModelGui, ResultItemData
 
 class ContactsGui(ModelGui):
 
-    def __init__(self, contact_model: ContactModel):
+    def __init__(self, contact_model: ContactModel, contact_repo: Repository):
         self._contact_model = contact_model
+        self._contact_repo = contact_repo
 
     def new_item(self, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> Optional[GlobalItemID]:
         contact_model = self._contact_model

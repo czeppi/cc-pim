@@ -23,6 +23,7 @@ from PySide2.QtCore import Qt, QPoint
 from PySide2.QtWidgets import QListWidgetItem, QProgressDialog, QMenu
 from PySide2.QtWidgets import QMainWindow
 
+from contacts.contactmodel import ContactModel
 from context import Context
 from pysidegui._ui2_.ui_mainwindow import Ui_MainWindow, QResizeEvent, QMoveEvent, QBrush, QColor
 from pysidegui.contactsgui.contactsgui import ContactsGui
@@ -50,10 +51,14 @@ class MainWindow(QMainWindow):
         self.move(*self._state.frame_pos)
         self.ui.splitter.setSizes([self._state.search_width, self._state.frame_size[0] - self._state.search_width])
 
-        contact_model = context.user.read_contact_model()
+        contact_repo = context.user.get_contact_repo()
+        contact_repo.reload()
+        date_changes, fact_changes = contact_repo.aggregate_revisions()
+        contact_model = ContactModel(date_changes, fact_changes)
+
         task_meta_model = context.system.read_task_metamodel()
         self._task_model = context.user.read_task_model(task_meta_model, self._config.tasks_root)
-        self._contacts_gui = ContactsGui(contact_model)
+        self._contacts_gui = ContactsGui(contact_model, contact_repo)
         self._tasks_gui = TasksGui(self._task_model)
 
         self._cur_model_gui: ModelGui = self._contacts_gui
