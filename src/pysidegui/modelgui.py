@@ -29,10 +29,12 @@ from tasks.caching import RGB
 
 class ModelGui:
 
-    def new_item(self, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> Optional[GlobalItemID]:
+    def new_item(self, frame: QMainWindow, data_icons: Dict[str, QIcon],
+                 css_buf: Optional[str]) -> Optional[GlobalItemID]:
         raise NotImplemented()
 
-    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> bool:
+    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow, data_icons: Dict[str, QIcon],
+                  css_buf: Optional[str]) -> bool:
         raise NotImplemented()
 
     def save_all(self) -> None:

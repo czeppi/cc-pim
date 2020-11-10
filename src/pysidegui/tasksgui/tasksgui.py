@@ -40,20 +40,22 @@ class TasksGui(ModelGui):
         # keywords = self._task_model.calc_keywords()
         # self.ui.title_edit.init_completer(keywords)  # todo?
 
-    def new_item(self, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> Optional[GlobalItemID]:
+    def new_item(self, frame: QMainWindow, data_icons: Dict[str, QIcon],
+                 css_buf: Optional[str]) -> Optional[GlobalItemID]:
         new_task = self._task_model.create_new_task()
-        dlg = TaskEditDialog(frame, task=new_task, task_model=self._task_model, data_icons=data_icons)
+        dlg = TaskEditDialog(frame, task=new_task, task_model=self._task_model, data_icons=data_icons, css_buf=css_buf)
         if dlg.exec() == dlg.Accepted:
             dlg_values = dlg.get_values()  # { attr-name -> new-value }
             new_task_rev = new_task.create_new_revision(**dlg_values)
             self._task_model.add_task_revision(new_task_rev)
             return _convert_task2global_id(new_task_rev.task_serial)
 
-    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> bool:
+    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow, data_icons: Dict[str, QIcon],
+                  css_buf: Optional[str]) -> bool:
         task_serial = _convert_global2task_serial(glob_item_id)
         task = self._task_model.get_task(task_serial)
 
-        dlg = TaskEditDialog(frame, task, task_model=self._task_model, data_icons=data_icons)
+        dlg = TaskEditDialog(frame, task, task_model=self._task_model, data_icons=data_icons, css_buf=css_buf)
         if dlg.exec() != dlg.Accepted:
             return False
 

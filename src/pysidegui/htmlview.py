@@ -121,6 +121,10 @@ class HtmlView(QTextEdit):
             for observer in self.click_link_observers:
                 observer(href_str)
 
+    def set_text(self, text: str) -> None:
+        self._tooltip_caches.clear()
+        super().setText(text)
+
 
 class ContactHtmlCreator:
 
@@ -140,15 +144,14 @@ class ContactHtmlCreator:
     def _add_header(self) -> None:
         self._add('<html>')
         self._add('<head>')
-        # self._add('  <style> table, td, th { border: 1px solid black; } </style>')
         self._add('</head>')
         self._add('<body>')
 
     def _add_title(self) -> None:
-        self._add(f'<h1 align="center">{self._contact.title}</h1>')
+        self._add(f'<h1>{self._contact.title}</h1>')
 
     def _add_table(self) -> None:
-        self._add('<table align="center" cellspacing="10" cellpadding="1">')
+        self._add('<table>')
         for attr in self._contact.iter_attributes():
             for fact in self._contact.get_facts(attr.name):
                 if fact.is_valid:

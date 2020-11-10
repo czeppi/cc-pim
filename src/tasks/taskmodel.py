@@ -238,7 +238,7 @@ class Task:
         return TaskRevision(
             task_serial=self._serial,
             rev_no=new_rev_no,
-            date_str=datetime.today().strftime('%y%m%d'),
+            date=datetime.today().strftime('%y%m%d'),
             category=category,
             title=title,
             body=body,

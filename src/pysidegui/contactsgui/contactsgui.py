@@ -35,7 +35,8 @@ class ContactsGui(ModelGui):
         self._contact_model = contact_model
         self._contact_repo = contact_repo
 
-    def new_item(self, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> Optional[GlobalItemID]:
+    def new_item(self, frame: QMainWindow, data_icons: Dict[str, QIcon],
+                 css_buf: Optional[str]) -> Optional[GlobalItemID]:
         contact_model = self._contact_model
         type_map = OrderedDict((x.type_name.lower(), x) for x in contact_model.iter_object_classes())
         type_name, ok = QInputDialog.getItem(frame, 'new', 'select a type', list(type_map.keys()), editable=False)
@@ -51,7 +52,8 @@ class ContactsGui(ModelGui):
                 )
                 return _convert_contact2global_id(new_contact.id)
 
-    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow, data_icons: Dict[str, QIcon]) -> bool:
+    def edit_item(self, glob_item_id: GlobalItemID, frame: QMainWindow, data_icons: Dict[str, QIcon],
+                  css_buf: Optional[str]) -> bool:
         contact_id = _convert_global2contact_id(glob_item_id)
         contact = self._contact_model.get_contact(contact_id)
         dlg = ContactEditDialog(frame, contact, self._contact_model, data_icons=data_icons)

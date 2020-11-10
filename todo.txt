@@ -10,6 +10,7 @@ cc-pim:
   - preview?
 - html-page: split view (for compare + preview)
 - html-page: mark search words red
+- new task: edit field for date-str
 
 css:
 - add user.css-file (for contacts + tasks)

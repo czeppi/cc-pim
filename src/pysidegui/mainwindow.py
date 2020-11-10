@@ -41,6 +41,9 @@ class MainWindow(QMainWindow):
         self._config = context.user.read_config()
         self._state = context.user.read_state()
         self._data_icons = context.user.read_icons()
+        self._contact_css = context.user.read_contact_css()
+        self._task_css = context.user.read_task_css()
+        self._cur_css = self._contact_css
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -74,6 +77,8 @@ class MainWindow(QMainWindow):
         self.ui.search_edit.setFocus()
         self.ui.search_result_list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.search_result_list.customContextMenuRequested.connect(self.on_list_item_context_menu)
+        if self._contact_css:
+            self.ui.html_view.document().setDefaultStyleSheet(self._contact_css)
 
         self.ui.action_contacts.triggered.connect(self.on_contacts_mode)
         self.ui.action_tasks.triggered.connect(self.on_tasks_mode)
@@ -139,6 +144,9 @@ class MainWindow(QMainWindow):
         self._update_category_filter()
         self.ui.search_result_list.setCurrentItem(None)
         self._update_list()
+        if self._contact_css:
+            self.ui.html_view.document().setDefaultStyleSheet(self._contact_css)
+        self._cur_css = self._contact_css
 
     def on_tasks_mode(self):
         self.ui.action_contacts.setChecked(False)
@@ -148,9 +156,12 @@ class MainWindow(QMainWindow):
         self._update_category_filter()
         self.ui.search_result_list.setCurrentItem(None)
         self._update_list()
+        if self._task_css:
+            self.ui.html_view.document().setDefaultStyleSheet(self._task_css)
+        self._cur_css = self._task_css
 
     def on_new_item(self):
-        new_obj_id = self._cur_model_gui.new_item(frame=self, data_icons=self._data_icons)
+        new_obj_id = self._cur_model_gui.new_item(frame=self, data_icons=self._data_icons, css_buf=self._cur_css)
         if new_obj_id is not None:
             self._update_toolbar_icons()
             self._update_list(select_obj_id=new_obj_id)
@@ -168,7 +179,7 @@ class MainWindow(QMainWindow):
         if obj_id is None:
             return
 
-        if self._cur_model_gui.edit_item(obj_id, frame=self, data_icons=self._data_icons):
+        if self._cur_model_gui.edit_item(obj_id, frame=self, data_icons=self._data_icons, css_buf=self._cur_css):
             self._update_toolbar_icons()
             self._update_list()
             self._update_html_view(obj_id)
@@ -309,4 +320,4 @@ class MainWindow(QMainWindow):
             html_text = self._cur_model_gui.get_html_text(obj_id)
         else:
             html_text = ''
-        self.ui.html_view.setText(html_text)
+        self.ui.html_view.set_text(html_text)

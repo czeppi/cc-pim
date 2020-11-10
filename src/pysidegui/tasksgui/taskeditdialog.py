@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Iterator, Dict
+from typing import Iterator, Dict, Optional
 
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QDialog, QApplication, QWidget
@@ -30,7 +30,8 @@ from tasks.xml_writing import write_xmlstr
 
 class TaskEditDialog(QDialog):
 
-    def __init__(self, parent: QWidget, task: Task, task_model: TaskModel, data_icons: Dict[str, QIcon]):
+    def __init__(self, parent: QWidget, task: Task, task_model: TaskModel, data_icons: Dict[str, QIcon],
+                 css_buf: Optional[str]):
         super().__init__(parent, f=Qt.WindowMaximizeButtonHint)
         self.ui = Ui_TaskEditDialog()
         self.ui.setupUi(self)
@@ -44,7 +45,7 @@ class TaskEditDialog(QDialog):
         self._init_cat_combo()
         self._init_title_text()
         self._init_text_edit()
-        self._init_preview()
+        self._init_preview(css_buf)
         
         self._preview_updater = FastPreviewUpdater(self)
         self.showMaximized()
@@ -94,23 +95,11 @@ class TaskEditDialog(QDialog):
         markup = write_markup(page)
         self.ui.body_edit.setText(markup)
     
-    def _init_preview(self) -> None:
-        html_text = self._get_html_text()
+    def _init_preview(self, css_buf: Optional[str]) -> None:
+        if css_buf:
+            self.ui.preview.document().setDefaultStyleSheet(css_buf)
 
-        self.ui.preview.document().setDefaultStyleSheet(
-            '* {'
-            '    color:  #000000;'
-            '    font-size: 12px;'
-            '    font-weight: normal;'
-            '    margin: 0;'
-            '    padding: 0;'
-            '}'
-            'h1 {'
-            '   color: #008000;'
-            '   font-size: 16px;'
-            '   text-align: center;'
-            '}'
-        )
+        html_text = self._get_html_text()
         self.ui.preview.setText(html_text)
         self.ui.preview.setReadOnly(False)
 

@@ -18,7 +18,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
 import yaml
 
 from contacts.contactmodel import ContactModel
@@ -114,6 +114,17 @@ class UserResourceMgr:
         icon_dpath = self._user_dpath / 'icons'
         return {icon_fpath.stem.lower(): _read_icon(icon_fpath)
                 for icon_fpath in icon_dpath.iterdir()}
+
+    def read_contact_css(self) -> Optional[str]:
+        return self._read_css('contact.css')
+
+    def read_task_css(self) -> Optional[str]:
+        return self._read_css('task.css')
+
+    def _read_css(self, fname: str) -> Optional[str]:
+        css_fpath = self._user_dpath / fname
+        if css_fpath.exists():
+            return css_fpath.open('r', encoding='utf-8').read()
 
     def get_contact_repo(self) -> Repository:
         return Repository(self._user_dpath / 'contacts.sqlite')

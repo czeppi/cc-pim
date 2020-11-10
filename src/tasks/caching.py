@@ -177,8 +177,9 @@ class TaskResource:
 
     def read(self) -> TaskCache:
         match = _TASK_FSTEM_REX.match(self._path.stem)
+        meta_file = self._read_metafile()
         return TaskCache(
-            task_serial=self._read_metafile().task_serial,
+            task_serial=meta_file.task_serial,
             files_state=self.files_state,
             category=self._path.parent.name,
             date_str=match.group('date_str'),
