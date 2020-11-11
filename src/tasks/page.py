@@ -123,17 +123,11 @@ class Image(InlineElement):
                      text=self.text, class_attr=self.class_attr)
 
 
-TRANSFORM_FUNCTION = Callable[[TList[InlineElement]], TList[InlineElement]]
-
-
 @dataclass
 class BlockElement(ElementBase):
     pass
 
     def iter_inline_elements(self) -> Iterator[InlineElement]:
-        raise NotImplemented()
-
-    def transform_inline_element(self, transform: TRANSFORM_FUNCTION):
         raise NotImplemented()
 
 
@@ -145,9 +139,6 @@ class Header(BlockElement):
     def iter_inline_elements(self) -> Iterator[InlineElement]:
         yield from self.inline_elements
 
-    def transform_inline_element(self, transform: TRANSFORM_FUNCTION):
-        self.inline_elements = transform(self.inline_elements)
-
 
 @dataclass
 class Paragraph(BlockElement):
@@ -156,9 +147,6 @@ class Paragraph(BlockElement):
 
     def iter_inline_elements(self) -> Iterator[InlineElement]:
         yield from self.inline_elements
-
-    def transform_inline_element(self, transform: TRANSFORM_FUNCTION):
-        self.inline_elements = transform(self.inline_elements)
 
 
 @dataclass
@@ -173,11 +161,6 @@ class ListItem(ElementBase):
         for sub_item in self.sub_items:
             yield from sub_item.iter_inline_elements()
 
-    def transform_inline_element(self, transform: TRANSFORM_FUNCTION):
-        self.inline_elements = transform(self.inline_elements)
-        for sub_item in self.sub_items:
-            sub_item.transform_inline_element(transform)
-
 
 @dataclass
 class List(BlockElement):
@@ -186,10 +169,6 @@ class List(BlockElement):
     def iter_inline_elements(self) -> Iterator[InlineElement]:
         for item in self.items:
             yield from item.iter_inline_elements()
-
-    def transform_inline_element(self, transform: TRANSFORM_FUNCTION):
-        for item in self.items:
-            item.transform_inline_element(transform)
 
 
 @dataclass
@@ -205,9 +184,6 @@ class Cell(ElementBase):
     def iter_inline_elements(self) -> Iterator[InlineElement]:
         yield from self.inline_elements
 
-    def transform_inline_element(self, transform: TRANSFORM_FUNCTION):
-        self.inline_elements = transform(self.inline_elements)
-
 
 @dataclass
 class Row(ElementBase):
@@ -216,10 +192,6 @@ class Row(ElementBase):
     def iter_inline_elements(self) -> Iterator[InlineElement]:
         for cell in self.cells:
             yield from cell.iter_inline_elements()
-
-    def transform_inline_element(self, transform: TRANSFORM_FUNCTION):
-        for cell in self.cells:
-            cell.transform_inline_element(transform)
 
 
 @dataclass
@@ -230,10 +202,6 @@ class Table(BlockElement):
     def iter_inline_elements(self) -> Iterator[InlineElement]:
         for row in self.rows:
             yield from row.iter_inline_elements()
-
-    def transform_inline_element(self, transform: TRANSFORM_FUNCTION):
-        for row in self.rows:
-            row.transform_inline_element(transform)
 
 
 @dataclass
@@ -246,7 +214,3 @@ class Page(ElementBase):
     def iter_inline_elements(self) -> Iterator[InlineElement]:
         for block_element in self.block_elements:
             yield from block_element.iter_inline_elements()
-
-    def transform_inline_element(self, transform: TRANSFORM_FUNCTION):
-        for block_element in self.block_elements:
-            block_element.transform_inline_element(transform)
