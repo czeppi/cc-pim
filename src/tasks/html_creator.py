@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 import xml.etree.ElementTree as ET
-from typing import Optional, List as TList, Iterator
+from typing import Optional, List as TList, Iterator, Iterable, Tuple
 
 from tasks.page import NormalText, BoldText, Link
 from tasks.page import Page, Header, Paragraph, List, ListItem, Table, Column, Row, Cell, BlockElement, InlineElement
@@ -27,17 +27,20 @@ from tasks.taskmodel import TaskModel
 
 
 def write_htmlstr(title: str, page: Page,
-                  link_solver: Optional[LinkSolver] = None) -> str:
-    html_root = _HtmlCreator(title, page, link_solver).create()
+                  link_solver: Optional[LinkSolver] = None,
+                  search_rex: Optional[re.Pattern] = None) -> str:
+    html_root = _HtmlCreator(title, page, link_solver, search_rex).create()
     return ET.tostring(html_root, encoding='unicode')
 
 
 class _HtmlCreator:
 
-    def __init__(self, title: str, page: Page, link_solver: Optional[LinkSolver]):
+    def __init__(self, title: str, page: Page,
+                 link_solver: Optional[LinkSolver], search_rex: Optional[re.Pattern]):
         self._title = title
         self._page = page
         self._link_solver = link_solver
+        self._search_rex = search_rex
 
     def create(self) -> ET.XML:
         html_page: ET.XML = ET.fromstring('<html></html>')
@@ -127,23 +130,27 @@ class _HtmlCreator:
         html_td = ET.SubElement(html_tr, 'td')
         self._add_html_inline_elements(html_td, cell.inline_elements)
 
-    def _add_html_inline_elements(self, html_block_element, inline_elements: TList[InlineElement]) -> None:
-        html_block_element.text = ''
+    def _add_html_inline_elements(self, html_parent_element, inline_elements: TList[InlineElement]) -> None:
+        if self._search_rex:
+            transformer = InlineElementTransformer(self._search_rex)
+            inline_elements = transformer.transform(inline_elements)
+
+        html_parent_element.text = ''
         if len(inline_elements) == 0:
             return
 
         start_index = 0
         inline_element0 = inline_elements[0]
-        if isinstance(inline_element0, NormalText):
-            html_block_element.text = inline_element0.text
+        if isinstance(inline_element0, NormalText) and not inline_element0.class_attr:
+            html_parent_element.text = inline_element0.text
             start_index = 1
 
         k = start_index
         while k < len(inline_elements):
             inline_element = inline_elements[k]
-            html_inline_element = self._add_html_inline_element(html_block_element, inline_element)
+            html_inline_element = self._add_html_inline_element(html_parent_element, inline_element)
             if k + 1 < len(inline_elements):
-                next_inline_element = inline_elements[k+1]
+                next_inline_element = inline_elements[k + 1]
                 if isinstance(next_inline_element, NormalText):
                     html_inline_element.tail = next_inline_element.text
                     k += 1
@@ -186,11 +193,26 @@ class _HtmlCreator:
             return self._add_html_bold(html_block_element, inline_element)
         elif isinstance(inline_element, Link):
             return self._add_html_link(html_block_element, inline_element)
+        elif isinstance(inline_element, NormalText):
+            return self._add_html_div(html_block_element, inline_element)
+        else:
+            raise Exception(type(inline_element))
+
+    @staticmethod
+    def _add_html_div(html_parent, normal_text: NormalText) -> ET.SubElement:
+        attrib = {}
+        if normal_text.class_attr:
+            attrib['class'] = normal_text.class_attr
+        html_div = ET.SubElement(html_parent, 'div', attrib=attrib)
+        html_div.text = normal_text.text
+        return html_div
 
     @staticmethod
     def _add_html_bold(html_parent, bold_text: BoldText) -> ET.SubElement:
         html_bold = ET.SubElement(html_parent, 'b')
         html_bold.text = bold_text.text
+        if bold_text.class_attr:
+            html_bold.attrib['class'] = bold_text.class_attr
         return html_bold
 
     def _add_html_link(self, html_parent, link: Link) -> ET.SubElement:
@@ -201,6 +223,9 @@ class _HtmlCreator:
             html_link.text = self._link_solver.get_link_text(link.uri)
         else:
             html_link.text = link.uri
+
+        if link.class_attr:
+            html_link.attrib['class'] = link.class_attr
         return html_link
 
 
@@ -217,3 +242,36 @@ class LinkSolver:
             task = self._task_model.get_task(task_serial)
             return task.get_header()
         return uri
+
+
+class InlineElementTransformer:
+
+    def __init__(self, search_rex: re.Pattern):
+        self._search_rex = search_rex
+
+    def transform(self, inline_elements: Iterable[InlineElement]
+                  ) -> TList[InlineElement]:
+        return list(self._iter_transformed(inline_elements))
+
+    def _iter_transformed(self, inline_elements: Iterable[InlineElement]
+                          ) -> Iterator[InlineElement]:
+        for elem in inline_elements:
+            if elem.text:
+                for text_part, marked in self._iter_text_parts(elem.text):
+                    new_elem = elem.copy()
+                    new_elem.text = text_part
+                    new_elem.class_attr = 'search_text' if marked else None
+                    yield new_elem
+            else:
+                yield elem.copy()
+
+    def _iter_text_parts(self, text: str) -> Iterator[Tuple[str, bool]]:
+        i = 0
+        for match in self._search_rex.finditer(text):
+            a, b = match.span()
+            if a > i:
+                yield text[i:a], False
+            yield text[a: b], True
+            i = b
+        if i < len(text):
+            yield text[i:], False

@@ -14,7 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
-
+import re
 from collections import OrderedDict
 from typing import Optional, Iterator, Iterable, Dict
 
@@ -81,7 +81,8 @@ class ContactsGui(ModelGui):
         self._contact_model = ContactModel(date_changes, fact_changes)
         return True
 
-    def get_html_text(self, glob_item_id: GlobalItemID) -> str:
+    def get_html_text(self, glob_item_id: GlobalItemID,
+                      search_rex: Optional[re.Pattern] = None) -> str:
         contact_id = _convert_global2contact_id(glob_item_id)
         contact = self._contact_model.get_contact(contact_id)
         html_text = ContactHtmlCreator(contact, self._contact_model).create_html_text()

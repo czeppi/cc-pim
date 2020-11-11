@@ -16,6 +16,8 @@
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
+
+import re
 from dataclasses import dataclass
 
 from PySide2.QtGui import QIcon
@@ -43,7 +45,8 @@ class ModelGui:
     def revert_change(self) -> None:
         raise NotImplemented()
 
-    def get_html_text(self, glob_item_id: GlobalItemID) -> str:
+    def get_html_text(self, glob_item_id: GlobalItemID,
+                      search_rex: Optional[re.Pattern] = None) -> str:
         raise NotImplemented()
 
     def exists_uncommitted_changes(self) -> bool:

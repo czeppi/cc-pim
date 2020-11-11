@@ -73,14 +73,16 @@ class TasksGui(ModelGui):
     def revert_change(self) -> bool:
         raise NotImplemented()
 
-    def get_html_text(self, glob_item_id: GlobalItemID) -> str:
+    def get_html_text(self, glob_item_id: GlobalItemID,
+                      search_rex: Optional[re.Pattern] = None) -> str:
         task_serial = _convert_global2task_serial(glob_item_id)
         task = self._task_model.get_task(task_serial)
         title = task.get_header()
         page = copy.deepcopy(task.last_revision.page)
         self._extend_page_with_task_cache(page=page, task=task)
         link_solver = LinkSolver(self._task_model)
-        html_text = write_htmlstr(title, page, link_solver=link_solver)
+        html_text = write_htmlstr(title, page, link_solver=link_solver,
+                                  search_rex=search_rex)
         return html_text
 
     def _extend_page_with_task_cache(self, page: Page, task: Task) -> None:

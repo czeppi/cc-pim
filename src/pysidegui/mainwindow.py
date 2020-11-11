@@ -14,7 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
-
+import re
 import webbrowser
 from datetime import datetime
 from typing import Optional, Iterator, List
@@ -317,7 +317,15 @@ class MainWindow(QMainWindow):
     def _update_html_view(self, obj_id: Optional[GlobalItemID]) -> None:
         self._show_obj_id = obj_id
         if obj_id:
-            html_text = self._cur_model_gui.get_html_text(obj_id)
+            search_rex = self._create_search_rex()
+            html_text = self._cur_model_gui.get_html_text(obj_id, search_rex)
         else:
             html_text = ''
         self.ui.html_view.set_text(html_text)
+
+    def _create_search_rex(self) -> Optional[re.Pattern]:
+        search_text = self.ui.search_edit.text()
+        if search_text:
+            search_words = [x.strip() for x in search_text.split() if x.strip() != '']
+            return re.compile('|'.join(search_words),
+                              flags=re.I)  # todo: should only find matches which begins with search words

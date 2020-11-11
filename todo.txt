@@ -4,16 +4,8 @@ cc-pim:
 - solve: contact commit vs. task commit (at once or manual triggered)
 - edit person or company: add support for adding address in dialog
 - task-categories: add, remove, rename
-- readme, files_state: add words to keywords
-- html-page, task-files: 
-  - add color
-  - preview?
 - html-page: split view (for compare + preview)
-- html-page: mark search words red
 - new task: edit field for date-str
-
-css:
-- add user.css-file (for contacts + tasks)
 
 refactoring:
 - TaskRevision: make to dataclass
