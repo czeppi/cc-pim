@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
+
 import re
 from collections import OrderedDict
 from typing import Optional, Iterator, Iterable, Dict
@@ -25,7 +26,7 @@ from contacts.contactmodel import ContactModel, ContactID, ContactType, Address,
 from contacts.repository import Repository
 from pysidegui.contactsgui.contacteditdialog import ContactEditDialog
 from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
-from pysidegui.htmlview import ContactHtmlCreator
+from contacts.html_creator import ContactHtmlCreator
 from pysidegui.modelgui import ModelGui, ResultItemData
 
 
