@@ -61,6 +61,7 @@ class MainWindow(QMainWindow):
 
         task_meta_model = context.system.read_task_metamodel()
         self._task_model = context.user.read_task_model(task_meta_model, self._config.tasks_root)
+        self._task_model.update_cache_of_active_tasks()
         self._contacts_gui = ContactsGui(contact_model, contact_repo)
         self._tasks_gui = TasksGui(self._task_model)
 

@@ -14,7 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with CC-PIM.  If not, see <http://www.gnu.org/licenses/>.
-
+from datetime import datetime
 from typing import Iterator, Dict, Optional
 
 from PySide2.QtCore import Qt
@@ -44,6 +44,7 @@ class TaskEditDialog(QDialog):
         self._init_id_edit()
         self._init_cat_combo()
         self._init_title_text()
+        self._init_date_edit()
         self._init_text_edit()
         self._init_preview(css_buf)
         
@@ -76,6 +77,15 @@ class TaskEditDialog(QDialog):
 
         cat_str = task.last_revision.category
         self.ui.cat_combo.setEditText(cat_str)
+
+    def _init_date_edit(self) -> None:
+        task = self._task
+        if task.is_empty():
+            today_str = datetime.today().strftime('%y%m%d')
+            self.ui.date_edit.setText(today_str)
+        else:
+            self.ui.date_edit.setText(task.last_revision.date_str)
+            self.ui.date_edit.setReadOnly(True)
 
     def _init_title_text(self) -> None:
         task = self._task

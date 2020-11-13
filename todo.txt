@@ -5,7 +5,6 @@ cc-pim:
 - edit person or company: add support for adding address in dialog
 - task-categories: add, remove, rename
 - html-page: split view (for compare + preview)
-- new task: edit field for date-str
 
 refactoring:
 - TaskRevision: make to dataclass

@@ -25,7 +25,7 @@ from typing import Optional, Dict, List, Iterable, Any, Iterator, Set, Tuple
 
 import yaml
 
-from tasks.caching import TaskCache, TaskCacheManager, TaskCaches, TaskCacheData, TaskFilesState, RGB
+from tasks.caching import TaskCache, TaskCacheManager, TaskCaches, TaskCacheData, TaskFilesState, RGB, TaskDir
 from tasks.db import Row, DB
 from tasks.xml_reading import read_from_xmlstr
 from tasks.zipping import Unzipper, Zipper
@@ -86,13 +86,22 @@ class TaskModel:
 
         for task in self._tasks.values():
             cache = task_caches.map.get(task.serial, None)
-            if cache is None:
-                cache_data = None
-            else:
-                cache_data = TaskCacheData(files_state=cache.files_state,
-                                           readme=cache.readme,
-                                           file_names=cache.file_names)
+            cache_data = cache.get_data() if cache is not None else None
             task.set_cache(cache_data, self._word_extractor)
+
+    def update_cache_of_active_tasks(self) -> None:
+        print('update caches of active tasks...')
+        for task in self._tasks.values():
+            if task.cache and task.cache.files_state == TaskFilesState.ACTIVE:
+                task_dir = TaskDir(task.get_path(self._tasks_root))
+                cache = task_dir.read()
+                cache_data = cache.get_data()
+                if cache_data != task.cache:
+                    task.set_cache(cache_data, self._word_extractor)
+                    cache_mgr = TaskCacheManager(self._tasks_root)
+                    cache_mgr.write_one_cache_to_db(task_cache=cache, db=self._db)
+        self._db.commit()
+        print('ready (caches updated)')
 
     def create_new_task(self, task_serial: Optional[int] = None) -> Task:
         if task_serial is None:
@@ -164,7 +173,7 @@ class TaskModel:
         task_caches = TaskCaches(
             update_datetime=timestamp,
             map={cache.task_serial: cache for cache in task_cache_list})
-        cache_mgr.write_db(task_caches=task_caches, db=self._db)
+        cache_mgr.write_caches_to_db(task_caches=task_caches, db=self._db)
 
         # update task.cache
         for task in self._tasks.values():

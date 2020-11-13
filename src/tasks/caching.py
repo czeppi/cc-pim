@@ -54,6 +54,11 @@ class TaskCache:
     readme: str
     file_names: str
 
+    def get_data(self) -> TaskCacheData:
+        return TaskCacheData(files_state=self.files_state,
+                             readme=self.readme,
+                             file_names=self.file_names)
+
 
 @dataclass
 class TaskCacheData:
@@ -69,11 +74,11 @@ class TaskFilesState(Enum):
     PASSIVE = 3   # zipped
     ARCHIVED = 4  # on extra hard disc
 
-    def rgb(self) -> RGB:
+    def rgb(self) -> Optional[RGB]:
         return {
-            self.ACTIVE.value: [0, 160, 0],
-            self.PASSIVE.value: [0, 0, 255],
-            self.ARCHIVED.value: [128, 128, 128],
+            self.ACTIVE.value: (0, 160, 0),
+            self.PASSIVE.value: (0, 0, 255),
+            self.ARCHIVED.value: (128, 128, 128),
         }.get(self.value, None)
 
 
@@ -124,20 +129,11 @@ class TaskCacheManager:
             )
         return task_caches
 
-    @staticmethod
-    def write_db(db: DB, task_caches: TaskCaches) -> None:
+    def write_caches_to_db(self, task_caches: TaskCaches, db: DB) -> None:
         task_caches_table = db.table('task_caches')
         task_caches_table.clear()
         for cache in task_caches.map.values():
-            row_values = {
-                'task_serial': cache.task_serial,
-                'files_state': cache.files_state.name.lower(),
-                'category': cache.category,
-                'date': cache.date_str,
-                'title': cache.title,
-                'readme': '' if cache.readme is None else cache.readme,
-                'file_names': cache.file_names,
-            }
+            row_values = self._create_row_values(cache)
             new_row = Row(table=task_caches_table, values=row_values)
             task_caches_table.insert_row(new_row)
 
@@ -145,7 +141,6 @@ class TaskCacheManager:
         print(f'update_time: {task_caches.update_datetime}, = {int(task_caches.update_datetime.timestamp())}')
 
         misc_table = db.table('misc')
-
         where_str = 'key = "task_caches_timestamp"'
         value = str(int(task_caches.update_datetime.timestamp()))
         rows = misc_table.select(where_str=where_str)
@@ -156,7 +151,25 @@ class TaskCacheManager:
             misc_table.update_row(values={'value': value}, where_str=where_str)
         db.commit()
 
-    def update_state_files_in_db(self, task_serial: TaskSerial,
+    def write_one_cache_to_db(self, task_cache: TaskCache, db: DB):
+        row_values = self._create_row_values(task_cache)
+        db.table('task_caches').update_row(row_values, where_str=f'task_serial = "{task_cache.task_serial}"')
+        db.commit()
+
+    @staticmethod
+    def _create_row_values(task_cache: TaskCache) -> Dict[str, Any]:
+        return {
+            'task_serial': task_cache.task_serial,
+            'files_state': task_cache.files_state.name.lower(),
+            'category': task_cache.category,
+            'date': task_cache.date_str,
+            'title': task_cache.title,
+            'readme': '' if task_cache.readme is None else task_cache.readme,
+            'file_names': task_cache.file_names,
+        }
+
+    @staticmethod
+    def update_state_files_in_db(task_serial: TaskSerial,
                                  new_files_state: TaskFilesState, db: DB) -> None:
         task_caches_table = db.table('task_caches')
         where_str = f'task_serial = {task_serial}'
