@@ -5,7 +5,13 @@ cc-pim:
 - edit person or company: add support for adding address in dialog
 - task-categories: add, remove, rename
 - html-page: split view (for compare + preview)
+- task edit dialog: change category or title => change dirname (if exists)
+
+- Task-DB: change title from 'xxx-yyy' in 'xxx yyy' or 'xxx, yyy'
+- Task: title -> dirname (remove spaces)
+- context menu tasks: add function for change title (without a new revision)
 
 refactoring:
 - TaskRevision: make to dataclass
+- rename cache in file_infos or something similar
 

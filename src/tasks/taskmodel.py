@@ -214,7 +214,7 @@ class Task:
         return self._revisions[-1]
 
     @property
-    def revisions_list(self):
+    def revisions(self):
         return self._revisions
 
     @property
@@ -298,16 +298,27 @@ class Task:
     def get_path(self, tasks_root: Path) -> Optional[Path]:
         if self._cache:
             files_state = self._cache.files_state
-            task_rev = self.last_revision
-            name = f'{task_rev.category}/{task_rev.date_str}-{task_rev.title}'
+            rel_path = self.get_rel_path()
             if files_state == TaskFilesState.ACTIVE:
-                return tasks_root / name
+                return tasks_root / rel_path
             elif files_state == TaskFilesState.PASSIVE:
-                return tasks_root / (name + '.zip')
+                return tasks_root / (rel_path + '.zip')
 
     def get_rel_path(self) -> str:
-        task_rev = self.last_revision
-        return f'{task_rev.category}/{task_rev.date_str}-{task_rev.title}'
+        assert not self._revisions[0].date_str
+        task_1st_rev = self._revisions[1]
+        task_last_rev = self.last_revision
+        title_fname = self._get_title_fname(task_last_rev.title)
+        return f'{task_last_rev.category}/{task_1st_rev.date_str}-{title_fname}'
+
+    @staticmethod
+    def _get_title_fname(title: str) -> str:
+        assert ':' not in title
+        title_fname = title.replace(', ', '-').replace(' ', '-')
+        assert ',' not in title_fname
+        assert ' ' not in title_fname
+        assert '--' not in title_fname
+        return title_fname
 
     def set_cache(self, cache_data: Optional[TaskCacheData], word_extractor: WordExtractor):
         self._cache = cache_data
