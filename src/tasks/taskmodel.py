@@ -21,8 +21,7 @@ import re
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, List, Iterable, Any, Iterator, Set, Tuple
-
+from typing import Optional, Dict, List, Iterable, Any, Iterator, Set
 import yaml
 
 from tasks.caching import TaskCache, TaskCacheManager, TaskCaches, TaskCacheData, TaskFilesState, RGB, TaskDir
@@ -149,7 +148,7 @@ class TaskModel:
 
     def update_cache(self, timestamp: datetime, task_cache_list: List[TaskCache]) -> None:
         for cache in task_cache_list:
-            cache_task_key = cache.category, cache.date_str, cache.title
+            cache_rel_path = cache.get_rel_path()
             if not cache.task_serial:
                 # task = task_map.get(cache_task_key, None)
                 # if task is None:
@@ -160,13 +159,14 @@ class TaskModel:
                 #     task_resource.write_meta(task.serial)
                 # else:
                 #     cache.task_serial = task.serial
-                raise Exception(cache_task_key)
+                raise Exception(cache_rel_path)
+
             task = self._tasks.get(cache.task_serial, None)
             if task is None:
                 raise Exception(cache.task_serial)  # todo: show error dialog
 
-            task_key = self._get_task_key(task)
-            if task_key != cache_task_key:
+            task_rel_path = task.get_rel_path()
+            if task_rel_path != cache_rel_path:
                 raise Exception(cache.task_serial)  # todo: show error dialog
 
         cache_mgr = TaskCacheManager(self._tasks_root)
@@ -183,11 +183,6 @@ class TaskModel:
                                      readme=cache.readme,
                                      file_names=cache.file_names)
             self._tasks[cache.task_serial].set_cache(new_data, self._word_extractor)
-
-    @staticmethod
-    def _get_task_key(task: Task) -> Tuple[str, str, str]:
-        task_rev = task.last_revision
-        return task_rev.category, task_rev.date_str, task_rev.title
 
 
 class Task:

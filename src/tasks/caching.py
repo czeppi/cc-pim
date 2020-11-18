@@ -22,7 +22,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Iterator, Optional, Any, Tuple
+from typing import Dict, List, Iterator, Optional, Any, Tuple, Pattern
 from datetime import datetime
 from zipfile import ZipFile
 
@@ -35,7 +35,7 @@ RGB = Tuple[int, int, int]
 
 _TASK_DPATH_REX = re.compile(r"[0-9x]{4,6}-.*")
 _TASK_ZIPFILE_REX = re.compile(r"[0-9x]{4,6}-.*\.zip")
-_TASK_FSTEM_REX = re.compile(r"(?P<date_str>[0-9x]{4,6})-(?P<title>.*)")
+_TASK_FSTEM_REX: Pattern[str] = re.compile(r"(?P<date_str>[0-9x]{4,6})-(?P<title_as_fname>.*)")
 
 
 @dataclass
@@ -50,7 +50,7 @@ class TaskCache:
     files_state: TaskFilesState
     category: str
     date_str: str
-    title: str
+    title_as_fname: str
     readme: str
     file_names: str
 
@@ -58,6 +58,9 @@ class TaskCache:
         return TaskCacheData(files_state=self.files_state,
                              readme=self.readme,
                              file_names=self.file_names)
+
+    def get_rel_path(self) -> str:
+        return f'{self.category}/{self.date_str}-{self.title_as_fname}'
 
 
 @dataclass
@@ -122,8 +125,8 @@ class TaskCacheManager:
                 task_serial=task_serial,
                 files_state=TaskFilesState[row['files_state'].upper()],
                 category=row['category'],
-                date_str=row['date'],
-                title=row['title'],
+                date_str=row['date_str'],
+                title_as_fname=row['title_as_fname'],
                 readme=row['readme'],
                 file_names=row['file_names'],
             )
@@ -132,6 +135,7 @@ class TaskCacheManager:
     def write_caches_to_db(self, task_caches: TaskCaches, db: DB) -> None:
         task_caches_table = db.table('task_caches')
         task_caches_table.clear()
+        # task_caches_table.create()
         for cache in task_caches.map.values():
             row_values = self._create_row_values(cache)
             new_row = Row(table=task_caches_table, values=row_values)
@@ -162,8 +166,8 @@ class TaskCacheManager:
             'task_serial': task_cache.task_serial,
             'files_state': task_cache.files_state.name.lower(),
             'category': task_cache.category,
-            'date': task_cache.date_str,
-            'title': task_cache.title,
+            'date_str': task_cache.date_str,
+            'title_as_fname': task_cache.title_as_fname,
             'readme': '' if task_cache.readme is None else task_cache.readme,
             'file_names': task_cache.file_names,
         }
@@ -196,7 +200,7 @@ class TaskResource:
             files_state=self.files_state,
             category=self._path.parent.name,
             date_str=match.group('date_str'),
-            title=match.group('title'),
+            title_as_fname=match.group('title_as_fname'),
             readme=self._read_readme(),
             file_names=self._read_filenames(),
         )
