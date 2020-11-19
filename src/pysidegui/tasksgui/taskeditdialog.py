@@ -76,7 +76,8 @@ class TaskEditDialog(QDialog):
                 self.ui.cat_combo.addItem(category)
 
         cat_str = task.last_revision.category
-        self.ui.cat_combo.setEditText(cat_str)
+        cur_index = self.ui.cat_combo.findText(cat_str)
+        self.ui.cat_combo.setCurrentIndex(cur_index)
 
     def _init_date_edit(self) -> None:
         task = self._task
