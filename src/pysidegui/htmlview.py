@@ -57,11 +57,13 @@ class HtmlView(QTextEdit):
         path = Path(anchor)
         suffix = path.suffix
         if suffix in ('.txt', '.py', '.html', '.xml'):
-            file_buf = self._read_file(path).decode('utf-8')
-            if suffix == '.html':
-                return file_buf
-            else:
-                return f'<pre>{file_buf}</pre>'
+            data = self._read_file(path)
+            if data:
+                file_buf = data.decode('utf-8')
+                if suffix == '.html':
+                    return file_buf
+                else:
+                    return f'<pre>{file_buf}</pre>'
         elif suffix in ('.png', '.jpg'):
             image = self._read_image(path)
             if image:
@@ -94,6 +96,8 @@ class HtmlView(QTextEdit):
                 if zip_fpath:
                     with ZipFile(zip_fpath, 'r') as zip_file:
                         return zip_file.read(zipped_filename)
+        except OSError:
+            pass
         except PermissionError:
             pass
 
