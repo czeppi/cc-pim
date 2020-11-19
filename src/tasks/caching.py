@@ -35,7 +35,6 @@ RGB = Tuple[int, int, int]
 
 _TASK_DPATH_REX = re.compile(r"[0-9x]{4,6}-.*")
 _TASK_ZIPFILE_REX = re.compile(r"[0-9x]{4,6}-.*\.zip")
-_TASK_FSTEM_REX: Pattern[str] = re.compile(r"(?P<date_str>[0-9x]{4,6})-(?P<title_as_fname>.*)")
 
 
 @dataclass
@@ -183,6 +182,7 @@ class TaskCacheManager:
 
 
 class TaskResource:
+    _TASK_PATH_REX = None
     files_state = TaskFilesState.UNKNOWN
 
     def __init__(self, path: Path):
@@ -193,7 +193,7 @@ class TaskResource:
         return self._path
 
     def read(self) -> TaskCache:
-        match = _TASK_FSTEM_REX.match(self._path.stem)
+        match = self._TASK_PATH_REX.match(self._path.name)
         meta_file = self._read_metafile()
         return TaskCache(
             task_serial=meta_file.task_serial,
@@ -219,6 +219,7 @@ class TaskResource:
 
 
 class TaskZipFile(TaskResource):
+    _TASK_PATH_REX: Pattern[str] = re.compile(r"(?P<date_str>[0-9x]{4,6})-(?P<title_as_fname>.*)\.zip$")
     files_state = TaskFilesState.PASSIVE
 
     def _read_filenames(self) -> str:
@@ -286,6 +287,7 @@ class TaskZipFile(TaskResource):
 
 
 class TaskDir(TaskResource):
+    _TASK_PATH_REX: Pattern[str] = re.compile(r"(?P<date_str>[0-9x]{4,6})-(?P<title_as_fname>.*)$")
     files_state = TaskFilesState.ACTIVE
 
     def _read_filenames(self) -> str:

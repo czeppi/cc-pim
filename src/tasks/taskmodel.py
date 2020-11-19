@@ -167,7 +167,7 @@ class TaskModel:
 
             task_rel_path = task.get_rel_path()
             if task_rel_path != cache_rel_path:
-                raise Exception(cache.task_serial)  # todo: show error dialog
+                raise Exception(cache.task_serial, task_rel_path, cache_rel_path)  # todo: show error dialog
 
         cache_mgr = TaskCacheManager(self._tasks_root)
         task_caches = TaskCaches(
