@@ -34,11 +34,11 @@ TaskSerial = int
 
 class TaskModel:
 
-    def __init__(self, db: DB, tasks_root: Path, keyword_extractor: WordExtractor):
+    def __init__(self, db: DB, tasks_root: Path, word_extractor: WordExtractor):
         self._db = db
         self._tasks_root = tasks_root
         self._tasks_revisions_table = self._db.table('tasks_revisions')
-        self._word_extractor = keyword_extractor
+        self._word_extractor = word_extractor
         self._tasks: Dict[int, Task] = {}
         self._default_rev = TaskRevision.create_default()
 
@@ -435,27 +435,25 @@ class TaskRevision:
 
 
 class WordExtractor:
-    rex = re.compile(r"[a-zA-Z0-9_äöüßÄÖÜ.]+[a-zA-Z0-9_äöüßÄÖÜ\-.]*[a-zA-Z0-9_äöüßÄÖÜ.]")
+    _REX = re.compile(r"[a-zA-Z0-9äöüßÄÖÜ]+[a-zA-Z0-9äöüßÄÖÜ_\-]*[a-zA-Z0-9äöüßÄÖÜ]")
 
     def __init__(self, no_keywords_path: Path):
         lines = no_keywords_path.open(encoding='utf-8').readlines()
         self._no_keywords = set(line.strip() for line in lines)
         self._no_keywords.add('')
 
-    def get_words(self, title: str) -> Set[str]:
-        words = self.rex.findall(title)
-        return set(self._filter_words(words))
+    def get_words(self, text: str) -> Set[str]:
+        unfiltered_words = set(self._iter_words(text))
+        return set(word for word in unfiltered_words if self._is_word_valid(word))
 
-    def _filter_words(self, words: Iterable[str]) -> Iterator[str]:
+    def _iter_words(self, text: str) -> Iterator[str]:
+        words = set(word.lower() for word in self._REX.findall(text))
+        yield from words
+
         for word in words:
-            kw = word.lower()
-            while len(kw) > 0 and not self._is_alnum(kw[0]):
-                kw = kw[1:]
-            while len(kw) > 0 and not self._is_alnum(kw[-1]):
-                kw = kw[:-1]
-            if kw not in self._no_keywords:
-                yield word.lower()
+            word_parts = word.split('-')
+            if len(word_parts) >= 2:
+                yield from word_parts
 
-    @staticmethod
-    def _is_alnum(ch):
-        return ch.isalnum() or ch in ['ä', 'ö', 'ü', 'ß', 'Ä', 'Ö', 'Ü']
+    def _is_word_valid(self, word: str) -> bool:
+        return len(word) >= 2 and word not in self._no_keywords
