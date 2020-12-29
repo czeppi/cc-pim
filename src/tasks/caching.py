@@ -154,9 +154,16 @@ class TaskCacheManager:
             misc_table.update_row(values={'value': value}, where_str=where_str)
         db.commit()
 
-    def write_one_cache_to_db(self, task_cache: TaskCache, db: DB):
+    def write_one_cache_to_db(self, task_cache: TaskCache, db: DB) -> None:
         row_values = self._create_row_values(task_cache)
         db.table('task_caches').update_row(row_values, where_str=f'task_serial = "{task_cache.task_serial}"')
+        db.commit()
+
+    def insert_one_cache_to_db(self, task_cache: TaskCache, db: DB) -> None:
+        task_caches_table = db.table('task_caches')
+        row_values = self._create_row_values(task_cache)
+        new_row = Row(table=task_caches_table, values=row_values)
+        task_caches_table.insert_row(new_row)
         db.commit()
 
     @staticmethod
@@ -195,6 +202,8 @@ class TaskResource:
     def read(self) -> TaskCache:
         match = self._TASK_PATH_REX.match(self._path.name)
         meta_file = self._read_metafile()
+        if not meta_file:
+            dummy = True  # todo: give a warning or repair it
         return TaskCache(
             task_serial=meta_file.task_serial,
             files_state=self.files_state,

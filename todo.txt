@@ -15,3 +15,7 @@ refactoring:
 - TaskRevision: make to dataclass
 - rename cache in file_infos or something similar
 
+bugs:
+- new task => no update of words
+- search for pil => unwanted line break
+

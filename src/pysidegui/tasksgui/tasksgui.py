@@ -26,7 +26,7 @@ from PySide2.QtWidgets import QMainWindow
 from pysidegui.globalitemid import GlobalItemID, GlobalItemTypes
 from pysidegui.modelgui import ModelGui, ResultItemData
 from pysidegui.tasksgui.taskeditdialog import TaskEditDialog
-from tasks.caching import TaskFilesState, TaskCacheManager
+from tasks.caching import TaskFilesState, TaskCacheManager, TaskCache
 from tasks.html_creator import write_htmlstr, LinkSolver
 from tasks.page import Header, NormalText, Paragraph, List, ListItem, Link, Page
 from tasks.taskmodel import TaskModel, Task
@@ -176,13 +176,26 @@ class TasksGui(ModelGui):
             os.system(cmd)
         elif action_name == 'create-dir':
             task.create_dir(tasks_root)
-            self._update_files_state(task)
+            self._add_files_state(task)
         elif action_name == 'zip':
             task.zip_dir(tasks_root)
             self._update_files_state(task)
         elif action_name == 'unzip':
             task.unzip_file(tasks_root)
             self._update_files_state(task)
+
+    def _add_files_state(self, task: Task) -> None:
+        task_cache = TaskCache(
+            task_serial=task.serial,
+            files_state=task.cache.files_state,
+            category=task.last_revision.category,
+            date_str=task.get_date_str(),
+            title_as_fname=task.get_title_fname(),
+            readme=task.cache.readme,
+            file_names=task.cache.file_names,
+        )
+        cache_mgr = TaskCacheManager(self._task_model.tasks_root)
+        cache_mgr.insert_one_cache_to_db(task_cache=task_cache, db=self._task_model.db)
 
     def _update_files_state(self, task: Task) -> None:
         cache_mgr = TaskCacheManager(self._task_model.tasks_root)

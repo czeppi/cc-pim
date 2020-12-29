@@ -299,12 +299,17 @@ class Task:
             elif files_state == TaskFilesState.PASSIVE:
                 return tasks_root / (rel_path + '.zip')
 
+    def get_date_str(self) -> str:
+        return self._revisions[1].date_str
+
     def get_rel_path(self) -> str:
         assert not self._revisions[0].date_str
-        task_1st_rev = self._revisions[1]
         task_last_rev = self.last_revision
         title_fname = self._get_title_fname(task_last_rev.title)
-        return f'{task_last_rev.category}/{task_1st_rev.date_str}-{title_fname}'
+        return f'{task_last_rev.category}/{self.get_date_str()}-{title_fname}'
+
+    def get_title_fname(self) -> str:
+        return self._get_title_fname(self.last_revision.title)
 
     @staticmethod
     def _get_title_fname(title: str) -> str:
