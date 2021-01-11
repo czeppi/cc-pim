@@ -203,7 +203,7 @@ class TaskResource:
         match = self._TASK_PATH_REX.match(self._path.name)
         meta_file = self._read_metafile()
         if not meta_file:
-            dummy = True  # todo: give a warning or repair it
+            print(f'not meta_file: path={self._path}')
         return TaskCache(
             task_serial=meta_file.task_serial,
             files_state=self.files_state,
