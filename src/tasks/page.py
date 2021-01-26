@@ -53,7 +53,7 @@ Page([
 class HAlign(Enum):
     LEFT = 1
     RIGHT = 2
-    CENTRE = 3
+    CENTER = 3
 
 
 @dataclass

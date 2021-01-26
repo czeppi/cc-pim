@@ -198,7 +198,7 @@ class _MarkupParser:
         elif cell_str[0] == ' ' and cell_str[-1] != ' ':
             return HAlign.RIGHT
         elif cell_str[0] == ' ' and cell_str[-1] == ' ':
-            return HAlign.CENTRE
+            return HAlign.CENTER
 
         return default_halign
 

@@ -86,7 +86,7 @@ class _MarkupCreator:
             return col.text + ' '
         elif col.halign == HAlign.RIGHT:
             return ' ' + col.text
-        elif col.halign == HAlign.center:
+        elif col.halign == HAlign.CENTER:
             return ' ' + col.text + ' '
 
     def _create_row_line(self, row: Row) -> str:

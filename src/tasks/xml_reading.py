@@ -91,7 +91,10 @@ class _XmlReader:
     def _iter_columns(xml_table: ET.Element) -> Iterator[Column]:
         for xml_col in filter(lambda x: x.tag == 'column', xml_table):
             halign = HAlign[xml_col.attrib['halign'].upper()]
-            yield Column(halign=halign, text=xml_col.text)
+            col_text = xml_col.text
+            if col_text is None:
+                col_text = ''
+            yield Column(halign=halign, text=col_text)
 
     def _iter_rows(self, xml_table: ET.Element) -> Iterator[Row]:
         for xml_row in filter(lambda x: x.tag == 'row', xml_table):
