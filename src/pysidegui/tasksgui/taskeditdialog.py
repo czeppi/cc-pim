@@ -81,11 +81,9 @@ class TaskEditDialog(QDialog):
 
     def _init_date_edit(self) -> None:
         task = self._task
-        if task.is_empty():
-            today_str = datetime.today().strftime('%y%m%d')
-            self.ui.date_edit.setText(today_str)
-        else:
-            self.ui.date_edit.setText(task.last_revision.date_str)
+        today_str = datetime.today().strftime('%y%m%d')
+        self.ui.date_edit.setText(today_str)
+        if not task.is_empty():
             self.ui.date_edit.setReadOnly(True)
 
     def _init_title_text(self) -> None:
@@ -150,6 +148,7 @@ class TaskEditDialog(QDialog):
         markup_str = self.ui.body_edit.toPlainText()
         page = read_markup(markup_str)
         return {
+            'date':     self.ui.date_edit.text(),
             'title':    self.ui.title_edit.text(),
             'body':     write_xmlstr(page, with_page_element=False),
             'category': self.ui.cat_combo.currentText(),

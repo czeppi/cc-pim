@@ -237,12 +237,12 @@ class Task:
         if self._cache:
             return self._cache.files_state.rgb()
 
-    def create_new_revision(self, title: str, body: str, category: str) -> TaskRevision:
+    def create_new_revision(self, date: str, title: str, body: str, category: str) -> TaskRevision:
         new_rev_no = len(self._revisions)
         return TaskRevision(
             task_serial=self._serial,
             rev_no=new_rev_no,
-            date=datetime.today().strftime('%y%m%d'),
+            date=date,  # datetime.today().strftime('%y%m%d'),
             category=category,
             title=title,
             body=body,
